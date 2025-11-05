@@ -1,0 +1,55 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+built
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.sqlite
+*.sqlite-journal
+/postgres-data
+/redis-data
+
+# Docker
+.docker
+
+# Prisma
+packages/backend/prisma/migrations/*
+!packages/backend/prisma/migrations/.gitkeep
+
+# Test
+coverage
+.nyc_output
+
+# Temporary
+tmp
+temp
+*.tmp

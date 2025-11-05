@@ -1,0 +1,38 @@
+{
+  "name": "yamix",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open-source mental health community platform - A modern reimplementation of menhera.jp",
+  "keywords": [
+    "mental-health",
+    "community",
+    "self-hosted",
+    "activitypub",
+    "menhera"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yamisskey-dev/yamix.git"
+  },
+  "license": "AGPL-3.0",
+  "packageManager": "pnpm@10.18.2",
+  "engines": {
+    "node": ">=22.15.0"
+  },
+  "workspaces": [
+    "packages/frontend",
+    "packages/backend",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
