@@ -13,7 +13,13 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       schema: {
         description: 'Get all published posts',
         tags: ['posts'],
-        querystring: postFilterSchema.omit({ status: true }),
+        querystring: z.object({
+          categoryId: z.number().int().positive().optional(),
+          tag: z.string().optional(),
+          authorId: z.number().int().positive().optional(),
+          page: z.number().int().positive().default(1),
+          limit: z.number().int().positive().max(100).default(20),
+        }),
         response: {
           200: z.object({
             items: z.array(

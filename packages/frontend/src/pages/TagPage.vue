@@ -23,11 +23,22 @@
 
     <!-- Main content -->
     <main class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <!-- Tag header -->
+      <div class="mb-8">
+        <div class="flex items-center gap-2 mb-2">
+          <RouterLink to="/" class="text-gray-600 hover:text-primary">ホーム</RouterLink>
+          <span class="text-gray-400">/</span>
+          <span class="text-gray-900">タグ</span>
+        </div>
+        <h1 class="text-4xl font-bold mb-2">
+          <span class="text-primary">#{{ tagName }}</span>
+        </h1>
+        <p class="text-gray-600">#{{ tagName }} タグの投稿一覧</p>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Posts list -->
         <div class="lg:col-span-2">
-          <h2 class="text-2xl font-bold mb-6">最新記事</h2>
-
           <!-- Loading -->
           <div v-if="postsStore.loading" class="text-center py-12">
             <div class="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
@@ -75,6 +86,11 @@
               </div>
             </article>
 
+            <!-- Empty state -->
+            <div v-if="postsStore.posts.length === 0" class="text-center py-12">
+              <p class="text-gray-500">このタグの投稿はまだありません</p>
+            </div>
+
             <!-- Pagination -->
             <div v-if="postsStore.pagination.totalPages > 1" class="flex justify-center gap-2 mt-8">
               <button
@@ -100,25 +116,52 @@
           <div class="card">
             <h3 class="font-bold mb-4">カテゴリー</h3>
             <div class="space-y-2">
-              <div class="text-sm text-gray-700 hover:text-primary cursor-pointer">コラム</div>
-              <div class="text-sm text-gray-700 hover:text-primary cursor-pointer">体験談</div>
-              <div class="text-sm text-gray-700 hover:text-primary cursor-pointer">その他</div>
+              <RouterLink to="/categories/column" class="block text-sm text-gray-700 hover:text-primary cursor-pointer">
+                コラム
+              </RouterLink>
+              <RouterLink to="/categories/experience" class="block text-sm text-gray-700 hover:text-primary cursor-pointer">
+                体験談
+              </RouterLink>
+              <RouterLink to="/categories/other" class="block text-sm text-gray-700 hover:text-primary cursor-pointer">
+                その他
+              </RouterLink>
             </div>
           </div>
 
-          <!-- Popular tags -->
+          <!-- Related tags -->
           <div class="card">
-            <h3 class="font-bold mb-4">人気のタグ</h3>
+            <h3 class="font-bold mb-4">関連タグ</h3>
             <div class="flex flex-wrap gap-2">
-              <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition">
+              <RouterLink
+                to="/tags/メンタルヘルス"
+                class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition"
+              >
                 #メンタルヘルス
-              </span>
-              <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition">
+              </RouterLink>
+              <RouterLink
+                to="/tags/希死念慮"
+                class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition"
+              >
                 #希死念慮
-              </span>
-              <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition">
+              </RouterLink>
+              <RouterLink
+                to="/tags/発達障害"
+                class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition"
+              >
                 #発達障害
-              </span>
+              </RouterLink>
+              <RouterLink
+                to="/tags/うつ病"
+                class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition"
+              >
+                #うつ病
+              </RouterLink>
+              <RouterLink
+                to="/tags/不安障害"
+                class="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm cursor-pointer hover:bg-primary hover:text-white transition"
+              >
+                #不安障害
+              </RouterLink>
             </div>
           </div>
         </div>
@@ -128,22 +171,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePostsStore } from '../stores/posts'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const postsStore = usePostsStore()
 
+const tagName = computed(() => route.params.name as string)
+
 onMounted(async () => {
   await authStore.fetchUser()
-  await postsStore.fetchPosts()
+  // TODO: Fetch posts by tag
+  // For now, just fetch all posts
+  await postsStore.fetchPosts({ tag: tagName.value })
 })
 
 function loadPage(page: number) {
-  postsStore.fetchPosts({ page })
+  postsStore.fetchPosts({ page, tag: tagName.value })
 }
 </script>
 

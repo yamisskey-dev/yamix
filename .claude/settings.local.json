@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install:*)",
+      "Bash(pnpm view:*)",
+      "Bash(pnpm prisma:generate:*)",
+      "Bash(pnpm prisma:migrate:*)",
+      "Bash(pnpm prisma migrate:*)",
+      "Bash(pnpm db:seed:*)",
+      "Bash(pnpm dev:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

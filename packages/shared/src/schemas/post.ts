@@ -6,7 +6,7 @@ import { z } from 'zod'
 export const createPostSchema = z.object({
   title: z.string().min(1, 'タイトルを入力してください').max(200, 'タイトルは200文字以内である必要があります'),
   content: z.string().min(1, '本文を入力してください'),
-  thumbnailUrl: z.string().url('有効なURLを入力してください').optional(),
+  thumbnailUrl: z.string().url('有効なURLを入力してください').nullish(),
   categoryId: z.number().int().positive(),
   tags: z.array(z.string()).max(10, 'タグは10個までです').optional(),
   isAnonymous: z.boolean().default(false),
@@ -21,7 +21,7 @@ export type CreatePostInput = z.infer<typeof createPostSchema>
 export const updatePostSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).optional(),
-  thumbnailUrl: z.string().url().optional().nullable(),
+  thumbnailUrl: z.string().url().nullish(),
   categoryId: z.number().int().positive().optional(),
   tags: z.array(z.string()).max(10).optional(),
   status: z.enum(['draft', 'published', 'archived']).optional(),

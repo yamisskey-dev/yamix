@@ -13,7 +13,7 @@ export const tagsRoutes: FastifyPluginAsync = async (fastify) => {
         description: 'Get popular tags',
         tags: ['tags'],
         querystring: z.object({
-          limit: z.string().transform(Number).optional().default('20'),
+          limit: z.string().transform(Number).default('20'),
         }),
         response: {
           200: z.array(
