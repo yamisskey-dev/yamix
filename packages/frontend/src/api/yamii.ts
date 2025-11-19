@@ -3,7 +3,8 @@
  * 人生相談AIサービスとの通信用クライアント
  */
 
-const YAMII_BASE_URL = import.meta.env.VITE_YAMII_API_URL || 'http://localhost:8000'
+// 本番環境ではnginxプロキシ経由、開発環境では直接アクセス
+const YAMII_BASE_URL = import.meta.env.VITE_YAMII_API_URL || '/yamii'
 
 /**
  * カウンセリングリクエスト
