@@ -61,7 +61,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { address } = request.params
+      const { address } = request.params as { address: string }
 
       const wallet = await fastify.prisma.wallet.findUnique({
         where: { address },
@@ -85,7 +85,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { address } = request.params
+      const { address } = request.params as { address: string }
 
       const wallet = await fastify.prisma.wallet.findUnique({
         where: { address },

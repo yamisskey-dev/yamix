@@ -15,9 +15,10 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      const { categoryId } = request.query
-      const page = parseInt(request.query.page || '1', 10)
-      const limit = parseInt(request.query.limit || '20', 10)
+      const query = request.query as { categoryId?: string; page?: string; limit?: string }
+      const { categoryId } = query
+      const page = parseInt(query.page || '1', 10)
+      const limit = parseInt(query.limit || '20', 10)
 
       const where: any = {}
       if (categoryId) where.categoryId = categoryId
@@ -70,7 +71,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { id } = request.params
+      const { id } = request.params as { id: string }
 
       const post = await fastify.prisma.post.findUnique({
         where: { id },

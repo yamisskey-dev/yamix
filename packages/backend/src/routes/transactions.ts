@@ -15,8 +15,9 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const { postId, senderId } = request.body
-      const amount = request.body.amount || 1
+      const body = request.body as { postId: string; senderId: string; amount?: number }
+      const { postId, senderId } = body
+      const amount = body.amount || 1
 
       // Get the post with author
       const post = await fastify.prisma.post.findUnique({
@@ -85,7 +86,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      const { postId } = request.query
+      const { postId } = request.query as { postId?: string }
 
       const where = postId ? { postId } : {}
 
