@@ -53,19 +53,6 @@ function formatTime(date: Date): string {
 
 <template>
   <div class="chat-panel">
-    <!-- ヘッダー -->
-    <header class="panel-header">
-      <div class="header-content">
-        <div class="avatar">
-          <span>Y</span>
-        </div>
-        <div class="header-info">
-          <h2 class="header-title">Yamii</h2>
-          <p class="header-subtitle">人生相談AI</p>
-        </div>
-      </div>
-    </header>
-
     <!-- メッセージエリア -->
     <div ref="messagesContainer" class="messages-container">
       <!-- ウェルカムメッセージ -->
@@ -147,49 +134,6 @@ function formatTime(date: Date): string {
   flex-direction: column;
 }
 
-/* ヘッダー */
-.panel-header {
-  display: flex;
-  align-items: center;
-  padding: var(--space-3) var(--space-4);
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
-  color: hsl(var(--primary-foreground));
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: hsl(var(--primary-foreground) / 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-}
-
-.header-info {
-  flex: 1;
-}
-
-.header-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  margin: 0;
-}
-
-.header-subtitle {
-  font-size: var(--font-size-xs);
-  opacity: 0.8;
-  margin: 2px 0 0;
-}
-
 /* メッセージエリア */
 .messages-container {
   flex: 1;
@@ -212,19 +156,18 @@ function formatTime(date: Date): string {
 }
 
 .welcome-icon {
-  width: 64px;
-  height: 64px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-3);
-  box-shadow: var(--shadow-lg);
 }
 
 .welcome-icon span {
-  font-size: 28px;
+  font-size: 14px;
   font-weight: 700;
   color: hsl(var(--primary-foreground));
 }

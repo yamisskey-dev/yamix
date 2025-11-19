@@ -113,27 +113,20 @@ import ChatPanel from './components/ChatPanel.vue'
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: 7px 14px;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  border-radius: var(--radius-full);
+  border-radius: 999px;
   text-decoration: none;
-  font-size: var(--font-size-md);
-  font-weight: 600;
-  transition: all var(--transition-normal) var(--spring-easing);
+  font-size: 95%;
+  font-weight: bold;
+  transition: background 0.1s ease;
   border: none;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
 }
 
 .post-button:hover {
   background: hsl(var(--primary-hover));
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.post-button:active {
-  transform: translateY(0) scale(0.98);
 }
 
 /* 認証セクション */
@@ -147,13 +140,13 @@ import ChatPanel from './components/ChatPanel.vue'
 
 .auth-button {
   display: block;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  border-radius: 5px;
   text-decoration: none;
-  font-size: var(--font-size-base);
-  font-weight: 500;
+  font-size: 95%;
+  font-weight: normal;
   text-align: center;
-  transition: all var(--transition-normal) var(--spring-easing);
+  transition: background 0.1s ease;
 }
 
 .auth-login {

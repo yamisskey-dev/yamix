@@ -100,7 +100,7 @@
   --spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* Layout */
-  --sidebar-width: 200px;
+  --sidebar-width: 250px;
   --sidebar-collapsed-width: 60px;
   --chat-panel-width: 360px;
   --header-height: 52px;

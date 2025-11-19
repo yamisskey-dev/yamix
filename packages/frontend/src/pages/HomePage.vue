@@ -126,28 +126,34 @@ function formatDate(date: string | Date): string {
   position: sticky;
   top: 0;
   z-index: 10;
+  height: 40px;
 }
 
 .tab-item {
   flex: 1;
-  padding: var(--space-4) var(--space-4);
-  font-size: var(--font-size-md);
-  font-weight: 600;
+  padding: 0 10px;
+  font-size: 0.8em;
+  font-weight: normal;
   color: hsl(var(--foreground-secondary));
   background: none;
   border: none;
   cursor: pointer;
-  transition: all var(--transition-normal) var(--spring-easing);
+  transition: opacity var(--transition-normal);
   position: relative;
+  opacity: 0.7;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-item:hover {
-  background: hsl(var(--item-hover));
-  color: hsl(var(--foreground));
+  opacity: 1;
 }
 
 .tab-item.active {
-  color: hsl(var(--primary));
+  opacity: 1;
+  color: hsl(var(--foreground));
 }
 
 .tab-item.active::after {
@@ -156,8 +162,9 @@ function formatDate(date: string | Date): string {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 3px;
   background: hsl(var(--primary));
+  border-radius: 999px;
 }
 
 /* 投稿コンテナ */
