@@ -8,7 +8,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
-    "lint": "eslint src --ext .ts,.vue"
+    "lint": "eslint src --ext .ts,.vue",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "dependencies": {
     "@yamix/shared": "workspace:*",
@@ -18,13 +20,16 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@types/node": "^22.18.10",
+    "@types/node": "^22.19.0",
     "@unocss/reset": "^66.5.4",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.7.0",
+    "happy-dom": "^20.0.10",
     "typescript": "^5.9.3",
     "unocss": "^66.5.4",
     "vite": "^7.1.9",
+    "vitest": "^4.0.10",
     "vue-tsc": "^3.1.1"
   }
 }

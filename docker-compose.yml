@@ -1,12 +1,11 @@
-version: '3.8'
-
 services:
+  # Database
   postgres:
     image: postgres:16-alpine
     container_name: yamix-postgres
     environment:
       POSTGRES_USER: yamix
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: yamix
     ports:
       - '5432:5432'
@@ -18,6 +17,7 @@ services:
       timeout: 5s
       retries: 5
 
+  # Cache
   redis:
     image: redis:7-alpine
     container_name: yamix-redis
@@ -30,6 +30,56 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # yamix Backend (Fastify + Prisma)
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: yamix-backend
+    environment:
+      DATABASE_URL: postgresql://yamix:${POSTGRES_PASSWORD:-password}@postgres:5432/yamix
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this}
+      PORT: 3000
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # yamix Frontend (Vue + Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: packages/frontend/Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_YAMII_API_URL: /yamii
+    container_name: yamix-frontend
+    ports:
+      - '8080:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 
 volumes:
   postgres-data:

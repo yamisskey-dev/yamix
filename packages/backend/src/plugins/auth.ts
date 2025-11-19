@@ -12,7 +12,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
     try {
       await request.jwtVerify()
     } catch (err) {
-      throw fastify.httpErrors.unauthorized('認証が必要です')
+      const error = new Error('認証が必要です')
+      ;(error as any).statusCode = 401
+      throw error
     }
   })
 }

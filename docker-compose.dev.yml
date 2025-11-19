@@ -1,0 +1,38 @@
+# 開発環境用 docker-compose
+# データベースのみ起動し、バックエンドとフロントエンドはローカルで実行
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: yamix-postgres
+    environment:
+      POSTGRES_USER: yamix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: yamix
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yamix']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache
+  redis:
+    image: redis:7-alpine
+    container_name: yamix-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  redis-data:

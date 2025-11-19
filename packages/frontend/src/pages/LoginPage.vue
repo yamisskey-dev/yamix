@@ -4,7 +4,7 @@
     <header class="bg-white shadow-sm">
       <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-between">
-          <RouterLink to="/" class="text-3xl font-bold text-primary">やみなべ</RouterLink>
+          <RouterLink to="/" class="text-3xl font-bold text-primary">Yamix</RouterLink>
           <nav class="flex gap-4 items-center">
             <RouterLink to="/" class="text-gray-700 hover:text-primary">ホーム</RouterLink>
             <RouterLink to="/register" class="btn-primary text-sm">会員登録</RouterLink>

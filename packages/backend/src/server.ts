@@ -53,7 +53,7 @@ async function buildServer() {
   await fastify.register(swagger, {
     openapi: {
       info: {
-        title: 'やみなべ API',
+        title: 'Yamix API',
         description: 'Open-source mental health community platform API',
         version: '0.1.0',
       },
@@ -114,7 +114,7 @@ async function start() {
     await fastify.listen({ port: PORT, host: HOST })
 
     console.log(`
-🚀 やみなべ Backend Server is running!
+🚀 Yamix Backend Server is running!
 
 📍 Server:        http://localhost:${PORT}
 📚 API Docs:      http://localhost:${PORT}/docs

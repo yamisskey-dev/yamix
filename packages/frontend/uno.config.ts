@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   theme: {
     colors: {
-      // やみなべのブランドカラー（紫）
+      // Yamixのブランドカラー（紫）
       primary: {
         DEFAULT: '#9333ea',
         50: '#faf5ff',
