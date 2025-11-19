@@ -3,6 +3,7 @@ import Fastify from 'fastify'
 import { PrismaClient } from '@prisma/client'
 import { postsRoutes } from './posts.js'
 import { prismaPlugin } from '../plugins/prisma.js'
+import { INITIAL_BALANCE } from './wallets.js'
 
 describe('Posts API', () => {
   const fastify = Fastify()
@@ -32,7 +33,7 @@ describe('Posts API', () => {
     testWallet = await prisma.wallet.create({
       data: {
         address: `test${uniqueId.slice(-8)}`,
-        balance: 0,
+        balance: INITIAL_BALANCE,
       },
     })
   })

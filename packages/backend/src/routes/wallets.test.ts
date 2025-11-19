@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
 import Fastify from 'fastify'
 import { PrismaClient } from '@prisma/client'
-import { walletsRoutes } from './wallets.js'
+import { walletsRoutes, INITIAL_BALANCE } from './wallets.js'
 import { prismaPlugin } from '../plugins/prisma.js'
 
 describe('Wallets API', () => {
@@ -38,7 +38,7 @@ describe('Wallets API', () => {
       expect(wallet).toHaveProperty('id')
       expect(wallet).toHaveProperty('address')
       expect(wallet.address).toHaveLength(8)
-      expect(wallet.balance).toBe(0)
+      expect(wallet.balance).toBe(INITIAL_BALANCE)
     })
 
     it('should create wallet with unique address', async () => {
@@ -75,7 +75,7 @@ describe('Wallets API', () => {
       expect(response.statusCode).toBe(200)
       const wallet = JSON.parse(response.payload)
       expect(wallet.address).toBe(createdWallet.address)
-      expect(wallet.balance).toBe(0)
+      expect(wallet.balance).toBe(INITIAL_BALANCE)
     })
 
     it('should return 404 for non-existent wallet', async () => {

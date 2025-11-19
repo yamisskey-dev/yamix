@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { MAX_BALANCE, REACTION_AMOUNT } from './wallets.js'
 
 export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>()
@@ -56,10 +57,11 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
           data: { balance: { decrement: amount } },
         })
 
-        // Increase receiver balance
+        // Increase receiver balance (with cap at MAX_BALANCE)
+        const newBalance = Math.min(post.wallet.balance + amount, MAX_BALANCE)
         await tx.wallet.update({
           where: { id: post.walletId },
-          data: { balance: { increment: amount } },
+          data: { balance: newBalance },
         })
 
         // Create transaction record

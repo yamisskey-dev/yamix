@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
+import { POST_COST } from './wallets.js'
 
 export const postsRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>()
@@ -122,11 +123,26 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'Wallet not found' })
       }
 
-      const post = await fastify.prisma.post.create({
-        data: {
-          content,
-          walletId,
-        },
+      // Check if wallet has enough balance to post
+      if (wallet.balance < POST_COST) {
+        return reply.code(400).send({ error: 'Insufficient balance to post' })
+      }
+
+      // Create post and decrease balance atomically
+      const post = await fastify.prisma.$transaction(async (tx) => {
+        // Decrease wallet balance
+        await tx.wallet.update({
+          where: { id: walletId },
+          data: { balance: { decrement: POST_COST } },
+        })
+
+        // Create post
+        return tx.post.create({
+          data: {
+            content,
+            walletId,
+          },
+        })
       })
 
       return reply.code(201).send(post)

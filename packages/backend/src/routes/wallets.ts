@@ -3,6 +3,12 @@ import { z } from 'zod'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { randomBytes } from 'crypto'
 
+// Token economy constants
+export const INITIAL_BALANCE = 10
+export const MAX_BALANCE = 100
+export const POST_COST = 1
+export const REACTION_AMOUNT = 1
+
 // Generate a unique 8-character address
 function generateAddress(): string {
   return randomBytes(4).toString('hex')
@@ -43,7 +49,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       const wallet = await fastify.prisma.wallet.create({
         data: {
           address,
-          balance: 0,
+          balance: INITIAL_BALANCE,
         },
       })
 
