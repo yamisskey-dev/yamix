@@ -1,7 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
-import { createPostSchema, updatePostSchema, postFilterSchema } from '@yamix/shared'
 
 export const postsRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>()
@@ -11,110 +10,39 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Get all published posts',
+        description: 'Get all posts',
         tags: ['posts'],
-        querystring: z.object({
-          categoryId: z.number().int().positive().optional(),
-          tag: z.string().optional(),
-          authorId: z.number().int().positive().optional(),
-          page: z.number().int().positive().default(1),
-          limit: z.number().int().positive().max(100).default(20),
-        }),
-        response: {
-          200: z.object({
-            items: z.array(
-              z.object({
-                id: z.number(),
-                title: z.string(),
-                content: z.string(),
-                thumbnailUrl: z.string().nullable(),
-                viewCount: z.number(),
-                createdAt: z.string(),
-                publishedAt: z.string().nullable(),
-                author: z
-                  .object({
-                    id: z.number(),
-                    displayName: z.string(),
-                  })
-                  .nullable(),
-                category: z.object({
-                  id: z.number(),
-                  name: z.string(),
-                  slug: z.string(),
-                }),
-                tags: z.array(
-                  z.object({
-                    id: z.number(),
-                    name: z.string(),
-                    slug: z.string(),
-                  })
-                ),
-              })
-            ),
-            total: z.number(),
-            page: z.number(),
-            limit: z.number(),
-            totalPages: z.number(),
-          }),
-        },
       },
     },
-    async (request, reply) => {
-      const { page = 1, limit = 20, categoryId, tag, authorId } = request.query
+    async (request) => {
+      const { categoryId } = request.query
+      const page = parseInt(request.query.page || '1', 10)
+      const limit = parseInt(request.query.limit || '20', 10)
 
-      const where: any = {
-        status: 'PUBLISHED',
-      }
-
+      const where: any = {}
       if (categoryId) where.categoryId = categoryId
-      if (authorId) where.authorId = authorId
-      if (tag) {
-        where.tags = {
-          some: {
-            tag: {
-              slug: tag,
-            },
-          },
-        }
-      }
 
       const [posts, total] = await Promise.all([
         fastify.prisma.post.findMany({
           where,
           skip: (page - 1) * limit,
           take: limit,
-          orderBy: { publishedAt: 'desc' },
-          select: {
-            id: true,
-            title: true,
-            content: true,
-            thumbnailUrl: true,
-            viewCount: true,
-            createdAt: true,
-            publishedAt: true,
-            isAnonymous: true,
-            author: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            wallet: {
               select: {
-                id: true,
-                displayName: true,
+                address: true,
               },
             },
             category: {
               select: {
                 id: true,
                 name: true,
-                slug: true,
               },
             },
-            tags: {
+            _count: {
               select: {
-                tag: {
-                  select: {
-                    id: true,
-                    name: true,
-                    slug: true,
-                  },
-                },
+                transactions: true,
               },
             },
           },
@@ -122,21 +50,13 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         fastify.prisma.post.count({ where }),
       ])
 
-      const items = posts.map((post) => ({
-        ...post,
-        author: post.isAnonymous ? null : post.author,
-        createdAt: post.createdAt.toISOString(),
-        publishedAt: post.publishedAt?.toISOString() || null,
-        tags: post.tags.map((t) => t.tag),
-      }))
-
-      reply.send({
-        items,
+      return {
+        posts,
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-      })
+      }
     }
   )
 
@@ -147,42 +67,6 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       schema: {
         description: 'Get post by ID',
         tags: ['posts'],
-        params: z.object({
-          id: z.string().transform(Number),
-        }),
-        response: {
-          200: z.object({
-            id: z.number(),
-            title: z.string(),
-            content: z.string(),
-            thumbnailUrl: z.string().nullable(),
-            viewCount: z.number(),
-            createdAt: z.string(),
-            updatedAt: z.string(),
-            publishedAt: z.string().nullable(),
-            author: z
-              .object({
-                id: z.number(),
-                displayName: z.string(),
-                bio: z.string().nullable(),
-                avatarUrl: z.string().nullable(),
-              })
-              .nullable(),
-            category: z.object({
-              id: z.number(),
-              name: z.string(),
-              slug: z.string(),
-            }),
-            tags: z.array(
-              z.object({
-                id: z.number(),
-                name: z.string(),
-                slug: z.string(),
-              })
-            ),
-          }),
-          404: z.object({ error: z.string() }),
-        },
       },
     },
     async (request, reply) => {
@@ -191,109 +75,83 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       const post = await fastify.prisma.post.findUnique({
         where: { id },
         include: {
-          author: {
+          wallet: {
             select: {
-              id: true,
-              displayName: true,
-              bio: true,
-              avatarUrl: true,
+              address: true,
             },
           },
-          category: true,
-          tags: {
-            include: {
-              tag: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          transactions: {
+            select: {
+              id: true,
+              amount: true,
+              createdAt: true,
+            },
+            orderBy: {
+              createdAt: 'desc',
             },
           },
         },
       })
 
-      if (!post || post.status !== 'PUBLISHED') {
-        return reply.code(404).send({ error: '投稿が見つかりません' })
+      if (!post) {
+        return reply.code(404).send({ error: 'Post not found' })
       }
 
-      // Increment view count
-      await fastify.prisma.post.update({
-        where: { id },
-        data: { viewCount: { increment: 1 } },
-      })
-
-      reply.send({
-        ...post,
-        author: post.isAnonymous ? null : post.author,
-        createdAt: post.createdAt.toISOString(),
-        updatedAt: post.updatedAt.toISOString(),
-        publishedAt: post.publishedAt?.toISOString() || null,
-        tags: post.tags.map((t) => t.tag),
-      })
+      return post
     }
   )
 
-  // Create post (authenticated)
+  // Create post
   server.post(
     '/',
     {
       schema: {
         description: 'Create a new post',
         tags: ['posts'],
-        security: [{ bearerAuth: [] }],
-        body: createPostSchema,
-        response: {
-          201: z.object({
-            id: z.number(),
-            title: z.string(),
-            status: z.string(),
-          }),
-          400: z.object({ error: z.string() }),
-        },
       },
-      onRequest: [fastify.authenticate],
     },
     async (request, reply) => {
-      const userId = (request.user as { id: number }).id
-      const { title, content, thumbnailUrl, categoryId, tags, isAnonymous, status } = request.body
+      const body = request.body as { content?: string; walletId?: string; categoryId?: string }
+      const { content, walletId, categoryId } = body
 
-      // Create post
+      // Validate required fields
+      if (!content || !walletId || !categoryId) {
+        return reply.code(400).send({ error: 'Missing required fields' })
+      }
+
+      // Verify wallet exists
+      const wallet = await fastify.prisma.wallet.findUnique({
+        where: { id: walletId },
+      })
+
+      if (!wallet) {
+        return reply.code(400).send({ error: 'Wallet not found' })
+      }
+
+      // Verify category exists
+      const category = await fastify.prisma.category.findUnique({
+        where: { id: categoryId },
+      })
+
+      if (!category) {
+        return reply.code(400).send({ error: 'Category not found' })
+      }
+
       const post = await fastify.prisma.post.create({
         data: {
-          title,
           content,
-          thumbnailUrl,
+          walletId,
           categoryId,
-          authorId: isAnonymous ? null : userId,
-          isAnonymous,
-          status: status.toUpperCase() as any,
-          publishedAt: status === 'published' ? new Date() : null,
         },
       })
 
-      // Add tags
-      if (tags && tags.length > 0) {
-        for (const tagName of tags) {
-          const slug = tagName.toLowerCase().replace(/\s+/g, '-')
-
-          // Find or create tag
-          const tag = await fastify.prisma.tag.upsert({
-            where: { slug },
-            create: { name: tagName, slug },
-            update: {},
-          })
-
-          // Link tag to post
-          await fastify.prisma.postTag.create({
-            data: {
-              postId: post.id,
-              tagId: tag.id,
-            },
-          })
-        }
-      }
-
-      reply.code(201).send({
-        id: post.id,
-        title: post.title,
-        status: post.status,
-      })
+      return reply.code(201).send(post)
     }
   )
 }

@@ -15,17 +15,16 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
         response: {
           200: z.array(
             z.object({
-              id: z.number(),
+              id: z.string(),
               name: z.string(),
               slug: z.string(),
-              description: z.string().nullable(),
               postCount: z.number(),
             })
           ),
         },
       },
     },
-    async (request, reply) => {
+    async () => {
       const categories = await fastify.prisma.category.findMany({
         orderBy: { order: 'asc' },
         include: {
@@ -35,15 +34,49 @@ export const categoriesRoutes: FastifyPluginAsync = async (fastify) => {
         },
       })
 
-      reply.send(
-        categories.map((cat) => ({
-          id: cat.id,
-          name: cat.name,
-          slug: cat.slug,
-          description: cat.description,
-          postCount: cat._count.posts,
-        }))
-      )
+      return categories.map((cat) => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        postCount: cat._count.posts,
+      }))
+    }
+  )
+
+  // Create category
+  server.post(
+    '/',
+    {
+      schema: {
+        description: 'Create a new category',
+        tags: ['categories'],
+        body: z.object({
+          name: z.string().min(1),
+          slug: z.string().min(1),
+          order: z.number().int().optional().default(0),
+        }),
+        response: {
+          201: z.object({
+            id: z.string(),
+            name: z.string(),
+            slug: z.string(),
+            order: z.number(),
+          }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const { name, slug, order } = request.body
+
+      const category = await fastify.prisma.category.create({
+        data: {
+          name,
+          slug,
+          order,
+        },
+      })
+
+      return reply.code(201).send(category)
     }
   )
 }

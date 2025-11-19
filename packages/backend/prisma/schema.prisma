@@ -1,4 +1,5 @@
 // Prisma schema for Yamix
+// Blockchain-inspired anonymous identity system
 
 generator client {
   provider = "prisma-client-js"
@@ -9,168 +10,70 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model
-model User {
-  id          Int       @id @default(autoincrement())
-  email       String    @unique
-  password    String
-  displayName String    @map("display_name")
-  bio         String?
-  avatarUrl   String?   @map("avatar_url")
-  role        UserRole  @default(USER)
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+// Wallet - ユーザーのアイデンティティ（ブロックチェーンのウォレット相当）
+model Wallet {
+  id        String   @id @default(uuid())
+  address   String   @unique  // 短いハッシュ（8文字）
+  balance   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 認証連携（オプション）
+  discordId   String?  @unique @map("discord_id")
+  fediverseId String?  @unique @map("fediverse_id")
 
   // Relations
-  posts       Post[]
-  comments    Comment[]
-  questions   Question[]
-  answers     Answer[]
+  posts            Post[]
+  sentTransactions Transaction[] @relation("sender")
 
-  @@map("users")
+  @@map("wallets")
 }
 
-enum UserRole {
-  USER
-  MODERATOR
-  ADMIN
-}
-
-// Category model
+// Category - 投稿のカテゴリ
 model Category {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  order       Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  name      String   @unique
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  posts       Post[]
+  posts Post[]
 
   @@map("categories")
 }
 
-// Tag model
-model Tag {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  posts     PostTag[]
-
-  @@map("tags")
-}
-
-// Post model
+// Post - 投稿
 model Post {
-  id           Int         @id @default(autoincrement())
-  title        String
-  content      String      @db.Text
-  thumbnailUrl String?     @map("thumbnail_url")
-  categoryId   Int         @map("category_id")
-  authorId     Int?        @map("author_id") // null for anonymous
-  isAnonymous  Boolean     @default(false) @map("is_anonymous")
-  status       PostStatus  @default(DRAFT)
-  viewCount    Int         @default(0) @map("view_count")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
-  publishedAt  DateTime?   @map("published_at")
+  id         String   @id @default(uuid())
+  content    String   @db.Text
+  walletId   String   @map("wallet_id")
+  categoryId String   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
-  category     Category    @relation(fields: [categoryId], references: [id])
-  author       User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  tags         PostTag[]
-  comments     Comment[]
+  wallet       Wallet        @relation(fields: [walletId], references: [id])
+  category     Category      @relation(fields: [categoryId], references: [id])
+  transactions Transaction[]
 
+  @@index([walletId])
   @@index([categoryId])
-  @@index([authorId])
-  @@index([status])
-  @@index([publishedAt])
+  @@index([createdAt])
   @@map("posts")
 }
 
-enum PostStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-// Post-Tag relation (many-to-many)
-model PostTag {
-  postId Int @map("post_id")
-  tagId  Int @map("tag_id")
+// Transaction - リアクション（トークン転送）
+model Transaction {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  senderId  String   @map("sender_id")
+  amount    Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([postId, tagId])
-  @@map("post_tags")
-}
-
-// Comment model
-model Comment {
-  id          Int      @id @default(autoincrement())
-  postId      Int      @map("post_id")
-  authorId    Int?     @map("author_id") // null for anonymous
-  content     String   @db.Text
-  isAnonymous Boolean  @default(false) @map("is_anonymous")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author      User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender Wallet @relation("sender", fields: [senderId], references: [id])
 
   @@index([postId])
-  @@index([authorId])
-  @@map("comments")
-}
-
-// Question model (Q&A)
-model Question {
-  id          Int       @id @default(autoincrement())
-  title       String
-  content     String    @db.Text
-  authorId    Int?      @map("author_id") // null for anonymous
-  isAnonymous Boolean   @default(false) @map("is_anonymous")
-  isSolved    Boolean   @default(false) @map("is_solved")
-  bestAnswerId Int?     @unique @map("best_answer_id")
-  viewCount   Int       @default(0) @map("view_count")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  answers     Answer[]
-  bestAnswer  Answer?   @relation("BestAnswer", fields: [bestAnswerId], references: [id])
-
-  @@index([authorId])
-  @@index([isSolved])
-  @@map("questions")
-}
-
-// Answer model (Q&A)
-model Answer {
-  id          Int       @id @default(autoincrement())
-  questionId  Int       @map("question_id")
-  authorId    Int?      @map("author_id") // null for anonymous
-  content     String    @db.Text
-  isAnonymous Boolean   @default(false) @map("is_anonymous")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  question    Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  bestAnswerFor Question? @relation("BestAnswer")
-
-  @@index([questionId])
-  @@index([authorId])
-  @@map("answers")
+  @@index([senderId])
+  @@map("transactions")
 }

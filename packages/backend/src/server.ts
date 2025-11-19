@@ -1,23 +1,26 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import cookie from '@fastify/cookie'
-import jwt from '@fastify/jwt'
 import multipart from '@fastify/multipart'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod'
+import type { ZodTypeProvider } from 'fastify-type-provider-zod'
+import {
+  jsonSchemaTransform,
+  serializerCompiler,
+  validatorCompiler,
+} from 'fastify-type-provider-zod'
 import { prismaPlugin } from './plugins/prisma.js'
-import { authPlugin } from './plugins/auth.js'
-import { authRoutes } from './routes/auth.js'
+import { walletsRoutes } from './routes/wallets.js'
 import { postsRoutes } from './routes/posts.js'
 import { categoriesRoutes } from './routes/categories.js'
-import { tagsRoutes } from './routes/tags.js'
+import { transactionsRoutes } from './routes/transactions.js'
 
 const PORT = parseInt(process.env.PORT || '3000', 10)
 const HOST = process.env.HOST || '0.0.0.0'
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'
 
-async function buildServer() {
+export async function buildServer() {
   const fastify = Fastify({
     logger: {
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -36,13 +39,6 @@ async function buildServer() {
 
   await fastify.register(cookie)
 
-  await fastify.register(jwt, {
-    secret: process.env.JWT_SECRET || 'your-secret-key',
-    sign: {
-      expiresIn: '7d',
-    },
-  })
-
   await fastify.register(multipart, {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB
@@ -54,7 +50,7 @@ async function buildServer() {
     openapi: {
       info: {
         title: 'Yamix API',
-        description: 'Open-source mental health community platform API',
+        description: 'Blockchain-inspired anonymous community platform API',
         version: '0.1.0',
       },
       servers: [
@@ -64,21 +60,13 @@ async function buildServer() {
         },
       ],
       tags: [
-        { name: 'auth', description: 'Authentication endpoints' },
+        { name: 'wallets', description: 'Wallet management endpoints' },
         { name: 'posts', description: 'Post management endpoints' },
         { name: 'categories', description: 'Category endpoints' },
-        { name: 'tags', description: 'Tag endpoints' },
+        { name: 'transactions', description: 'Transaction endpoints' },
       ],
-      components: {
-        securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-          },
-        },
-      },
     },
+    transform: jsonSchemaTransform,
   })
 
   await fastify.register(swaggerUi, {
@@ -91,13 +79,12 @@ async function buildServer() {
 
   // Custom plugins
   await fastify.register(prismaPlugin)
-  await fastify.register(authPlugin)
 
   // Routes
-  await fastify.register(authRoutes, { prefix: '/api/auth' })
+  await fastify.register(walletsRoutes, { prefix: '/api/wallets' })
   await fastify.register(postsRoutes, { prefix: '/api/posts' })
   await fastify.register(categoriesRoutes, { prefix: '/api/categories' })
-  await fastify.register(tagsRoutes, { prefix: '/api/tags' })
+  await fastify.register(transactionsRoutes, { prefix: '/api/transactions' })
 
   // Health check
   fastify.get('/health', async () => {
@@ -114,11 +101,11 @@ async function start() {
     await fastify.listen({ port: PORT, host: HOST })
 
     console.log(`
-🚀 Yamix Backend Server is running!
+Yamix Backend Server is running!
 
-📍 Server:        http://localhost:${PORT}
-📚 API Docs:      http://localhost:${PORT}/docs
-🏥 Health Check:  http://localhost:${PORT}/health
+Server:        http://localhost:${PORT}
+API Docs:      http://localhost:${PORT}/docs
+Health Check:  http://localhost:${PORT}/health
 
 Environment: ${process.env.NODE_ENV || 'development'}
     `)
