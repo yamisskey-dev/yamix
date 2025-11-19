@@ -32,33 +32,18 @@
           @click="router.push(`/posts/${post.id}`)"
         >
           <div class="post-content">
-            <h3 class="post-title">{{ post.title }}</h3>
             <div class="post-meta">
               <span class="category-badge">{{ post.category.name }}</span>
-              <span
-                v-for="tag in post.tags.slice(0, 3)"
-                :key="tag.id"
-                class="tag-badge"
-              >
-                #{{ tag.name }}
-              </span>
+              <span class="wallet-address">{{ post.wallet.address }}</span>
             </div>
             <p class="post-excerpt">
-              {{ post.content.substring(0, 150) }}...
+              {{ post.content.length > 200 ? post.content.substring(0, 200) + '...' : post.content }}
             </p>
             <div class="post-footer">
-              <span v-if="post.author" class="author">{{ post.author.displayName }}</span>
-              <span v-else class="author anonymous">匿名</span>
               <span class="date">{{ formatDate(post.createdAt) }}</span>
-              <span class="views">{{ post.viewCount }} views</span>
+              <span v-if="post._count" class="tokens">{{ post._count.transactions }} tokens</span>
             </div>
           </div>
-          <img
-            v-if="post.thumbnailUrl"
-            :src="post.thumbnailUrl"
-            :alt="post.title"
-            class="post-thumbnail"
-          />
         </article>
 
         <!-- Empty state -->
@@ -235,19 +220,12 @@ function formatDate(date: string | Date): string {
   min-width: 0;
 }
 
-.post-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: hsl(var(--foreground));
-  margin: 0 0 var(--space-2);
-  line-height: var(--line-height-tight);
-}
-
 .post-meta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-2);
+  align-items: center;
 }
 
 .category-badge {
@@ -259,12 +237,13 @@ function formatDate(date: string | Date): string {
   font-weight: 500;
 }
 
-.tag-badge {
+.wallet-address {
   font-size: var(--font-size-xs);
   padding: 2px var(--space-2);
   background: hsl(var(--item-hover));
-  color: hsl(var(--foreground-secondary));
+  color: hsl(var(--foreground-tertiary));
   border-radius: var(--radius-sm);
+  font-family: monospace;
 }
 
 .post-excerpt {
@@ -285,16 +264,9 @@ function formatDate(date: string | Date): string {
   color: hsl(var(--foreground-tertiary));
 }
 
-.author.anonymous {
-  font-style: italic;
-}
-
-.post-thumbnail {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: var(--radius-lg);
-  flex-shrink: 0;
+.tokens {
+  color: hsl(var(--primary));
+  font-weight: 500;
 }
 
 /* 空状態 */

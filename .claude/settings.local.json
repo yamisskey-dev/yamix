@@ -11,7 +11,9 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm test:run:*)",
       "Bash(pnpm --filter frontend test:run:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pnpm info:*)",
+      "Bash(pnpm typecheck:*)"
     ],
     "deny": [],
     "ask": []

@@ -37,41 +37,23 @@
 
       <!-- Post detail -->
       <article v-else-if="postsStore.currentPost" class="card">
-        <!-- Category & Tags -->
-        <div class="mb-4 flex flex-wrap gap-2">
+        <!-- Category & Wallet -->
+        <div class="mb-4 flex flex-wrap gap-2 items-center">
           <span class="bg-primary-100 text-primary-700 px-3 py-1 rounded">
             {{ postsStore.currentPost.category.name }}
           </span>
-          <span
-            v-for="tag in postsStore.currentPost.tags"
-            :key="tag.id"
-            class="bg-gray-200 text-gray-700 px-3 py-1 rounded cursor-pointer hover:bg-gray-300"
-            @click="router.push(`/tags/${tag.name}`)"
-          >
-            #{{ tag.name }}
+          <span class="bg-gray-200 text-gray-700 px-3 py-1 rounded font-mono text-sm">
+            {{ postsStore.currentPost.wallet.address }}
           </span>
         </div>
-
-        <!-- Title -->
-        <h1 class="text-4xl font-bold mb-4">{{ postsStore.currentPost.title }}</h1>
 
         <!-- Meta info -->
         <div class="flex items-center gap-4 mb-6 text-sm text-gray-600 pb-6 border-b">
-          <span v-if="postsStore.currentPost.author">
-            {{ postsStore.currentPost.author.displayName }}
-          </span>
-          <span v-else class="italic">匿名</span>
           <span>{{ new Date(postsStore.currentPost.createdAt).toLocaleDateString('ja-JP') }}</span>
-          <span>👁 {{ postsStore.currentPost.viewCount }}</span>
+          <span v-if="postsStore.currentPost._count" class="text-primary font-medium">
+            {{ postsStore.currentPost._count.transactions }} tokens
+          </span>
         </div>
-
-        <!-- Thumbnail -->
-        <img
-          v-if="postsStore.currentPost.thumbnailUrl"
-          :src="postsStore.currentPost.thumbnailUrl"
-          :alt="postsStore.currentPost.title"
-          class="w-full h-auto rounded-lg mb-6"
-        />
 
         <!-- Content -->
         <div class="prose prose-lg max-w-none">
@@ -80,8 +62,7 @@
 
         <!-- Actions -->
         <div class="mt-8 pt-6 border-t flex gap-4">
-          <button class="btn-secondary">いいね</button>
-          <button class="btn-secondary">ブックマーク</button>
+          <button class="btn-primary" @click="sendToken">トークンを送る</button>
           <button class="btn-secondary">共有</button>
         </div>
       </article>
@@ -122,17 +103,32 @@ import { onMounted } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePostsStore } from '../stores/posts'
+import { useWalletStore } from '../stores/wallet'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const postsStore = usePostsStore()
+const walletStore = useWalletStore()
 
 onMounted(async () => {
   await authStore.fetchUser()
-  const postId = Number(route.params.id)
+  const postId = route.params.id as string
   if (postId) {
     await postsStore.fetchPostById(postId)
   }
 })
+
+async function sendToken() {
+  if (!walletStore.isConnected) {
+    await walletStore.createWallet()
+  }
+
+  const postId = route.params.id as string
+  if (postId) {
+    await walletStore.sendTokens(postId)
+    // Refresh post to show updated token count
+    await postsStore.fetchPostById(postId)
+  }
+}
 </script>

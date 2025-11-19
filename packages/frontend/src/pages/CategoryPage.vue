@@ -56,30 +56,17 @@
               class="card hover:shadow-lg transition cursor-pointer"
               @click="router.push(`/posts/${post.id}`)"
             >
-              <div class="flex gap-4">
-                <img
-                  v-if="post.thumbnailUrl"
-                  :src="post.thumbnailUrl"
-                  :alt="post.title"
-                  class="w-32 h-32 object-cover rounded"
-                />
-                <div class="flex-1">
-                  <h3 class="text-xl font-bold mb-2 hover:text-primary">{{ post.title }}</h3>
-                  <div class="text-sm text-gray-600 mb-2">
-                    <span class="bg-primary-100 text-primary-700 px-2 py-1 rounded">{{ post.category.name }}</span>
-                    <span v-for="tag in post.tags.slice(0, 3)" :key="tag.id" class="ml-2 bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                      #{{ tag.name }}
-                    </span>
-                  </div>
-                  <p class="text-gray-700 mb-2 line-clamp-2">
-                    {{ post.content.substring(0, 150) }}...
-                  </p>
-                  <div class="text-sm text-gray-500 flex items-center gap-4">
-                    <span v-if="post.author">{{ post.author.displayName }}</span>
-                    <span v-else class="italic">匿名</span>
-                    <span>{{ new Date(post.createdAt).toLocaleDateString('ja-JP') }}</span>
-                    <span>👁 {{ post.viewCount }}</span>
-                  </div>
+              <div class="flex-1">
+                <div class="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                  <span class="bg-primary-100 text-primary-700 px-2 py-1 rounded">{{ post.category.name }}</span>
+                  <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded font-mono text-xs">{{ post.wallet.address }}</span>
+                </div>
+                <p class="text-gray-700 mb-2 line-clamp-2">
+                  {{ post.content.length > 150 ? post.content.substring(0, 150) + '...' : post.content }}
+                </p>
+                <div class="text-sm text-gray-500 flex items-center gap-4">
+                  <span>{{ new Date(post.createdAt).toLocaleDateString('ja-JP') }}</span>
+                  <span v-if="post._count" class="text-primary font-medium">{{ post._count.transactions }} tokens</span>
                 </div>
               </div>
             </article>

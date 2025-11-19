@@ -1,84 +1,60 @@
 /**
- * User type
+ * Wallet type (anonymous identity)
  */
-export interface User {
-  id: number
-  email: string
-  displayName: string
-  bio: string | null
-  avatarUrl: string | null
-  role: 'user' | 'moderator' | 'admin'
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * Public user type (without sensitive data)
- */
-export interface PublicUser {
-  id: number
-  displayName: string
-  bio: string | null
-  avatarUrl: string | null
-  createdAt: Date
+export interface Wallet {
+  id: string
+  address: string
+  balance: number
+  createdAt: string
 }
 
 /**
  * Post type
  */
 export interface Post {
-  id: number
-  title: string
+  id: string
   content: string
-  thumbnailUrl: string | null
-  categoryId: number
-  authorId: number | null // null for anonymous posts
-  status: 'draft' | 'published' | 'archived'
-  viewCount: number
-  createdAt: Date
-  updatedAt: Date
-  publishedAt: Date | null
+  walletId: string
+  categoryId: string
+  createdAt: string
 }
 
 /**
  * Post with relations
  */
 export interface PostWithRelations extends Post {
-  author: PublicUser | null
-  category: Category
-  tags: Tag[]
+  wallet: {
+    address: string
+  }
+  category: {
+    id: string
+    name: string
+  }
+  _count?: {
+    transactions: number
+  }
+  transactions?: Transaction[]
+}
+
+/**
+ * Transaction type (token transfer)
+ */
+export interface Transaction {
+  id: string
+  postId: string
+  senderId: string
+  amount: number
+  createdAt: string
 }
 
 /**
  * Category type
  */
 export interface Category {
-  id: number
+  id: string
   name: string
   slug: string
-  description: string | null
-}
-
-/**
- * Tag type
- */
-export interface Tag {
-  id: number
-  name: string
-  slug: string
-}
-
-/**
- * Comment type
- */
-export interface Comment {
-  id: number
-  postId: number
-  authorId: number | null
-  content: string
-  isAnonymous: boolean
-  createdAt: Date
-  updatedAt: Date
+  order?: number
 }
 
 /**
@@ -94,7 +70,18 @@ export interface ApiResponse<T = unknown> {
 }
 
 /**
- * Paginated response
+ * Paginated response for posts
+ */
+export interface PaginatedPostsResponse {
+  posts: PostWithRelations[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+/**
+ * Generic paginated response
  */
 export interface PaginatedResponse<T> {
   items: T[]

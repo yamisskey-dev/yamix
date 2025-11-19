@@ -8,34 +8,19 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/HomePage.vue'),
   },
   {
-    path: '/posts/:id',
-    name: 'post-detail',
-    component: () => import('../pages/PostDetailPage.vue'),
-  },
-  {
     path: '/posts/new',
     name: 'post-create',
     component: () => import('../pages/PostCreatePage.vue'),
   },
   {
-    path: '/login',
-    name: 'login',
-    component: () => import('../pages/LoginPage.vue'),
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: () => import('../pages/RegisterPage.vue'),
+    path: '/posts/:id',
+    name: 'post-detail',
+    component: () => import('../pages/PostDetailPage.vue'),
   },
   {
     path: '/category/:slug',
     name: 'category',
     component: () => import('../pages/CategoryPage.vue'),
-  },
-  {
-    path: '/tag/:slug',
-    name: 'tag',
-    component: () => import('../pages/TagPage.vue'),
   },
 ]
 
