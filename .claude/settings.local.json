@@ -7,7 +7,9 @@
       "Bash(pnpm prisma:migrate:*)",
       "Bash(pnpm prisma migrate:*)",
       "Bash(pnpm db:seed:*)",
-      "Bash(pnpm dev:*)"
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm test:run:*)"
     ],
     "deny": [],
     "ask": []

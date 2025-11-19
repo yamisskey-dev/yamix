@@ -52,20 +52,7 @@ function formatTime(date: Date): string {
 </script>
 
 <template>
-  <!-- FAB (Floating Action Button) -->
-  <button
-    class="chat-fab"
-    :class="{ hidden: chatStore.isPanelOpen }"
-    @click="chatStore.togglePanel"
-    aria-label="Yamiiを開く"
-  >
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-  </button>
-
-  <!-- Chat Panel -->
-  <div class="chat-panel" :class="{ open: chatStore.isPanelOpen }">
+  <div class="chat-panel">
     <!-- ヘッダー -->
     <header class="panel-header">
       <div class="header-content">
@@ -77,12 +64,6 @@ function formatTime(date: Date): string {
           <p class="header-subtitle">人生相談AI</p>
         </div>
       </div>
-      <button class="close-button" @click="chatStore.closePanel" aria-label="閉じる">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
     </header>
 
     <!-- メッセージエリア -->
@@ -155,72 +136,21 @@ function formatTime(date: Date): string {
       </button>
     </div>
   </div>
-
-  <!-- オーバーレイ (モバイル用) -->
-  <div
-    v-if="chatStore.isPanelOpen"
-    class="panel-overlay"
-    @click="chatStore.closePanel"
-  ></div>
 </template>
 
 <style scoped>
-/* FAB */
-.chat-fab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
-  border: none;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s, visibility 0.2s;
-  z-index: 1000;
-}
-
-.chat-fab:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(147, 51, 234, 0.5);
-}
-
-.chat-fab.hidden {
-  opacity: 0;
-  visibility: hidden;
-  transform: scale(0.8);
-}
-
 /* パネル */
 .chat-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 400px;
-  height: 100vh;
+  height: 100%;
   background: #f5f5f5;
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
-  z-index: 1001;
-}
-
-.chat-panel.open {
-  transform: translateX(0);
 }
 
 /* ヘッダー */
 .panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px 16px;
   background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
   color: white;
@@ -258,23 +188,6 @@ function formatTime(date: Date): string {
   font-size: 11px;
   opacity: 0.8;
   margin: 2px 0 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.close-button:hover {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 /* メッセージエリア */
@@ -511,41 +424,5 @@ function formatTime(date: Date): string {
 .send-button:disabled {
   background: #d1d5db;
   cursor: not-allowed;
-}
-
-/* オーバーレイ */
-.panel-overlay {
-  display: none;
-}
-
-/* レスポンシブ */
-@media (max-width: 768px) {
-  .chat-fab {
-    bottom: 16px;
-    right: 16px;
-  }
-
-  .chat-panel {
-    width: 100%;
-    height: 100dvh;
-  }
-
-  .panel-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-  }
-
-  .message-bubble {
-    max-width: 85%;
-  }
-}
-
-@media (max-width: 480px) {
-  .chat-panel {
-    border-radius: 0;
-  }
 }
 </style>
