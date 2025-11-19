@@ -42,8 +42,7 @@ yarn-error.log*
 .docker
 
 # Prisma
-packages/backend/prisma/migrations/*
-!packages/backend/prisma/migrations/.gitkeep
+# Note: migrations should be committed for deployment
 
 # Test
 coverage
