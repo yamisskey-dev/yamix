@@ -121,8 +121,8 @@ function formatDate(date: string | Date): string {
 /* タイムラインタブ */
 .timeline-tabs {
   display: flex;
-  background: white;
-  border-bottom: 1px solid #e5e5e5;
+  background: hsl(var(--background-secondary));
+  border-bottom: 1px solid hsl(var(--border));
   position: sticky;
   top: 0;
   z-index: 10;
@@ -130,24 +130,24 @@ function formatDate(date: string | Date): string {
 
 .tab-item {
   flex: 1;
-  padding: 14px 16px;
-  font-size: 14px;
+  padding: var(--space-4) var(--space-4);
+  font-size: var(--font-size-md);
   font-weight: 600;
-  color: #6b7280;
+  color: hsl(var(--foreground-secondary));
   background: none;
   border: none;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  transition: all var(--transition-normal) var(--spring-easing);
   position: relative;
 }
 
 .tab-item:hover {
-  background: #f9fafb;
-  color: #374151;
+  background: hsl(var(--item-hover));
+  color: hsl(var(--foreground));
 }
 
 .tab-item.active {
-  color: #9333ea;
+  color: hsl(var(--primary));
 }
 
 .tab-item.active::after {
@@ -157,7 +157,7 @@ function formatDate(date: string | Date): string {
   left: 0;
   right: 0;
   height: 2px;
-  background: #9333ea;
+  background: hsl(var(--primary));
 }
 
 /* 投稿コンテナ */
@@ -171,18 +171,18 @@ function formatDate(date: string | Date): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 16px;
-  color: #6b7280;
+  padding: var(--space-12) var(--space-4);
+  color: hsl(var(--foreground-secondary));
 }
 
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #e5e7eb;
-  border-top-color: #9333ea;
+  border: 3px solid hsl(var(--border));
+  border-top-color: hsl(var(--primary));
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 @keyframes spin {
@@ -193,13 +193,13 @@ function formatDate(date: string | Date): string {
 
 /* エラー */
 .error-state {
-  padding: 16px;
-  margin: 16px;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  color: #dc2626;
-  font-size: 14px;
+  padding: var(--space-4);
+  margin: var(--space-4);
+  background: hsl(var(--error) / 0.1);
+  border: 1px solid hsl(var(--error) / 0.2);
+  border-radius: var(--radius-lg);
+  color: hsl(var(--error));
+  font-size: var(--font-size-md);
 }
 
 /* 投稿リスト */
@@ -211,16 +211,16 @@ function formatDate(date: string | Date): string {
 /* 投稿カード */
 .post-card {
   display: flex;
-  gap: 16px;
-  padding: 16px;
-  background: white;
-  border-bottom: 1px solid #e5e5e5;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: hsl(var(--background-secondary));
+  border-bottom: 1px solid hsl(var(--border));
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .post-card:hover {
-  background: #f9fafb;
+  background: hsl(var(--item-hover));
 }
 
 .post-content {
@@ -229,41 +229,42 @@ function formatDate(date: string | Date): string {
 }
 
 .post-title {
-  font-size: 15px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 8px;
-  line-height: 1.4;
+  color: hsl(var(--foreground));
+  margin: 0 0 var(--space-2);
+  line-height: var(--line-height-tight);
 }
 
 .post-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .category-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: #f3e8ff;
-  color: #9333ea;
-  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-2);
+  background: hsl(var(--accent-light));
+  color: hsl(var(--primary));
+  border-radius: var(--radius-sm);
+  font-weight: 500;
 }
 
 .tag-badge {
-  font-size: 11px;
-  padding: 2px 6px;
-  background: #f3f4f6;
-  color: #6b7280;
-  border-radius: 4px;
+  font-size: var(--font-size-xs);
+  padding: 2px var(--space-2);
+  background: hsl(var(--item-hover));
+  color: hsl(var(--foreground-secondary));
+  border-radius: var(--radius-sm);
 }
 
 .post-excerpt {
-  font-size: 13px;
-  color: #4b5563;
-  margin: 0 0 8px;
-  line-height: 1.5;
+  font-size: var(--font-size-base);
+  color: hsl(var(--foreground-secondary));
+  margin: 0 0 var(--space-2);
+  line-height: var(--line-height-normal);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -272,9 +273,9 @@ function formatDate(date: string | Date): string {
 
 .post-footer {
   display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #9ca3af;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground-tertiary));
 }
 
 .author.anonymous {
@@ -285,45 +286,45 @@ function formatDate(date: string | Date): string {
   width: 80px;
   height: 80px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   flex-shrink: 0;
 }
 
 /* 空状態 */
 .empty-state {
-  padding: 48px 16px;
+  padding: var(--space-12) var(--space-4);
   text-align: center;
-  color: #6b7280;
-  font-size: 14px;
+  color: hsl(var(--foreground-secondary));
+  font-size: var(--font-size-md);
 }
 
 /* ページネーション */
 .pagination {
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 16px;
-  background: white;
-  border-top: 1px solid #e5e5e5;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: hsl(var(--background-secondary));
+  border-top: 1px solid hsl(var(--border));
 }
 
 .page-button {
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-base);
   border: none;
-  border-radius: 6px;
-  background: #f3f4f6;
-  color: #374151;
+  border-radius: var(--radius-md);
+  background: hsl(var(--item-hover));
+  color: hsl(var(--foreground));
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .page-button:hover {
-  background: #e5e7eb;
+  background: hsl(var(--item-active));
 }
 
 .page-button.active {
-  background: #9333ea;
-  color: white;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 </style>

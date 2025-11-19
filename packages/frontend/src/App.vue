@@ -46,12 +46,12 @@ import ChatPanel from './components/ChatPanel.vue'
 <style scoped>
 .app-layout {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: hsl(var(--background));
 }
 
 .three-column {
   display: grid;
-  grid-template-columns: 200px 1fr 360px;
+  grid-template-columns: var(--sidebar-width) 1fr var(--chat-panel-width);
 }
 
 /* 左サイドバー */
@@ -59,33 +59,44 @@ import ChatPanel from './components/ChatPanel.vue'
   position: sticky;
   top: 0;
   height: 100vh;
-  background: white;
-  border-right: 1px solid #e5e5e5;
-  padding: 12px;
+  background: hsl(var(--background-secondary));
+  border-right: 1px solid hsl(var(--border));
+  padding: var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   overflow-y: auto;
 }
 
 .app-logo {
   display: flex;
   justify-content: center;
-  padding: 4px 0;
+  padding: var(--space-1) 0;
 }
 
 .logo-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: bold;
-  color: white;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: hsl(var(--primary-foreground));
   text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal) var(--spring-easing);
+}
+
+.logo-icon:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+}
+
+.logo-icon:active {
+  transform: scale(0.98);
 }
 
 /* 下部セクション */
@@ -93,7 +104,7 @@ import ChatPanel from './components/ChatPanel.vue'
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* 投稿するボタン */
@@ -101,65 +112,73 @@ import ChatPanel from './components/ChatPanel.vue'
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #9333ea;
-  color: white;
-  border-radius: 20px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-radius: var(--radius-full);
   text-decoration: none;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
-  transition: background 0.2s;
+  transition: all var(--transition-normal) var(--spring-easing);
   border: none;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
 .post-button:hover {
-  background: #7e22ce;
+  background: hsl(var(--primary-hover));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.post-button:active {
+  transform: translateY(0) scale(0.98);
 }
 
 /* 認証セクション */
 .auth-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e5e5;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid hsl(var(--border));
 }
 
 .auth-button {
   display: block;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   text-align: center;
-  transition: background 0.2s;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .auth-login {
-  color: #4b5563;
-  background: #f3f4f6;
+  color: hsl(var(--foreground-secondary));
+  background: hsl(var(--item-hover));
 }
 
 .auth-login:hover {
-  background: #e5e7eb;
+  background: hsl(var(--item-active));
+  color: hsl(var(--foreground));
 }
 
 .auth-register {
-  color: white;
-  background: #9333ea;
+  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary));
 }
 
 .auth-register:hover {
-  background: #7e22ce;
+  background: hsl(var(--primary-hover));
 }
 
 /* 中央コンテンツ */
 .main-content {
   min-height: 100vh;
-  border-right: 1px solid #e5e5e5;
+  border-right: 1px solid hsl(var(--border));
 }
 
 /* 右サイドバー */
@@ -167,7 +186,7 @@ import ChatPanel from './components/ChatPanel.vue'
   position: sticky;
   top: 0;
   height: 100vh;
-  background: white;
+  background: hsl(var(--background-secondary));
   display: flex;
   flex-direction: column;
 }
@@ -175,11 +194,11 @@ import ChatPanel from './components/ChatPanel.vue'
 /* レスポンシブ */
 @media (max-width: 1024px) {
   .three-column {
-    grid-template-columns: 60px 1fr 320px;
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr 320px;
   }
 
   .sidebar-left {
-    padding: 8px;
+    padding: var(--space-2);
   }
 
   .post-button span,

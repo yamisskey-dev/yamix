@@ -142,7 +142,7 @@ function formatTime(date: Date): string {
 /* パネル */
 .chat-panel {
   height: 100%;
-  background: #f5f5f5;
+  background: hsl(var(--background));
   display: flex;
   flex-direction: column;
 }
@@ -151,27 +151,27 @@ function formatTime(date: Date): string {
 .panel-header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
-  color: white;
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
+  color: hsl(var(--primary-foreground));
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .avatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: hsl(var(--primary-foreground) / 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
 }
 
 .header-info {
@@ -179,13 +179,13 @@ function formatTime(date: Date): string {
 }
 
 .header-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   margin: 0;
 }
 
 .header-subtitle {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   opacity: 0.8;
   margin: 2px 0 0;
 }
@@ -194,10 +194,10 @@ function formatTime(date: Date): string {
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* ウェルカムメッセージ */
@@ -207,36 +207,37 @@ function formatTime(date: Date): string {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 32px 16px;
-  color: #666;
+  padding: var(--space-8) var(--space-4);
+  color: hsl(var(--foreground-secondary));
 }
 
 .welcome-icon {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-lg);
 }
 
 .welcome-icon span {
   font-size: 28px;
-  font-weight: bold;
-  color: white;
+  font-weight: 700;
+  color: hsl(var(--primary-foreground));
 }
 
 .welcome-message h3 {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  margin: 0 0 8px;
-  color: #333;
+  margin: 0 0 var(--space-2);
+  color: hsl(var(--foreground));
 }
 
 .welcome-message p {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   margin: 0;
   max-width: 280px;
 }
@@ -245,7 +246,8 @@ function formatTime(date: Date): string {
 .message-wrapper {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
+  animation: slide-up var(--transition-normal) var(--spring-easing);
 }
 
 .message-user {
@@ -256,7 +258,7 @@ function formatTime(date: Date): string {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-hover)) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -264,35 +266,35 @@ function formatTime(date: Date): string {
 }
 
 .message-avatar span {
-  font-size: 12px;
-  font-weight: bold;
-  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: hsl(var(--primary-foreground));
 }
 
 .message-bubble {
   max-width: 75%;
-  padding: 10px 14px;
-  border-radius: 16px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-2xl);
   position: relative;
 }
 
 .message-user .message-bubble {
-  background: #9333ea;
-  color: white;
-  border-bottom-right-radius: 4px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-bottom-right-radius: var(--radius-sm);
 }
 
 .message-assistant .message-bubble {
-  background: white;
-  color: #333;
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: hsl(var(--background-secondary));
+  color: hsl(var(--foreground));
+  border-bottom-left-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .message-content {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -301,7 +303,7 @@ function formatTime(date: Date): string {
   display: block;
   font-size: 9px;
   opacity: 0.6;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   text-align: right;
 }
 
@@ -309,15 +311,15 @@ function formatTime(date: Date): string {
 .loading {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 14px;
+  gap: var(--space-1);
+  padding: var(--space-4);
 }
 
 .typing-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #9333ea;
+  background: hsl(var(--primary));
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -340,14 +342,25 @@ function formatTime(date: Date): string {
   }
 }
 
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* エラー表示 */
 .error-message {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  border-radius: 8px;
-  padding: 10px 14px;
-  color: #dc2626;
-  font-size: 12px;
+  background: hsl(var(--error) / 0.1);
+  border: 1px solid hsl(var(--error) / 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+  color: hsl(var(--error));
+  font-size: var(--font-size-sm);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -360,61 +373,70 @@ function formatTime(date: Date): string {
 .error-dismiss {
   background: none;
   border: none;
-  color: #dc2626;
-  font-size: 11px;
+  color: hsl(var(--error));
+  font-size: var(--font-size-xs);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
+  transition: opacity var(--transition-fast);
 }
 
 .error-dismiss:hover {
-  text-decoration: underline;
+  opacity: 0.7;
 }
 
 /* 入力エリア */
 .input-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  background: white;
-  border-top: 1px solid #e5e5e5;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: hsl(var(--background-secondary));
+  border-top: 1px solid hsl(var(--border));
 }
 
 .message-input {
   flex: 1;
-  padding: 10px 14px;
-  border: 1px solid #e5e5e5;
-  border-radius: 20px;
-  font-size: 13px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-base);
   outline: none;
-  transition: border-color 0.2s;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .message-input:focus {
-  border-color: #9333ea;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
 }
 
 .message-input:disabled {
-  background: #f5f5f5;
+  background: hsl(var(--item-hover));
   cursor: not-allowed;
+}
+
+.message-input::placeholder {
+  color: hsl(var(--foreground-tertiary));
 }
 
 .send-button {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #9333ea;
+  background: hsl(var(--primary));
   border: none;
-  color: white;
+  color: hsl(var(--primary-foreground));
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, transform 0.1s;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .send-button:hover:not(:disabled) {
-  background: #7e22ce;
+  background: hsl(var(--primary-hover));
+  transform: scale(1.05);
 }
 
 .send-button:active:not(:disabled) {
@@ -422,7 +444,7 @@ function formatTime(date: Date): string {
 }
 
 .send-button:disabled {
-  background: #d1d5db;
+  background: hsl(var(--foreground-tertiary));
   cursor: not-allowed;
 }
 </style>
