@@ -104,16 +104,17 @@ onMounted(async () => {
 
 function switchTab(tab: 'latest' | 'popular') {
   activeTab.value = tab
-  // TODO: タブに応じた投稿を取得
-  postsStore.fetchPosts({ sort: tab === 'popular' ? 'popular' : 'latest' })
+  // TODO: バックエンドでsortパラメータをサポートしたら有効化
+  postsStore.fetchPosts()
 }
 
 function loadPage(page: number) {
-  postsStore.fetchPosts({ page, sort: activeTab.value === 'popular' ? 'popular' : 'latest' })
+  postsStore.fetchPosts({ page })
 }
 
-function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString('ja-JP')
+function formatDate(date: string | Date): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('ja-JP')
 }
 </script>
 
