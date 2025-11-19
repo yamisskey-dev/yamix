@@ -39,13 +39,33 @@
         <button class="action-button primary" @click="sendToken">
           トークンを送る
         </button>
+        <button
+          v-if="isOwnPost"
+          class="action-button danger"
+          @click="confirmDelete"
+        >
+          削除
+        </button>
       </div>
     </article>
+
+    <!-- 削除確認モーダル -->
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click="showDeleteConfirm = false">
+      <div class="confirm-modal" @click.stop>
+        <h3>投稿を削除</h3>
+        <p>この投稿を削除しますか？</p>
+        <p class="warning-text">この操作は取り消せません。</p>
+        <div class="modal-actions">
+          <button class="action-button" @click="showDeleteConfirm = false">キャンセル</button>
+          <button class="action-button danger" @click="deletePost">削除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { usePostsStore } from '../stores/posts'
 import { useWalletStore } from '../stores/wallet'
@@ -54,6 +74,13 @@ const router = useRouter()
 const route = useRoute()
 const postsStore = usePostsStore()
 const walletStore = useWalletStore()
+
+const showDeleteConfirm = ref(false)
+
+const isOwnPost = computed(() => {
+  if (!postsStore.currentPost || !walletStore.walletId) return false
+  return postsStore.currentPost.walletId === walletStore.walletId
+})
 
 onMounted(async () => {
   const postId = route.params.id as string
@@ -72,6 +99,21 @@ async function sendToken() {
     await walletStore.sendTokens(postId)
     await postsStore.fetchPostById(postId)
   }
+}
+
+function confirmDelete() {
+  showDeleteConfirm.value = true
+}
+
+async function deletePost() {
+  const postId = route.params.id as string
+  if (postId && walletStore.walletId) {
+    const success = await postsStore.deletePost(postId, walletStore.walletId)
+    if (success) {
+      router.push('/')
+    }
+  }
+  showDeleteConfirm.value = false
 }
 
 function formatDate(date: string | Date): string {
@@ -174,6 +216,8 @@ function formatDate(date: string | Date): string {
 }
 
 .post-actions {
+  display: flex;
+  gap: var(--space-2);
   padding-top: var(--space-4);
   border-top: 1px solid hsl(var(--border));
 }
@@ -201,5 +245,65 @@ function formatDate(date: string | Date): string {
 
 .action-button.primary:hover {
   opacity: 0.9;
+}
+
+.action-button.danger {
+  background: hsl(var(--error));
+  color: white;
+  border-color: hsl(var(--error));
+}
+
+.action-button.danger:hover {
+  opacity: 0.9;
+}
+
+/* モーダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 100px;
+  z-index: 100;
+}
+
+.confirm-modal {
+  background: hsl(var(--background));
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  width: 90%;
+  max-width: 360px;
+}
+
+.confirm-modal h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md);
+  color: hsl(var(--foreground));
+}
+
+.confirm-modal p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground-secondary));
+}
+
+.warning-text {
+  color: hsl(var(--error)) !important;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.modal-actions .action-button {
+  flex: 1;
 }
 </style>

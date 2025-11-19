@@ -67,7 +67,7 @@ class ApiClient {
     return this.request<T>(path, { ...options, method: 'PUT', body })
   }
 
-  async delete<T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+  async delete<T>(path: string, options?: Omit<RequestOptions, 'method'>): Promise<T> {
     return this.request<T>(path, { ...options, method: 'DELETE' })
   }
 }

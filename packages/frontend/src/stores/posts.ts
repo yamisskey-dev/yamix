@@ -75,6 +75,28 @@ export const usePostsStore = defineStore('posts', () => {
     }
   }
 
+  async function deletePost(postId: string, walletId: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      await api.delete(`/api/posts/${postId}`, {
+        body: { walletId },
+      })
+      // Remove from local state
+      posts.value = posts.value.filter(p => p.id !== postId)
+      if (currentPost.value?.id === postId) {
+        currentPost.value = null
+      }
+      return true
+    } catch (err: any) {
+      error.value = err.message || '投稿の削除に失敗しました'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     posts,
     currentPost,
@@ -84,5 +106,6 @@ export const usePostsStore = defineStore('posts', () => {
     fetchPosts,
     fetchPostById,
     createPost,
+    deletePost,
   }
 })

@@ -148,4 +148,44 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       return reply.code(201).send(post)
     }
   )
+
+  // Delete post
+  server.delete(
+    '/:id',
+    {
+      schema: {
+        description: 'Delete a post (only by owner)',
+        tags: ['posts'],
+      },
+    },
+    async (request, reply) => {
+      const { id } = request.params as { id: string }
+      const { walletId } = request.body as { walletId?: string }
+
+      if (!walletId) {
+        return reply.code(400).send({ error: 'Wallet ID is required' })
+      }
+
+      // Get the post
+      const post = await fastify.prisma.post.findUnique({
+        where: { id },
+      })
+
+      if (!post) {
+        return reply.code(404).send({ error: 'Post not found' })
+      }
+
+      // Verify ownership
+      if (post.walletId !== walletId) {
+        return reply.code(403).send({ error: 'Not authorized to delete this post' })
+      }
+
+      // Delete post (transactions will be cascade deleted)
+      await fastify.prisma.post.delete({
+        where: { id },
+      })
+
+      return reply.code(204).send()
+    }
+  )
 }
