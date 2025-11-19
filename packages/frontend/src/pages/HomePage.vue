@@ -8,24 +8,6 @@
       >
         最新
       </button>
-      <button
-        :class="['tab-item', { active: activeTab === 'popular' }]"
-        @click="switchTab('popular')"
-      >
-        人気
-      </button>
-      <button
-        :class="['tab-item', { active: activeTab === 'support' }]"
-        @click="switchTab('support')"
-      >
-        支援情報
-      </button>
-      <button
-        :class="['tab-item', { active: activeTab === 'search' }]"
-        @click="switchTab('search')"
-      >
-        検索
-      </button>
     </div>
 
     <!-- 投稿リスト -->
@@ -108,19 +90,15 @@ import { usePostsStore } from '../stores/posts'
 const router = useRouter()
 const postsStore = usePostsStore()
 
-const activeTab = ref<'latest' | 'popular' | 'support' | 'search'>('latest')
+const activeTab = ref<'latest'>('latest')
 
 onMounted(async () => {
   await postsStore.fetchPosts()
 })
 
-function switchTab(tab: 'latest' | 'popular' | 'support' | 'search') {
+function switchTab(tab: 'latest') {
   activeTab.value = tab
-  // TODO: 各タブの機能を実装
-  if (tab === 'latest' || tab === 'popular') {
-    postsStore.fetchPosts()
-  }
-  // support と search は後で実装
+  postsStore.fetchPosts()
 }
 
 function loadPage(page: number) {

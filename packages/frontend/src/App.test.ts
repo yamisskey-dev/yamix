@@ -86,17 +86,6 @@ describe('App - 3カラムレイアウト', () => {
       const postButton = wrapper.find('.post-button')
       expect(postButton.exists()).toBe(true)
     })
-
-    it('支援情報を登録ボタンが存在する', () => {
-      const wrapper = mount(App, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      const supportButton = wrapper.find('.support-button')
-      expect(supportButton.exists()).toBe(true)
-    })
   })
 
   describe('サイドバー - 認証', () => {
@@ -122,19 +111,19 @@ describe('App - 3カラムレイアウト', () => {
       expect(registerLink.exists()).toBe(true)
     })
 
-    it('認証ボタンがアクションボタンより下にある', () => {
+    it('投稿ボタンと認証ボタンが下部セクションにある', () => {
       const wrapper = mount(App, {
         global: {
           plugins: [router],
         },
       })
 
-      // サイドバー内の要素順序を確認
+      // サイドバー内の下部セクションを確認
       const sidebar = wrapper.find('.sidebar-left')
-      const actionSection = sidebar.find('.action-section')
+      const bottomSection = sidebar.find('.bottom-section')
       const authSection = sidebar.find('.auth-section')
 
-      expect(actionSection.exists()).toBe(true)
+      expect(bottomSection.exists()).toBe(true)
       expect(authSection.exists()).toBe(true)
     })
   })

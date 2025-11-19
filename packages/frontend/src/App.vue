@@ -7,8 +7,9 @@
         <RouterLink to="/" class="logo-icon">Y</RouterLink>
       </div>
 
-      <!-- アクションボタン -->
-      <div class="action-section">
+      <!-- 下部セクション -->
+      <div class="bottom-section">
+        <!-- 投稿するボタン -->
         <RouterLink to="/posts/new" class="post-button">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 20h9"></path>
@@ -16,18 +17,12 @@
           </svg>
           <span>投稿する</span>
         </RouterLink>
-        <button class="support-button">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <span>支援情報を登録</span>
-        </button>
-      </div>
 
-      <!-- 認証ボタン -->
-      <div class="auth-section">
-        <RouterLink to="/login" class="auth-button auth-login">ログイン</RouterLink>
-        <RouterLink to="/register" class="auth-button auth-register">会員登録</RouterLink>
+        <!-- 認証ボタン -->
+        <div class="auth-section">
+          <RouterLink to="/login" class="auth-button auth-login">ログイン</RouterLink>
+          <RouterLink to="/register" class="auth-button auth-register">会員登録</RouterLink>
+        </div>
       </div>
     </aside>
 
@@ -93,11 +88,12 @@ import ChatPanel from './components/ChatPanel.vue'
   text-decoration: none;
 }
 
-/* アクションセクション */
-.action-section {
+/* 下部セクション */
+.bottom-section {
+  margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 /* 投稿するボタン */
@@ -122,35 +118,12 @@ import ChatPanel from './components/ChatPanel.vue'
   background: #7e22ce;
 }
 
-/* 支援情報を登録ボタン */
-.support-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #f3f4f6;
-  color: #374151;
-  border-radius: 20px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-  transition: background 0.2s;
-  border: none;
-  cursor: pointer;
-}
-
-.support-button:hover {
-  background: #e5e7eb;
-}
-
 /* 認証セクション */
 .auth-section {
-  margin-top: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid #e5e5e5;
 }
 
@@ -210,13 +183,11 @@ import ChatPanel from './components/ChatPanel.vue'
   }
 
   .post-button span,
-  .support-button span,
   .auth-button {
     display: none;
   }
 
-  .post-button,
-  .support-button {
+  .post-button {
     width: 44px;
     height: 44px;
     padding: 0;
