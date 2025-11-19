@@ -10,8 +10,6 @@ const router = createRouter({
   routes: [
     { path: '/', component: { template: '<div>Home</div>' } },
     { path: '/posts/new', component: { template: '<div>New Post</div>' } },
-    { path: '/category/:slug', component: { template: '<div>Category</div>' } },
-    { path: '/tag/:slug', component: { template: '<div>Tag</div>' } },
     { path: '/login', component: { template: '<div>Login</div>' } },
     { path: '/register', component: { template: '<div>Register</div>' } },
   ],
@@ -65,7 +63,7 @@ describe('App - 3カラムレイアウト', () => {
     })
   })
 
-  describe('サイドバー - ロゴとアクション', () => {
+  describe('サイドバー - ロゴ', () => {
     it('ロゴアイコンが存在する', () => {
       const wrapper = mount(App, {
         global: {
@@ -75,7 +73,9 @@ describe('App - 3カラムレイアウト', () => {
 
       expect(wrapper.find('.app-logo .logo-icon').exists()).toBe(true)
     })
+  })
 
+  describe('サイドバー - アクション', () => {
     it('投稿するボタンが存在する', () => {
       const wrapper = mount(App, {
         global: {
@@ -86,65 +86,16 @@ describe('App - 3カラムレイアウト', () => {
       const postButton = wrapper.find('.post-button')
       expect(postButton.exists()).toBe(true)
     })
-  })
 
-  describe('サイドバー - カテゴリー', () => {
-    it('カテゴリーセクションが存在する', () => {
+    it('支援情報を登録ボタンが存在する', () => {
       const wrapper = mount(App, {
         global: {
           plugins: [router],
         },
       })
 
-      expect(wrapper.find('.nav-section-categories').exists()).toBe(true)
-    })
-
-    it('コラムカテゴリーリンクが存在する', () => {
-      const wrapper = mount(App, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      const links = wrapper.findAll('.nav-section-categories a')
-      const columnLink = links.find(link => link.text().includes('コラム'))
-      expect(columnLink).toBeDefined()
-    })
-
-    it('体験談カテゴリーリンクが存在する', () => {
-      const wrapper = mount(App, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      const links = wrapper.findAll('.nav-section-categories a')
-      const experienceLink = links.find(link => link.text().includes('体験談'))
-      expect(experienceLink).toBeDefined()
-    })
-  })
-
-  describe('サイドバー - 人気のタグ', () => {
-    it('タグセクションが存在する', () => {
-      const wrapper = mount(App, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      expect(wrapper.find('.nav-section-tags').exists()).toBe(true)
-    })
-
-    it('メンタルヘルスタグが存在する', () => {
-      const wrapper = mount(App, {
-        global: {
-          plugins: [router],
-        },
-      })
-
-      const tags = wrapper.findAll('.nav-section-tags a')
-      const mentalHealthTag = tags.find(tag => tag.text().includes('メンタルヘルス'))
-      expect(mentalHealthTag).toBeDefined()
+      const supportButton = wrapper.find('.support-button')
+      expect(supportButton.exists()).toBe(true)
     })
   })
 
@@ -169,6 +120,22 @@ describe('App - 3カラムレイアウト', () => {
 
       const registerLink = wrapper.find('a[href="/register"]')
       expect(registerLink.exists()).toBe(true)
+    })
+
+    it('認証ボタンがアクションボタンより下にある', () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router],
+        },
+      })
+
+      // サイドバー内の要素順序を確認
+      const sidebar = wrapper.find('.sidebar-left')
+      const actionSection = sidebar.find('.action-section')
+      const authSection = sidebar.find('.auth-section')
+
+      expect(actionSection.exists()).toBe(true)
+      expect(authSection.exists()).toBe(true)
     })
   })
 })
