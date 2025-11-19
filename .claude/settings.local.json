@@ -9,7 +9,9 @@
       "Bash(pnpm db:seed:*)",
       "Bash(pnpm dev:*)",
       "Bash(pnpm add:*)",
-      "Bash(pnpm test:run:*)"
+      "Bash(pnpm test:run:*)",
+      "Bash(pnpm --filter frontend test:run:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -14,6 +14,18 @@
       >
         人気
       </button>
+      <button
+        :class="['tab-item', { active: activeTab === 'support' }]"
+        @click="switchTab('support')"
+      >
+        支援情報
+      </button>
+      <button
+        :class="['tab-item', { active: activeTab === 'search' }]"
+        @click="switchTab('search')"
+      >
+        検索
+      </button>
     </div>
 
     <!-- 投稿リスト -->
@@ -96,16 +108,19 @@ import { usePostsStore } from '../stores/posts'
 const router = useRouter()
 const postsStore = usePostsStore()
 
-const activeTab = ref<'latest' | 'popular'>('latest')
+const activeTab = ref<'latest' | 'popular' | 'support' | 'search'>('latest')
 
 onMounted(async () => {
   await postsStore.fetchPosts()
 })
 
-function switchTab(tab: 'latest' | 'popular') {
+function switchTab(tab: 'latest' | 'popular' | 'support' | 'search') {
   activeTab.value = tab
-  // TODO: バックエンドでsortパラメータをサポートしたら有効化
-  postsStore.fetchPosts()
+  // TODO: 各タブの機能を実装
+  if (tab === 'latest' || tab === 'popular') {
+    postsStore.fetchPosts()
+  }
+  // support と search は後で実装
 }
 
 function loadPage(page: number) {

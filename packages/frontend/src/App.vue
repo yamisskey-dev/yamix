@@ -7,33 +7,21 @@
         <RouterLink to="/" class="logo-icon">Y</RouterLink>
       </div>
 
-      <!-- 投稿するボタン -->
-      <RouterLink to="/posts/new" class="post-button">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-        </svg>
-        <span>投稿する</span>
-      </RouterLink>
-
-      <!-- カテゴリー -->
-      <div class="nav-section nav-section-categories">
-        <h3 class="nav-section-title">カテゴリー</h3>
-        <nav>
-          <RouterLink to="/category/column" class="nav-item">コラム</RouterLink>
-          <RouterLink to="/category/experience" class="nav-item">体験談</RouterLink>
-          <RouterLink to="/category/other" class="nav-item">その他</RouterLink>
-        </nav>
-      </div>
-
-      <!-- 人気のタグ -->
-      <div class="nav-section nav-section-tags">
-        <h3 class="nav-section-title">人気のタグ</h3>
-        <nav>
-          <RouterLink to="/tag/mental-health" class="nav-item tag-item">#メンタルヘルス</RouterLink>
-          <RouterLink to="/tag/suicidal-ideation" class="nav-item tag-item">#希死念慮</RouterLink>
-          <RouterLink to="/tag/developmental-disorder" class="nav-item tag-item">#発達障害</RouterLink>
-        </nav>
+      <!-- アクションボタン -->
+      <div class="action-section">
+        <RouterLink to="/posts/new" class="post-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          <span>投稿する</span>
+        </RouterLink>
+        <button class="support-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span>支援情報を登録</span>
+        </button>
       </div>
 
       <!-- 認証ボタン -->
@@ -105,6 +93,13 @@ import ChatPanel from './components/ChatPanel.vue'
   text-decoration: none;
 }
 
+/* アクションセクション */
+.action-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* 投稿するボタン */
 .post-button {
   display: flex;
@@ -119,57 +114,34 @@ import ChatPanel from './components/ChatPanel.vue'
   font-size: 14px;
   font-weight: 600;
   transition: background 0.2s;
+  border: none;
+  cursor: pointer;
 }
 
 .post-button:hover {
   background: #7e22ce;
 }
 
-/* ナビゲーションセクション */
-.nav-section {
+/* 支援情報を登録ボタン */
+.support-button {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-section-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 8px;
-  margin: 0;
-}
-
-.nav-section nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nav-item {
-  display: block;
-  padding: 8px 12px;
-  border-radius: 6px;
-  color: #4b5563;
-  text-decoration: none;
-  font-size: 13px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.nav-item:hover {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
   background: #f3f4f6;
-  color: #1f2937;
+  color: #374151;
+  border-radius: 20px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  border: none;
+  cursor: pointer;
 }
 
-.nav-item.router-link-active {
-  background: #f3e8ff;
-  color: #9333ea;
-}
-
-.tag-item {
-  font-size: 12px;
+.support-button:hover {
+  background: #e5e7eb;
 }
 
 /* 認証セクション */
@@ -238,20 +210,19 @@ import ChatPanel from './components/ChatPanel.vue'
   }
 
   .post-button span,
-  .nav-section-title,
-  .nav-item,
+  .support-button span,
   .auth-button {
     display: none;
   }
 
-  .post-button {
+  .post-button,
+  .support-button {
     width: 44px;
     height: 44px;
     padding: 0;
     border-radius: 50%;
   }
 
-  .nav-section,
   .auth-section {
     display: none;
   }
