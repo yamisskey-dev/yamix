@@ -11,7 +11,6 @@ describe('Transactions API', () => {
   let senderWallet: { id: string; address: string }
   let receiverWallet: { id: string; address: string }
   let testPost: { id: string }
-  let testCategory: { id: string }
 
   beforeAll(async () => {
     await fastify.register(prismaPlugin)
@@ -29,7 +28,6 @@ describe('Transactions API', () => {
     await prisma.transaction.deleteMany()
     await prisma.post.deleteMany()
     await prisma.wallet.deleteMany()
-    await prisma.category.deleteMany()
 
     // Create test wallets
     senderWallet = await prisma.wallet.create({
@@ -39,17 +37,11 @@ describe('Transactions API', () => {
       data: { address: 'receive1', balance: 0 },
     })
 
-    // Create test category with unique name
-    testCategory = await prisma.category.create({
-      data: { name: `Test-${Date.now()}`, slug: `test-${Date.now()}` },
-    })
-
     // Create test post
     testPost = await prisma.post.create({
       data: {
         content: 'Test post',
         walletId: receiverWallet.id,
-        categoryId: testCategory.id,
       },
     })
   })
@@ -132,7 +124,6 @@ describe('Transactions API', () => {
         data: {
           content: 'Self post',
           walletId: senderWallet.id,
-          categoryId: testCategory.id,
         },
       })
 

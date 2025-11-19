@@ -15,7 +15,6 @@ export interface Post {
   id: string
   content: string
   walletId: string
-  categoryId: string
   createdAt: string
 }
 
@@ -25,10 +24,6 @@ export interface Post {
 export interface PostWithRelations extends Post {
   wallet: {
     address: string
-  }
-  category: {
-    id: string
-    name: string
   }
   _count?: {
     transactions: number
@@ -45,16 +40,6 @@ export interface Transaction {
   senderId: string
   amount: number
   createdAt: string
-}
-
-/**
- * Category type
- */
-export interface Category {
-  id: string
-  name: string
-  slug: string
-  order?: number
 }
 
 /**

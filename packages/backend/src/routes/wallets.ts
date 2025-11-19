@@ -91,9 +91,6 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
         where: { address },
         include: {
           posts: {
-            include: {
-              category: true,
-            },
             orderBy: {
               createdAt: 'desc',
             },
@@ -106,6 +103,34 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       return wallet.posts
+    }
+  )
+
+  // Delete wallet by address
+  server.delete(
+    '/:address',
+    {
+      schema: {
+        tags: ['wallets'],
+        description: 'Delete wallet by address (cascade deletes posts and transactions)',
+      },
+    },
+    async (request, reply) => {
+      const { address } = request.params as { address: string }
+
+      const wallet = await fastify.prisma.wallet.findUnique({
+        where: { address },
+      })
+
+      if (!wallet) {
+        return reply.status(404).send({ error: 'Wallet not found' })
+      }
+
+      await fastify.prisma.wallet.delete({
+        where: { address },
+      })
+
+      return reply.status(204).send()
     }
   )
 }

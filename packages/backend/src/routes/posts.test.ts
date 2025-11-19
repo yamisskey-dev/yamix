@@ -9,7 +9,6 @@ describe('Posts API', () => {
   const prisma = new PrismaClient()
 
   let testWallet: { id: string; address: string }
-  let testCategory: { id: string; name: string; slug: string }
 
   beforeAll(async () => {
     await fastify.register(prismaPlugin)
@@ -27,7 +26,6 @@ describe('Posts API', () => {
     await prisma.transaction.deleteMany()
     await prisma.post.deleteMany()
     await prisma.wallet.deleteMany()
-    await prisma.category.deleteMany()
 
     // Create test wallet with unique address
     const uniqueId = Date.now().toString()
@@ -35,14 +33,6 @@ describe('Posts API', () => {
       data: {
         address: `test${uniqueId.slice(-8)}`,
         balance: 0,
-      },
-    })
-
-    // Create test category with unique name
-    testCategory = await prisma.category.create({
-      data: {
-        name: `General-${uniqueId}`,
-        slug: `general-${uniqueId}`,
       },
     })
   })
@@ -64,9 +54,9 @@ describe('Posts API', () => {
       // Create test posts
       await prisma.post.createMany({
         data: [
-          { content: 'Post 1', walletId: testWallet.id, categoryId: testCategory.id },
-          { content: 'Post 2', walletId: testWallet.id, categoryId: testCategory.id },
-          { content: 'Post 3', walletId: testWallet.id, categoryId: testCategory.id },
+          { content: 'Post 1', walletId: testWallet.id },
+          { content: 'Post 2', walletId: testWallet.id },
+          { content: 'Post 3', walletId: testWallet.id },
         ],
       })
 
@@ -80,31 +70,6 @@ describe('Posts API', () => {
       expect(result.posts).toHaveLength(2)
       expect(result.total).toBe(3)
     })
-
-    it('should filter posts by category', async () => {
-      // Create another category
-      const otherCategory = await prisma.category.create({
-        data: { name: `Other-${Date.now()}`, slug: `other-${Date.now()}` },
-      })
-
-      // Create posts in different categories
-      await prisma.post.createMany({
-        data: [
-          { content: 'General Post', walletId: testWallet.id, categoryId: testCategory.id },
-          { content: 'Other Post', walletId: testWallet.id, categoryId: otherCategory.id },
-        ],
-      })
-
-      const response = await fastify.inject({
-        method: 'GET',
-        url: `/api/posts?categoryId=${testCategory.id}`,
-      })
-
-      expect(response.statusCode).toBe(200)
-      const result = JSON.parse(response.payload)
-      expect(result.posts).toHaveLength(1)
-      expect(result.posts[0].content).toBe('General Post')
-    })
   })
 
   describe('POST /api/posts', () => {
@@ -115,7 +80,6 @@ describe('Posts API', () => {
         payload: {
           content: 'New post content',
           walletId: testWallet.id,
-          categoryId: testCategory.id,
         },
       })
 
@@ -144,7 +108,6 @@ describe('Posts API', () => {
         data: {
           content: 'Test post',
           walletId: testWallet.id,
-          categoryId: testCategory.id,
         },
       })
 

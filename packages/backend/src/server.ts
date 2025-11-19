@@ -13,7 +13,6 @@ import {
 import { prismaPlugin } from './plugins/prisma.js'
 import { walletsRoutes } from './routes/wallets.js'
 import { postsRoutes } from './routes/posts.js'
-import { categoriesRoutes } from './routes/categories.js'
 import { transactionsRoutes } from './routes/transactions.js'
 
 const PORT = parseInt(process.env.PORT || '3000', 10)
@@ -62,7 +61,6 @@ export async function buildServer() {
       tags: [
         { name: 'wallets', description: 'Wallet management endpoints' },
         { name: 'posts', description: 'Post management endpoints' },
-        { name: 'categories', description: 'Category endpoints' },
         { name: 'transactions', description: 'Transaction endpoints' },
       ],
     },
@@ -83,7 +81,6 @@ export async function buildServer() {
   // Routes
   await fastify.register(walletsRoutes, { prefix: '/api/wallets' })
   await fastify.register(postsRoutes, { prefix: '/api/posts' })
-  await fastify.register(categoriesRoutes, { prefix: '/api/categories' })
   await fastify.register(transactionsRoutes, { prefix: '/api/transactions' })
 
   // Health check

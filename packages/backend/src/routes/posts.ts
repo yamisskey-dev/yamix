@@ -1,11 +1,10 @@
 import { FastifyPluginAsync } from 'fastify'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { z } from 'zod'
 
 export const postsRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>()
 
-  // Get posts (with filtering and pagination)
+  // Get posts (with pagination)
   server.get(
     '/',
     {
@@ -15,17 +14,12 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request) => {
-      const query = request.query as { categoryId?: string; page?: string; limit?: string }
-      const { categoryId } = query
+      const query = request.query as { page?: string; limit?: string }
       const page = parseInt(query.page || '1', 10)
       const limit = parseInt(query.limit || '20', 10)
 
-      const where: any = {}
-      if (categoryId) where.categoryId = categoryId
-
       const [posts, total] = await Promise.all([
         fastify.prisma.post.findMany({
-          where,
           skip: (page - 1) * limit,
           take: limit,
           orderBy: { createdAt: 'desc' },
@@ -35,12 +29,6 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
                 address: true,
               },
             },
-            category: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
             _count: {
               select: {
                 transactions: true,
@@ -48,7 +36,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
             },
           },
         }),
-        fastify.prisma.post.count({ where }),
+        fastify.prisma.post.count(),
       ])
 
       return {
@@ -81,10 +69,9 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
               address: true,
             },
           },
-          category: {
+          _count: {
             select: {
-              id: true,
-              name: true,
+              transactions: true,
             },
           },
           transactions: {
@@ -118,11 +105,11 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const body = request.body as { content?: string; walletId?: string; categoryId?: string }
-      const { content, walletId, categoryId } = body
+      const body = request.body as { content?: string; walletId?: string }
+      const { content, walletId } = body
 
       // Validate required fields
-      if (!content || !walletId || !categoryId) {
+      if (!content || !walletId) {
         return reply.code(400).send({ error: 'Missing required fields' })
       }
 
@@ -135,20 +122,10 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'Wallet not found' })
       }
 
-      // Verify category exists
-      const category = await fastify.prisma.category.findUnique({
-        where: { id: categoryId },
-      })
-
-      if (!category) {
-        return reply.code(400).send({ error: 'Category not found' })
-      }
-
       const post = await fastify.prisma.post.create({
         data: {
           content,
           walletId,
-          categoryId,
         },
       })
 

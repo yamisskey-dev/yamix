@@ -33,7 +33,6 @@
         >
           <div class="post-content">
             <div class="post-meta">
-              <span class="category-badge">{{ post.category.name }}</span>
               <span class="wallet-address">{{ post.wallet.address }}</span>
             </div>
             <p class="post-excerpt">
@@ -41,7 +40,7 @@
             </p>
             <div class="post-footer">
               <span class="date">{{ formatDate(post.createdAt) }}</span>
-              <span v-if="post._count" class="tokens">{{ post._count.transactions }} tokens</span>
+              <span v-if="post._count" class="tokens">{{ post._count.transactions }} トークン</span>
             </div>
           </div>
         </article>
@@ -226,15 +225,6 @@ function formatDate(date: string | Date): string {
   gap: var(--space-2);
   margin-bottom: var(--space-2);
   align-items: center;
-}
-
-.category-badge {
-  font-size: var(--font-size-xs);
-  padding: 2px var(--space-2);
-  background: hsl(var(--accent-light));
-  color: hsl(var(--primary));
-  border-radius: var(--radius-sm);
-  font-weight: 500;
 }
 
 .wallet-address {

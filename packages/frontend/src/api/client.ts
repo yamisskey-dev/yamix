@@ -30,14 +30,22 @@ class ApiClient {
       }
     }
 
-    const response = await fetch(url, {
+    // Build request options
+    const fetchOptions: RequestInit = {
       method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    })
+      headers: { ...headers },
+    }
+
+    // Only set Content-Type and body for methods that typically have a body
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json'
+      fetchOptions.body = JSON.stringify(body ?? {})
+    } else if (body) {
+      (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json'
+      fetchOptions.body = JSON.stringify(body)
+    }
+
+    const response = await fetch(url, fetchOptions)
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'リクエストに失敗しました' }))

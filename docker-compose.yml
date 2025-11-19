@@ -66,11 +66,13 @@ services:
       context: .
       dockerfile: packages/frontend/Dockerfile
       args:
-        VITE_API_URL: /api
+        VITE_API_URL: ''
         VITE_YAMII_API_URL: /yamii
     container_name: yamix-frontend
     ports:
       - '8080:80'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backend:
         condition: service_healthy

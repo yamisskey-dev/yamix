@@ -18,10 +18,13 @@
           <span>投稿する</span>
         </RouterLink>
 
-        <!-- 認証ボタン -->
-        <div class="auth-section">
-          <RouterLink to="/login" class="auth-button auth-login">ログイン</RouterLink>
-          <RouterLink to="/register" class="auth-button auth-register">会員登録</RouterLink>
+        <!-- ウォレットセクション -->
+        <div class="wallet-section">
+          <button class="wallet-selector" @click="showWalletMenu = !showWalletMenu">
+            <span class="wallet-label">ウォレット</span>
+            <span class="wallet-address">{{ walletStore.address || '未作成' }}</span>
+            <span class="wallet-balance">{{ walletStore.balance }} トークン</span>
+          </button>
         </div>
       </div>
     </aside>
@@ -35,12 +38,90 @@
     <aside class="sidebar-right">
       <ChatPanel />
     </aside>
+
+    <!-- ウォレット管理メニュー -->
+    <div v-if="showWalletMenu" class="wallet-menu-overlay" @click="showWalletMenu = false">
+      <div class="wallet-menu" @click.stop>
+        <div class="wallet-menu-header">
+          <h3>ウォレット管理</h3>
+          <button class="close-button" @click="showWalletMenu = false">×</button>
+        </div>
+        <div class="wallet-list">
+          <div
+            v-for="w in walletStore.wallets"
+            :key="w.id"
+            :class="['wallet-item', { active: w.address === walletStore.address }]"
+          >
+            <button class="wallet-item-main" @click="selectWallet(w.address)">
+              <span class="wallet-item-address">{{ w.address }}</span>
+              <span class="wallet-item-balance">{{ w.balance }} トークン</span>
+            </button>
+            <button
+              class="delete-button"
+              @click.stop="confirmDeleteWallet(w.address)"
+              title="削除"
+            >
+              ×
+            </button>
+          </div>
+          <div v-if="walletStore.wallets.length === 0" class="wallet-empty">
+            ウォレットがありません
+          </div>
+        </div>
+        <div class="wallet-menu-footer">
+          <button class="action-button primary" @click="createAndClose()">
+            新しいウォレットを作成
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div v-if="walletToDelete" class="wallet-menu-overlay" @click="walletToDelete = null">
+      <div class="confirm-modal" @click.stop>
+        <h3>ウォレットを削除</h3>
+        <p>{{ walletToDelete }} を削除しますか？</p>
+        <p class="warning-text">このウォレットに紐づく全ての投稿も削除されます。</p>
+        <div class="modal-actions">
+          <button class="action-button" @click="walletToDelete = null">キャンセル</button>
+          <button class="action-button danger" @click="executeDelete()">削除</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterView, RouterLink } from 'vue-router'
 import ChatPanel from './components/ChatPanel.vue'
+import { useWalletStore } from './stores/wallet'
+
+const walletStore = useWalletStore()
+
+const showWalletMenu = ref(false)
+const walletToDelete = ref<string | null>(null)
+
+function selectWallet(address: string) {
+  walletStore.switchWallet(address)
+  showWalletMenu.value = false
+}
+
+async function createAndClose() {
+  await walletStore.createWallet()
+  showWalletMenu.value = false
+}
+
+function confirmDeleteWallet(address: string) {
+  walletToDelete.value = address
+}
+
+async function executeDelete() {
+  if (walletToDelete.value) {
+    await walletStore.deleteWallet(walletToDelete.value)
+    walletToDelete.value = null
+  }
+}
 </script>
 
 <style scoped>
@@ -129,43 +210,46 @@ import ChatPanel from './components/ChatPanel.vue'
   background: hsl(var(--primary-hover));
 }
 
-/* 認証セクション */
-.auth-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+/* ウォレットセクション */
+.wallet-section {
   padding-top: var(--space-3);
   border-top: 1px solid hsl(var(--border));
 }
 
-.auth-button {
-  display: block;
-  padding: 7px 14px;
-  border-radius: 5px;
-  text-decoration: none;
-  font-size: 95%;
-  font-weight: normal;
-  text-align: center;
-  transition: background 0.1s ease;
-}
-
-.auth-login {
-  color: hsl(var(--foreground-secondary));
+.wallet-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-2);
   background: hsl(var(--item-hover));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-align: left;
 }
 
-.auth-login:hover {
+.wallet-selector:hover {
   background: hsl(var(--item-active));
+}
+
+.wallet-label {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
+}
+
+.wallet-address {
+  font-size: var(--font-size-sm);
+  font-family: monospace;
   color: hsl(var(--foreground));
 }
 
-.auth-register {
-  color: hsl(var(--primary-foreground));
-  background: hsl(var(--primary));
-}
-
-.auth-register:hover {
-  background: hsl(var(--primary-hover));
+.wallet-balance {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--primary));
+  font-weight: 500;
 }
 
 /* 中央コンテンツ */
@@ -184,6 +268,201 @@ import ChatPanel from './components/ChatPanel.vue'
   flex-direction: column;
 }
 
+/* ウォレットメニュー */
+.wallet-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 100px;
+  z-index: 100;
+}
+
+.wallet-menu {
+  background: hsl(var(--background));
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 400px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.wallet-menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.wallet-menu-header h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: hsl(var(--foreground));
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: var(--font-size-lg);
+  color: hsl(var(--foreground-tertiary));
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.close-button:hover {
+  color: hsl(var(--foreground));
+}
+
+.wallet-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.wallet-item {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+}
+
+.wallet-item.active {
+  background: hsl(var(--primary) / 0.1);
+}
+
+.wallet-item-main {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wallet-item-main:hover {
+  background: hsl(var(--item-hover));
+  border-radius: var(--radius-md);
+}
+
+.wallet-item-address {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground));
+}
+
+.wallet-item-balance {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
+}
+
+.delete-button {
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: hsl(var(--foreground-tertiary));
+  cursor: pointer;
+  font-size: var(--font-size-md);
+}
+
+.delete-button:hover {
+  color: hsl(var(--error));
+}
+
+.wallet-empty {
+  padding: var(--space-4);
+  text-align: center;
+  color: hsl(var(--foreground-tertiary));
+  font-size: var(--font-size-sm);
+}
+
+.wallet-menu-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid hsl(var(--border));
+}
+
+.action-button {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.action-button:hover {
+  background: hsl(var(--item-hover));
+}
+
+.action-button.primary {
+  width: 100%;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.action-button.primary:hover {
+  opacity: 0.9;
+}
+
+.action-button.danger {
+  background: hsl(var(--error));
+  color: white;
+  border-color: hsl(var(--error));
+}
+
+.action-button.danger:hover {
+  opacity: 0.9;
+}
+
+/* 確認モーダル */
+.confirm-modal {
+  background: hsl(var(--background));
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  width: 90%;
+  max-width: 360px;
+}
+
+.confirm-modal h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md);
+  color: hsl(var(--foreground));
+}
+
+.confirm-modal p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground-secondary));
+}
+
+.warning-text {
+  color: hsl(var(--error)) !important;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.modal-actions .action-button {
+  flex: 1;
+}
+
 /* レスポンシブ */
 @media (max-width: 1024px) {
   .three-column {
@@ -194,8 +473,7 @@ import ChatPanel from './components/ChatPanel.vue'
     padding: var(--space-2);
   }
 
-  .post-button span,
-  .auth-button {
+  .post-button span {
     display: none;
   }
 
@@ -206,7 +484,7 @@ import ChatPanel from './components/ChatPanel.vue'
     border-radius: 50%;
   }
 
-  .auth-section {
+  .wallet-section {
     display: none;
   }
 }

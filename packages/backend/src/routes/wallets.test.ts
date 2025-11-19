@@ -24,7 +24,6 @@ describe('Wallets API', () => {
     await prisma.transaction.deleteMany()
     await prisma.post.deleteMany()
     await prisma.wallet.deleteMany()
-    await prisma.category.deleteMany()
   })
 
   describe('POST /api/wallets', () => {
@@ -91,24 +90,18 @@ describe('Wallets API', () => {
 
   describe('GET /api/wallets/:address/posts', () => {
     it('should get posts by wallet address', async () => {
-      // Create wallet and category first
+      // Create wallet first
       const createWalletResponse = await fastify.inject({
         method: 'POST',
         url: '/api/wallets',
       })
       const wallet = JSON.parse(createWalletResponse.payload)
 
-      // Create a category
-      const category = await prisma.category.create({
-        data: { name: `Test-${Date.now()}`, slug: `test-${Date.now()}` },
-      })
-
       // Create posts
       await prisma.post.create({
         data: {
           content: 'Test post',
           walletId: wallet.id,
-          categoryId: category.id,
         },
       })
 

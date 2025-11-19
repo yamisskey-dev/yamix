@@ -57,4 +57,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 
 EXPOSE 3000
 
-CMD ["node", "dist/server.js"]
+# Run migrations and start server
+CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/server.js"]

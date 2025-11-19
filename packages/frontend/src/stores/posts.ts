@@ -20,7 +20,6 @@ export const usePostsStore = defineStore('posts', () => {
   async function fetchPosts(params?: {
     page?: number
     limit?: number
-    categoryId?: string
   }) {
     loading.value = true
     error.value = null
@@ -61,7 +60,6 @@ export const usePostsStore = defineStore('posts', () => {
   async function createPost(data: {
     content: string
     walletId: string
-    categoryId: string
   }) {
     loading.value = true
     error.value = null

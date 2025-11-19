@@ -28,35 +28,18 @@ model Wallet {
   @@map("wallets")
 }
 
-// Category - 投稿のカテゴリ
-model Category {
+// Post - 投稿
+model Post {
   id        String   @id @default(uuid())
-  name      String   @unique
-  slug      String   @unique
-  order     Int      @default(0)
+  content   String   @db.Text
+  walletId  String   @map("wallet_id")
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  posts Post[]
-
-  @@map("categories")
-}
-
-// Post - 投稿
-model Post {
-  id         String   @id @default(uuid())
-  content    String   @db.Text
-  walletId   String   @map("wallet_id")
-  categoryId String   @map("category_id")
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  // Relations
-  wallet       Wallet        @relation(fields: [walletId], references: [id])
-  category     Category      @relation(fields: [categoryId], references: [id])
+  wallet       Wallet        @relation(fields: [walletId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 
   @@index([walletId])
-  @@index([categoryId])
   @@index([createdAt])
   @@map("posts")
 }
@@ -71,7 +54,7 @@ model Transaction {
 
   // Relations
   post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-  sender Wallet @relation("sender", fields: [senderId], references: [id])
+  sender Wallet @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([senderId])

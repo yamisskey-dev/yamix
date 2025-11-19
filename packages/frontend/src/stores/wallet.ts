@@ -3,29 +3,53 @@ import { ref, computed } from 'vue'
 import type { Wallet, Transaction } from '@yamix/shared'
 import { api } from '../api/client'
 
-const WALLET_STORAGE_KEY = 'yamix_wallet'
+const WALLETS_STORAGE_KEY = 'yamix_wallets'
+const ACTIVE_WALLET_KEY = 'yamix_active_wallet'
 
 export const useWalletStore = defineStore('wallet', () => {
   // State
-  const wallet = ref<Wallet | null>(null)
+  const wallets = ref<Wallet[]>([])
+  const activeWalletAddress = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   // Computed
+  const wallet = computed(() =>
+    wallets.value.find(w => w.address === activeWalletAddress.value) || null
+  )
   const isConnected = computed(() => wallet.value !== null)
   const address = computed(() => wallet.value?.address || '')
   const balance = computed(() => wallet.value?.balance || 0)
   const walletId = computed(() => wallet.value?.id || '')
+  const walletCount = computed(() => wallets.value.length)
 
   // Initialize from localStorage
   function init() {
-    const stored = localStorage.getItem(WALLET_STORAGE_KEY)
-    if (stored) {
+    const storedWallets = localStorage.getItem(WALLETS_STORAGE_KEY)
+    const storedActive = localStorage.getItem(ACTIVE_WALLET_KEY)
+
+    if (storedWallets) {
       try {
-        wallet.value = JSON.parse(stored)
+        wallets.value = JSON.parse(storedWallets)
       } catch {
-        localStorage.removeItem(WALLET_STORAGE_KEY)
+        localStorage.removeItem(WALLETS_STORAGE_KEY)
       }
+    }
+
+    if (storedActive && wallets.value.some(w => w.address === storedActive)) {
+      activeWalletAddress.value = storedActive
+    } else if (wallets.value.length > 0) {
+      activeWalletAddress.value = wallets.value[0].address
+    }
+  }
+
+  // Save to localStorage
+  function saveToStorage() {
+    localStorage.setItem(WALLETS_STORAGE_KEY, JSON.stringify(wallets.value))
+    if (activeWalletAddress.value) {
+      localStorage.setItem(ACTIVE_WALLET_KEY, activeWalletAddress.value)
+    } else {
+      localStorage.removeItem(ACTIVE_WALLET_KEY)
     }
   }
 
@@ -36,8 +60,9 @@ export const useWalletStore = defineStore('wallet', () => {
 
     try {
       const response = await api.post<Wallet>('/api/wallets')
-      wallet.value = response
-      localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(response))
+      wallets.value.push(response)
+      activeWalletAddress.value = response.address
+      saveToStorage()
       return response
     } catch (err: any) {
       error.value = err.message || 'ウォレットの作成に失敗しました'
@@ -47,15 +72,59 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  // Fetch wallet by address
+  // Switch to a different wallet
+  function switchWallet(walletAddress: string) {
+    if (wallets.value.some(w => w.address === walletAddress)) {
+      activeWalletAddress.value = walletAddress
+      saveToStorage()
+      return true
+    }
+    return false
+  }
+
+  // Delete a wallet
+  async function deleteWallet(walletAddress: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      await api.delete(`/api/wallets/${walletAddress}`)
+    } catch (err: any) {
+      // 404 means wallet doesn't exist in DB, but we should still remove from local storage
+      // Other errors should be reported but we still remove locally to maintain sync
+      if (!err.message?.includes('404')) {
+        error.value = err.message || 'ウォレットの削除に失敗しました'
+      }
+    }
+
+    // Always remove from local storage to maintain consistency
+    wallets.value = wallets.value.filter(w => w.address !== walletAddress)
+
+    // If deleted wallet was active, switch to another
+    if (activeWalletAddress.value === walletAddress) {
+      activeWalletAddress.value = wallets.value.length > 0 ? wallets.value[0].address : null
+    }
+
+    saveToStorage()
+    loading.value = false
+    return true
+  }
+
+  // Fetch wallet by address and update local state
   async function fetchWallet(walletAddress: string) {
     loading.value = true
     error.value = null
 
     try {
       const response = await api.get<Wallet>(`/api/wallets/${walletAddress}`)
-      wallet.value = response
-      localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(response))
+
+      // Update in wallets array
+      const index = wallets.value.findIndex(w => w.address === walletAddress)
+      if (index >= 0) {
+        wallets.value[index] = response
+      }
+
+      saveToStorage()
       return response
     } catch (err: any) {
       error.value = err.message || 'ウォレットの取得に失敗しました'
@@ -65,14 +134,20 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  // Refresh wallet balance
+  // Refresh active wallet balance
   async function refreshBalance() {
-    if (!wallet.value?.address) return
+    if (!activeWalletAddress.value) return
 
     try {
-      const response = await api.get<Wallet>(`/api/wallets/${wallet.value.address}`)
-      wallet.value = response
-      localStorage.setItem(WALLET_STORAGE_KEY, JSON.stringify(response))
+      const response = await api.get<Wallet>(`/api/wallets/${activeWalletAddress.value}`)
+
+      // Update in wallets array
+      const index = wallets.value.findIndex(w => w.address === activeWalletAddress.value)
+      if (index >= 0) {
+        wallets.value[index] = response
+      }
+
+      saveToStorage()
     } catch {
       // Silently fail on refresh
     }
@@ -107,15 +182,14 @@ export const useWalletStore = defineStore('wallet', () => {
     }
   }
 
-  // Disconnect wallet (create new identity)
+  // Disconnect current wallet (just deselect, keep in storage)
   function disconnect() {
-    wallet.value = null
-    localStorage.removeItem(WALLET_STORAGE_KEY)
+    activeWalletAddress.value = null
+    saveToStorage()
   }
 
   // Reincarnate (create new identity)
   async function reincarnate() {
-    disconnect()
     return createWallet()
   }
 
@@ -124,13 +198,17 @@ export const useWalletStore = defineStore('wallet', () => {
 
   return {
     wallet,
+    wallets,
     loading,
     error,
     isConnected,
     address,
     balance,
     walletId,
+    walletCount,
     createWallet,
+    switchWallet,
+    deleteWallet,
     fetchWallet,
     refreshBalance,
     sendTokens,

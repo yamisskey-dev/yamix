@@ -17,11 +17,6 @@ const routes: RouteRecordRaw[] = [
     name: 'post-detail',
     component: () => import('../pages/PostDetailPage.vue'),
   },
-  {
-    path: '/category/:slug',
-    name: 'category',
-    component: () => import('../pages/CategoryPage.vue'),
-  },
 ]
 
 const router = createRouter({
