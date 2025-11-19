@@ -48,36 +48,52 @@
           <article
             v-for="post in postsStore.posts"
             :key="post.id"
-            class="post-item"
-            :class="{ expanded: expandedPost === post.id }"
-            @click="toggleExpand(post.id)"
+            class="post-card"
+            @click="openReader(post)"
           >
             <div class="post-content">
-              <p class="post-text">{{ post.content }}</p>
-              <div class="post-footer">
+              <p class="post-excerpt">{{ getExcerpt(post.content) }}</p>
+              <div class="post-meta">
                 <span class="date">{{ formatDate(post.createdAt) }}</span>
-                <span v-if="post._count" class="tokens">{{ post._count.transactions }} トークン</span>
+                <span v-if="post._count && post._count.transactions > 0" class="tokens">
+                  · {{ post._count.transactions }} トークン
+                </span>
               </div>
             </div>
-
-            <!-- Actions (visible when expanded) -->
-            <div v-if="expandedPost === post.id" class="post-actions" @click.stop>
-              <button
-                class="action-button primary"
-                @click="sendToken(post.id)"
-                :disabled="walletStore.loading"
-              >
-                トークンを送る
-              </button>
-              <button
-                v-if="isOwnWallet"
-                class="action-button danger"
-                @click="confirmDelete(post.id)"
-              >
-                削除
-              </button>
-            </div>
           </article>
+        </div>
+      </div>
+    </div>
+
+    <!-- 読書モードモーダル -->
+    <div v-if="selectedPost" class="reader-overlay" @click="closeReader">
+      <div class="reader-modal" @click.stop>
+        <div class="reader-header">
+          <button class="close-button" @click="closeReader">×</button>
+        </div>
+        <div class="reader-content">
+          <article class="reader-article">
+            <p class="reader-text">{{ selectedPost.content }}</p>
+          </article>
+          <div class="reader-meta">
+            <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
+          </div>
+          <div class="reader-actions">
+            <button
+              class="reader-action-button primary"
+              @click="sendToken(selectedPost.id)"
+              :disabled="walletStore.loading"
+            >
+              トークンを送る
+            </button>
+            <button
+              v-if="isOwnWallet"
+              class="reader-action-button danger"
+              @click="confirmDelete(selectedPost.id)"
+            >
+              削除
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -104,7 +120,7 @@ import { usePostsStore } from '../stores/posts'
 import { useWalletStore } from '../stores/wallet'
 import { useFollowsStore } from '../stores/follows'
 import { api } from '../api/client'
-import type { Wallet } from '@yamix/shared'
+import type { Wallet, PostWithRelations } from '@yamix/shared'
 
 const router = useRouter()
 const route = useRoute()
@@ -115,7 +131,7 @@ const followsStore = useFollowsStore()
 const profileWallet = ref<Wallet | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
-const expandedPost = ref<string | null>(null)
+const selectedPost = ref<PostWithRelations | null>(null)
 const showDeleteConfirm = ref(false)
 const postToDelete = ref<string | null>(null)
 
@@ -167,8 +183,21 @@ async function toggleFollow() {
   }
 }
 
-function toggleExpand(postId: string) {
-  expandedPost.value = expandedPost.value === postId ? null : postId
+function getExcerpt(content: string): string {
+  const lines = content.split('\n').filter(line => line.trim())
+  const excerpt = lines.slice(0, 3).join('\n')
+  if (excerpt.length > 150 || lines.length > 3) {
+    return `${excerpt.substring(0, 150)}...`
+  }
+  return excerpt
+}
+
+function openReader(post: PostWithRelations) {
+  selectedPost.value = post
+}
+
+function closeReader() {
+  selectedPost.value = null
 }
 
 async function sendToken(postId: string) {
@@ -203,7 +232,7 @@ async function deletePost() {
   }
   showDeleteConfirm.value = false
   postToDelete.value = null
-  expandedPost.value = null
+  selectedPost.value = null
 }
 
 function formatDate(date: string | Date): string {
@@ -348,51 +377,44 @@ function formatDate(date: string | Date): string {
 .posts-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
 }
 
-.post-item {
-  padding: var(--space-3);
+.post-card {
+  padding: var(--space-4);
   background: hsl(var(--background-secondary));
-  border-radius: var(--radius-md);
+  border-bottom: 1px solid hsl(var(--border));
   cursor: pointer;
   transition: all var(--transition-normal);
 }
 
-.post-item:hover {
+.post-card:hover {
   background: hsl(var(--item-hover));
 }
 
-.post-item.expanded {
-  background: hsl(var(--item-active));
+.post-content {
+  flex: 1;
+  min-width: 0;
 }
 
-.post-text {
+.post-excerpt {
   font-size: var(--font-size-base);
-  line-height: var(--line-height-relaxed);
   color: hsl(var(--foreground));
+  margin: 0 0 var(--space-3);
+  line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
-  margin: 0 0 var(--space-2);
 }
 
-.post-footer {
+.post-meta {
   display: flex;
-  gap: var(--space-3);
-  font-size: var(--font-size-sm);
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  font-size: var(--font-size-xs);
   color: hsl(var(--foreground-tertiary));
 }
 
 .tokens {
   color: hsl(var(--primary));
-  font-weight: 500;
-}
-
-.post-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid hsl(var(--border));
 }
 
 .action-button {
@@ -490,5 +512,119 @@ function formatDate(date: string | Date): string {
 
 .modal-actions .action-button {
   flex: 1;
+}
+
+/* 読書モードモーダル */
+.reader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: hsl(var(--background) / 0.95);
+  z-index: 100;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.reader-modal {
+  max-width: 640px;
+  margin: 0 auto;
+  background: hsl(var(--background));
+  min-height: 100%;
+}
+
+.reader-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) 0;
+  position: sticky;
+  top: 0;
+  background: hsl(var(--background));
+}
+
+.close-button {
+  padding: var(--space-2);
+  font-size: var(--font-size-lg);
+  color: hsl(var(--foreground-tertiary));
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: hsl(var(--foreground));
+}
+
+.reader-content {
+  padding: var(--space-4) 0 var(--space-8);
+}
+
+.reader-article {
+  margin-bottom: var(--space-6);
+}
+
+.reader-text {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: hsl(var(--foreground));
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.reader-meta {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground-tertiary));
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.reader-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.reader-action-button {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.reader-action-button:hover {
+  background: hsl(var(--item-hover));
+}
+
+.reader-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reader-action-button.primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.reader-action-button.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.reader-action-button.danger {
+  background: hsl(var(--error));
+  color: white;
+  border-color: hsl(var(--error));
+}
+
+.reader-action-button.danger:hover {
+  opacity: 0.9;
 }
 </style>

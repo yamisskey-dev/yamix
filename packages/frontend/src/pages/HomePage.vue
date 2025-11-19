@@ -40,18 +40,19 @@
           v-for="post in currentPosts"
           :key="post.id"
           class="post-card"
-          @click="router.push(`/wallets/${post.wallet.address}`)"
+          @click="openReader(post)"
         >
           <div class="post-content">
+            <p class="post-excerpt">
+              {{ getExcerpt(post.content) }}
+            </p>
             <div class="post-meta">
               <span class="wallet-address">{{ post.wallet.address }}</span>
-            </div>
-            <p class="post-excerpt">
-              {{ post.content.length > 200 ? post.content.substring(0, 200) + '...' : post.content }}
-            </p>
-            <div class="post-footer">
+              <span class="separator">·</span>
               <span class="date">{{ formatDate(post.createdAt) }}</span>
-              <span v-if="post._count" class="tokens">{{ post._count.transactions }} トークン</span>
+              <span v-if="post._count && post._count.transactions > 0" class="tokens">
+                · {{ post._count.transactions }} トークン
+              </span>
             </div>
           </div>
         </article>
@@ -75,6 +76,44 @@
         </div>
       </div>
     </div>
+
+    <!-- 読書モードモーダル -->
+    <div v-if="selectedPost" class="reader-overlay" @click="closeReader">
+      <div class="reader-modal" @click.stop>
+        <div class="reader-header">
+          <button class="close-button" @click="closeReader">×</button>
+        </div>
+        <div class="reader-content">
+          <article class="reader-article">
+            <p class="reader-text">{{ selectedPost.content }}</p>
+          </article>
+          <div class="reader-meta">
+            <span
+              class="reader-wallet"
+              @click="goToProfile(selectedPost.wallet.address)"
+            >
+              {{ selectedPost.wallet.address }}
+            </span>
+            <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
+          </div>
+          <div class="reader-actions">
+            <button
+              class="reader-action-button primary"
+              @click="sendToken(selectedPost.id)"
+              :disabled="walletStore.loading"
+            >
+              トークンを送る
+            </button>
+            <button
+              class="reader-action-button"
+              @click="goToProfile(selectedPost.wallet.address)"
+            >
+              プロフィールを見る
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -84,6 +123,7 @@ import { useRouter } from 'vue-router'
 import { usePostsStore } from '../stores/posts'
 import { useWalletStore } from '../stores/wallet'
 import { useFollowsStore } from '../stores/follows'
+import type { PostWithRelations } from '@yamix/shared'
 
 const router = useRouter()
 const postsStore = usePostsStore()
@@ -91,6 +131,7 @@ const walletStore = useWalletStore()
 const followsStore = useFollowsStore()
 
 const activeTab = ref<'home' | 'discover'>('discover')
+const selectedPost = ref<PostWithRelations | null>(null)
 
 const isLoading = computed(() => {
   return activeTab.value === 'home' ? followsStore.loading : postsStore.loading
@@ -149,6 +190,35 @@ async function loadPage(page: number) {
 function formatDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date
   return d.toLocaleDateString('ja-JP')
+}
+
+function getExcerpt(content: string): string {
+  const lines = content.split('\n').filter(line => line.trim())
+  const excerpt = lines.slice(0, 3).join('\n')
+  if (excerpt.length > 150 || lines.length > 3) {
+    return excerpt.substring(0, 150) + '...'
+  }
+  return excerpt
+}
+
+function openReader(post: PostWithRelations) {
+  selectedPost.value = post
+}
+
+function closeReader() {
+  selectedPost.value = null
+}
+
+function goToProfile(address: string) {
+  closeReader()
+  router.push(`/wallets/${address}`)
+}
+
+async function sendToken(postId: string) {
+  if (!walletStore.isConnected) {
+    await walletStore.createWallet()
+  }
+  await walletStore.sendTokens(postId)
 }
 </script>
 
@@ -276,44 +346,33 @@ function formatDate(date: string | Date): string {
   min-width: 0;
 }
 
+.post-excerpt {
+  font-size: var(--font-size-base);
+  color: hsl(var(--foreground));
+  margin: 0 0 var(--space-3);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+}
+
 .post-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  gap: var(--space-1);
   align-items: center;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
 }
 
 .wallet-address {
-  font-size: var(--font-size-xs);
-  padding: 2px var(--space-2);
-  background: hsl(var(--item-hover));
-  color: hsl(var(--foreground-tertiary));
-  border-radius: var(--radius-sm);
   font-family: monospace;
 }
 
-.post-excerpt {
-  font-size: var(--font-size-base);
-  color: hsl(var(--foreground-secondary));
-  margin: 0 0 var(--space-2);
-  line-height: var(--line-height-normal);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.post-footer {
-  display: flex;
-  gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  color: hsl(var(--foreground-tertiary));
+.separator {
+  opacity: 0.5;
 }
 
 .tokens {
   color: hsl(var(--primary));
-  font-weight: 500;
 }
 
 /* 空状態 */
@@ -352,5 +411,118 @@ function formatDate(date: string | Date): string {
 .page-button.active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
+}
+
+/* 読書モードモーダル */
+.reader-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: hsl(var(--background) / 0.95);
+  z-index: 100;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.reader-modal {
+  max-width: 640px;
+  margin: 0 auto;
+  background: hsl(var(--background));
+  min-height: 100%;
+}
+
+.reader-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) 0;
+  position: sticky;
+  top: 0;
+  background: hsl(var(--background));
+}
+
+.close-button {
+  padding: var(--space-2);
+  font-size: var(--font-size-lg);
+  color: hsl(var(--foreground-tertiary));
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: hsl(var(--foreground));
+}
+
+.reader-content {
+  padding: var(--space-4) 0 var(--space-8);
+}
+
+.reader-article {
+  margin-bottom: var(--space-6);
+}
+
+.reader-text {
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: hsl(var(--foreground));
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.reader-meta {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+  color: hsl(var(--foreground-tertiary));
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.reader-wallet {
+  font-family: monospace;
+  cursor: pointer;
+}
+
+.reader-wallet:hover {
+  color: hsl(var(--primary));
+}
+
+.reader-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.reader-action-button {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.reader-action-button:hover {
+  background: hsl(var(--item-hover));
+}
+
+.reader-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reader-action-button.primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.reader-action-button.primary:hover:not(:disabled) {
+  opacity: 0.9;
 }
 </style>
