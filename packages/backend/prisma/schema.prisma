@@ -24,8 +24,25 @@ model Wallet {
   // Relations
   posts            Post[]
   sentTransactions Transaction[] @relation("sender")
+  following        Follow[]      @relation("follower")
 
   @@map("wallets")
+}
+
+// Follow - サイレントウォッチ（フォローされた側には見えない）
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String   @map("follower_id")
+  targetId   String   @map("target_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  follower Wallet @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, targetId])
+  @@index([followerId])
+  @@index([targetId])
+  @@map("follows")
 }
 
 // Post - 投稿

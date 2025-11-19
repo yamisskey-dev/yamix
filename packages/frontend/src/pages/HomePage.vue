@@ -3,33 +3,44 @@
     <!-- タイムラインタブ -->
     <div class="timeline-tabs">
       <button
-        :class="['tab-item', { active: activeTab === 'latest' }]"
-        @click="switchTab('latest')"
+        :class="['tab-item', { active: activeTab === 'home' }]"
+        @click="switchTab('home')"
       >
-        最新
+        部屋
+      </button>
+      <button
+        :class="['tab-item', { active: activeTab === 'discover' }]"
+        @click="switchTab('discover')"
+      >
+        発見
       </button>
     </div>
 
     <!-- 投稿リスト -->
     <div class="posts-container">
       <!-- Loading -->
-      <div v-if="postsStore.loading" class="loading-state">
+      <div v-if="isLoading" class="loading-state">
         <div class="loading-spinner"></div>
         <p>読み込み中...</p>
       </div>
 
       <!-- Error -->
-      <div v-else-if="postsStore.error" class="error-state">
-        <p>{{ postsStore.error }}</p>
+      <div v-else-if="currentError" class="error-state">
+        <p>{{ currentError }}</p>
+      </div>
+
+      <!-- Home tab - not connected message -->
+      <div v-else-if="activeTab === 'home' && !walletStore.isConnected" class="empty-state">
+        <p>ウォレットを作成してフォローを始めましょう</p>
       </div>
 
       <!-- Posts -->
       <div v-else class="posts-list">
         <article
-          v-for="post in postsStore.posts"
+          v-for="post in currentPosts"
           :key="post.id"
           class="post-card"
-          @click="router.push(`/posts/${post.id}`)"
+          @click="router.push(`/wallets/${post.wallet.address}`)"
         >
           <div class="post-content">
             <div class="post-meta">
@@ -46,17 +57,18 @@
         </article>
 
         <!-- Empty state -->
-        <div v-if="postsStore.posts.length === 0" class="empty-state">
-          <p>まだ投稿がありません</p>
+        <div v-if="currentPosts.length === 0" class="empty-state">
+          <p v-if="activeTab === 'home'">まだ投稿がありません。発見タブでウォレットをフォローしましょう</p>
+          <p v-else>まだ投稿がありません</p>
         </div>
 
         <!-- Pagination -->
-        <div v-if="postsStore.pagination.totalPages > 1" class="pagination">
+        <div v-if="currentPagination.totalPages > 1" class="pagination">
           <button
-            v-for="page in postsStore.pagination.totalPages"
+            v-for="page in currentPagination.totalPages"
             :key="page"
             @click="loadPage(page)"
-            :class="['page-button', { active: page === postsStore.pagination.page }]"
+            :class="['page-button', { active: page === currentPagination.page }]"
           >
             {{ page }}
           </button>
@@ -67,26 +79,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePostsStore } from '../stores/posts'
+import { useWalletStore } from '../stores/wallet'
+import { useFollowsStore } from '../stores/follows'
 
 const router = useRouter()
 const postsStore = usePostsStore()
+const walletStore = useWalletStore()
+const followsStore = useFollowsStore()
 
-const activeTab = ref<'latest'>('latest')
+const activeTab = ref<'home' | 'discover'>('discover')
 
-onMounted(async () => {
-  await postsStore.fetchPosts()
+const isLoading = computed(() => {
+  return activeTab.value === 'home' ? followsStore.loading : postsStore.loading
 })
 
-function switchTab(tab: 'latest') {
+const currentError = computed(() => {
+  return activeTab.value === 'home' ? followsStore.error : postsStore.error
+})
+
+const currentPosts = computed(() => {
+  return activeTab.value === 'home' ? followsStore.timeline : postsStore.posts
+})
+
+const currentPagination = computed(() => {
+  return activeTab.value === 'home' ? followsStore.pagination : postsStore.pagination
+})
+
+onMounted(async () => {
+  // Default to discover tab
+  await postsStore.fetchPosts()
+
+  // If wallet is connected, also fetch following list
+  if (walletStore.isConnected && walletStore.walletId) {
+    await followsStore.fetchFollowing(walletStore.walletId)
+  }
+})
+
+// Watch for wallet connection changes
+watch(() => walletStore.walletId, async (newWalletId) => {
+  if (newWalletId) {
+    await followsStore.fetchFollowing(newWalletId)
+    if (activeTab.value === 'home') {
+      await followsStore.fetchTimeline(newWalletId)
+    }
+  }
+})
+
+async function switchTab(tab: 'home' | 'discover') {
   activeTab.value = tab
-  postsStore.fetchPosts()
+
+  if (tab === 'home' && walletStore.walletId) {
+    await followsStore.fetchTimeline(walletStore.walletId)
+  } else if (tab === 'discover') {
+    await postsStore.fetchPosts()
+  }
 }
 
-function loadPage(page: number) {
-  postsStore.fetchPosts({ page })
+async function loadPage(page: number) {
+  if (activeTab.value === 'home' && walletStore.walletId) {
+    await followsStore.fetchTimeline(walletStore.walletId, { page })
+  } else {
+    await postsStore.fetchPosts({ page })
+  }
 }
 
 function formatDate(date: string | Date): string {

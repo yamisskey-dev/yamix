@@ -95,20 +95,30 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const wallet = await fastify.prisma.wallet.findUnique({
         where: { address },
-        include: {
-          posts: {
-            orderBy: {
-              createdAt: 'desc',
-            },
-          },
-        },
       })
 
       if (!wallet) {
         return reply.status(404).send({ error: 'Wallet not found' })
       }
 
-      return wallet.posts
+      const posts = await fastify.prisma.post.findMany({
+        where: { walletId: wallet.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          wallet: {
+            select: {
+              address: true,
+            },
+          },
+          _count: {
+            select: {
+              transactions: true,
+            },
+          },
+        },
+      })
+
+      return posts
     }
   )
 

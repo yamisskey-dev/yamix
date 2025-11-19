@@ -57,6 +57,20 @@ export const usePostsStore = defineStore('posts', () => {
     }
   }
 
+  async function fetchPostsByWallet(address: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.get<PostWithRelations[]>(`/api/wallets/${address}/posts`)
+      posts.value = response
+    } catch (err: any) {
+      error.value = err.message || '投稿の取得に失敗しました'
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function createPost(data: {
     content: string
     walletId: string
@@ -105,6 +119,7 @@ export const usePostsStore = defineStore('posts', () => {
     pagination,
     fetchPosts,
     fetchPostById,
+    fetchPostsByWallet,
     createPost,
     deletePost,
   }

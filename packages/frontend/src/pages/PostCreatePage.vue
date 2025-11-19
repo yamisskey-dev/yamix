@@ -73,7 +73,7 @@ async function handleSubmit() {
   })
 
   if (post) {
-    router.push(`/posts/${post.id}`)
+    router.push('/')
   }
 }
 </script>
