@@ -5,6 +5,7 @@ import { api } from '../api/client'
 
 const WALLETS_STORAGE_KEY = 'yamix_wallets'
 const ACTIVE_WALLET_KEY = 'yamix_active_wallet'
+const MAX_WALLETS = 10 // Maximum wallets per browser
 
 export const useWalletStore = defineStore('wallet', () => {
   // State
@@ -23,6 +24,7 @@ export const useWalletStore = defineStore('wallet', () => {
   const balance = computed(() => wallet.value?.balance || 0)
   const walletId = computed(() => wallet.value?.id || '')
   const walletCount = computed(() => wallets.value.length)
+  const canCreateWallet = computed(() => wallets.value.length < MAX_WALLETS)
 
   // Initialize from localStorage
   function init() {
@@ -56,6 +58,12 @@ export const useWalletStore = defineStore('wallet', () => {
 
   // Create a new wallet
   async function createWallet(walletName?: string) {
+    // Check wallet limit
+    if (wallets.value.length >= MAX_WALLETS) {
+      error.value = `ウォレットは最大${MAX_WALLETS}個までです`
+      return null
+    }
+
     loading.value = true
     error.value = null
 
@@ -232,6 +240,7 @@ export const useWalletStore = defineStore('wallet', () => {
     balance,
     walletId,
     walletCount,
+    canCreateWallet,
     createWallet,
     updateWalletName,
     switchWallet,

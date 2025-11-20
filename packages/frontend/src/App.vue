@@ -78,7 +78,12 @@
           </div>
         </div>
         <div class="wallet-menu-footer">
-          <button class="action-button primary" @click="createAndClose()">
+          <span class="wallet-count">{{ walletStore.walletCount }} / 10 ウォレット</span>
+          <button
+            class="action-button primary"
+            @click="createAndClose()"
+            :disabled="!walletStore.canCreateWallet"
+          >
             新しいウォレットを作成
           </button>
         </div>
@@ -471,6 +476,15 @@ async function saveName() {
 .wallet-menu-footer {
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid hsl(var(--border));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.wallet-count {
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
+  text-align: center;
 }
 
 .action-button {
