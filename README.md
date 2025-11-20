@@ -1,8 +1,8 @@
 # Yamix
 
-**Open-source mental health community platform - メンタルヘルスコミュニティプラットフォーム**
+**Open-source anonymous SNS template engine with approval economy - 承認経済による匿名SNSテンプレートエンジン**
 
-A modern, self-hostable reimplementation of menhera.jp, designed to be the WordPress/Misskey for mental health support communities.
+A modern, self-hostable anonymous SNS template engine. Users create multiple anonymous identities and earn approval tokens by receiving replies. Like WordPress or Misskey, but for building approval-based communities.
 
 ## 🌟 Features
 
@@ -252,7 +252,7 @@ This project is licensed under the AGPL-3.0 License - see the LICENSE file for d
 ## 🙏 Acknowledgments
 
 - Inspired by the late menhera.jp
-- Built with love for mental health communities
+- Built with love for life advice communities
 - MFM support powered by [mfm-js](https://github.com/misskey-dev/mfm-js)
 - Similar spirit to [Misskey](https://github.com/misskey-dev/misskey)
 

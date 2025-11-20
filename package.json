@@ -2,13 +2,13 @@
   "name": "yamix",
   "version": "0.1.0",
   "private": true,
-  "description": "Open-source mental health community platform - A modern reimplementation of menhera.jp",
+  "description": "Open-source anonymous SNS template engine with approval economy - 承認経済による匿名SNSテンプレートエンジン",
   "keywords": [
-    "mental-health",
-    "community",
+    "life-advice",
+    "sns",
     "self-hosted",
-    "activitypub",
-    "menhera"
+    "anonymous",
+    "token-economy"
   ],
   "repository": {
     "type": "git",
