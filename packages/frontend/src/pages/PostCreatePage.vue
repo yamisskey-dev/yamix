@@ -28,7 +28,7 @@
         <!-- Actions -->
         <div class="form-actions">
           <span class="wallet-info">
-            投稿者: @{{ walletStore.address || '自動生成' }}
+            投稿者: {{ walletStore.address ? truncateAddress(walletStore.address) : '自動生成' }}
           </span>
           <button
             type="submit"
@@ -54,6 +54,12 @@ const postsStore = usePostsStore()
 const walletStore = useWalletStore()
 
 const content = ref('')
+
+// Truncate ETH-style address for display
+function truncateAddress(address: string): string {
+  if (address.length <= 10) return address
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
 
 onMounted(async () => {
   // Ensure wallet exists

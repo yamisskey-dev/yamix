@@ -23,7 +23,7 @@
       <!-- Wallet info -->
       <div class="wallet-info">
         <div v-if="profileWallet.name" class="wallet-name-display">{{ profileWallet.name }}</div>
-        <div class="wallet-address-display">@{{ profileWallet.address }}</div>
+        <div class="wallet-address-display">{{ profileWallet.address }}</div>
         <div v-if="isOwnWallet" class="wallet-balance">{{ profileWallet.balance }} トークン</div>
         <div v-if="isOwnWallet" class="own-badge">あなたのウォレット</div>
         <button

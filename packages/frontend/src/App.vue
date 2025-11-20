@@ -23,7 +23,7 @@
           <button class="wallet-selector" @click="showWalletMenu = !showWalletMenu">
             <span class="wallet-label">ウォレット</span>
             <span v-if="walletStore.name" class="wallet-name">{{ walletStore.name }}</span>
-            <span class="wallet-address">{{ walletStore.address ? '@' + walletStore.address : '未作成' }}</span>
+            <span class="wallet-address">{{ walletStore.address ? truncateAddress(walletStore.address) : '未作成' }}</span>
             <span class="wallet-balance">{{ walletStore.balance }} トークン</span>
           </button>
         </div>
@@ -55,7 +55,7 @@
           >
             <button class="wallet-item-main" @click="selectWallet(w.address)">
               <span v-if="w.name" class="wallet-item-name">{{ w.name }}</span>
-              <span class="wallet-item-address">@{{ w.address }}</span>
+              <span class="wallet-item-address">{{ truncateAddress(w.address) }}</span>
               <span class="wallet-item-balance">{{ w.balance }} トークン</span>
             </button>
             <button
@@ -129,6 +129,12 @@ import ChatPanel from './components/ChatPanel.vue'
 import { useWalletStore } from './stores/wallet'
 
 const walletStore = useWalletStore()
+
+// Truncate ETH-style address for display
+function truncateAddress(address: string): string {
+  if (address.length <= 10) return address
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
 
 const showWalletMenu = ref(false)
 const walletToDelete = ref<string | null>(null)

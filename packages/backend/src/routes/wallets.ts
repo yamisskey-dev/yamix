@@ -9,9 +9,9 @@ export const MAX_BALANCE = 100
 export const POST_COST = 1
 export const REACTION_AMOUNT = 1
 
-// Generate a unique 8-character address
+// Generate an ETH-style address (0x + 40 hex chars)
 function generateAddress(): string {
-  return randomBytes(4).toString('hex')
+  return '0x' + randomBytes(20).toString('hex')
 }
 
 export const walletsRoutes: FastifyPluginAsync = async (fastify) => {

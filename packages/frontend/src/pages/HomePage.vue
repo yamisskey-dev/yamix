@@ -49,7 +49,7 @@
             <div class="post-meta">
               <span class="wallet-display">
                 <span v-if="post.wallet.name" class="wallet-name">{{ post.wallet.name }}</span>
-                <span class="wallet-address">@{{ post.wallet.address }}</span>
+                <span class="wallet-address">{{ truncateAddress(post.wallet.address) }}</span>
               </span>
               <span class="separator">·</span>
               <span class="date">{{ formatDate(post.createdAt) }}</span>
@@ -95,7 +95,7 @@
               class="reader-wallet"
               @click="goToProfile(selectedPost.wallet.address)"
             >
-              <span v-if="selectedPost.wallet.name" class="wallet-name">{{ selectedPost.wallet.name }} </span>@{{ selectedPost.wallet.address }}
+              <span v-if="selectedPost.wallet.name" class="wallet-name">{{ selectedPost.wallet.name }} </span>{{ truncateAddress(selectedPost.wallet.address) }}
             </span>
             <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
           </div>
@@ -142,7 +142,7 @@
                     class="reply-wallet"
                     @click="goToProfile(reply.wallet.address)"
                   >
-                    <span v-if="reply.wallet.name" class="wallet-name">{{ reply.wallet.name }} </span>@{{ reply.wallet.address }}
+                    <span v-if="reply.wallet.name" class="wallet-name">{{ reply.wallet.name }} </span>{{ truncateAddress(reply.wallet.address) }}
                   </span>
                   <span class="reply-date">{{ formatDate(reply.createdAt) }}</span>
                 </div>
@@ -228,6 +228,12 @@ async function loadPage(page: number) {
   } else {
     await postsStore.fetchPosts({ page })
   }
+}
+
+// Truncate ETH-style address for display
+function truncateAddress(address: string): string {
+  if (address.length <= 10) return address
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function formatDate(date: string | Date): string {
