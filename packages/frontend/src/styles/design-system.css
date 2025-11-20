@@ -196,6 +196,28 @@
   }
 }
 
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes shimmer {
   from { background-position: -200% 0; }
   to { background-position: 200% 0; }
@@ -211,6 +233,14 @@
 
 .animate-scale-in {
   animation: scale-in var(--transition-normal) var(--spring-bounce);
+}
+
+.animate-slide-down {
+  animation: slide-down var(--transition-slow) var(--spring-easing);
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right var(--transition-slow) var(--spring-easing);
 }
 
 /* Mask utilities - Follow style */

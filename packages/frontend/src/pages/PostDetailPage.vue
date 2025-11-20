@@ -196,10 +196,16 @@ async function submitReply() {
   color: hsl(var(--foreground));
   cursor: pointer;
   font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .back-button:hover {
   background: hsl(var(--item-hover));
+}
+
+.back-button:active {
+  transform: scale(0.97);
 }
 
 .loading-state,
@@ -225,8 +231,10 @@ async function submitReply() {
 
 .detail-content {
   background: hsl(var(--background-secondary));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+  animation: slide-up var(--transition-slow) var(--spring-easing);
 }
 
 .post-article {
@@ -276,10 +284,16 @@ async function submitReply() {
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .action-button:hover {
-  opacity: 0.9;
+  background: hsl(var(--primary-hover));
+}
+
+.action-button:active {
+  transform: scale(0.97);
 }
 
 /* Replies section */
@@ -308,6 +322,11 @@ async function submitReply() {
   font-size: var(--font-size-sm);
   resize: vertical;
   margin-bottom: var(--space-2);
+  transition: border-color var(--transition-fast);
+}
+
+.reply-input:hover {
+  border-color: hsl(var(--border-hover));
 }
 
 .reply-input:focus {
@@ -323,6 +342,16 @@ async function submitReply() {
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-normal) var(--spring-easing);
+}
+
+.reply-submit:hover:not(:disabled) {
+  background: hsl(var(--primary-hover));
+}
+
+.reply-submit:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 .reply-submit:disabled {
@@ -341,7 +370,13 @@ async function submitReply() {
   background: hsl(var(--background));
   border-radius: var(--radius-md);
   border: 1px solid hsl(var(--border));
+  animation: slide-up var(--transition-slow) var(--spring-easing);
+  animation-fill-mode: backwards;
 }
+
+.reply-card:nth-child(1) { animation-delay: 0ms; }
+.reply-card:nth-child(2) { animation-delay: 50ms; }
+.reply-card:nth-child(3) { animation-delay: 100ms; }
 
 .reply-text {
   font-size: var(--font-size-sm);

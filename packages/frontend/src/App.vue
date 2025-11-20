@@ -253,13 +253,19 @@ async function saveName() {
   text-decoration: none;
   font-size: 95%;
   font-weight: bold;
-  transition: background 0.1s ease;
+  transition: all var(--transition-normal) var(--spring-easing);
   border: none;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
 }
 
 .post-button:hover {
   background: hsl(var(--primary-hover));
+  box-shadow: var(--shadow-md);
+}
+
+.post-button:active {
+  transform: scale(0.97);
 }
 
 /* ウォレットセクション */
@@ -333,23 +339,27 @@ async function saveName() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: hsl(var(--shadow-color) / 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding-top: 100px;
   z-index: 100;
+  animation: fade-in var(--transition-fast) var(--spring-easing);
 }
 
 .wallet-menu {
   background: hsl(var(--background));
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-perfect);
   width: 90%;
   max-width: 400px;
   max-height: 60vh;
   display: flex;
   flex-direction: column;
+  animation: slide-down var(--transition-slow) var(--spring-easing);
 }
 
 .wallet-menu-header {
@@ -496,16 +506,30 @@ async function saveName() {
 .action-button {
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-sm);
+  font-weight: 500;
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius-md);
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all var(--transition-normal) var(--spring-easing);
 }
 
 .action-button:hover {
   background: hsl(var(--item-hover));
+}
+
+.action-button:active {
+  transform: scale(0.97);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-button:disabled:active {
+  transform: none;
 }
 
 .action-button.primary {
@@ -515,8 +539,8 @@ async function saveName() {
   border-color: hsl(var(--primary));
 }
 
-.action-button.primary:hover {
-  opacity: 0.9;
+.action-button.primary:hover:not(:disabled) {
+  background: hsl(var(--primary-hover));
 }
 
 .action-button.danger {
@@ -525,17 +549,19 @@ async function saveName() {
   border-color: hsl(var(--error));
 }
 
-.action-button.danger:hover {
+.action-button.danger:hover:not(:disabled) {
   opacity: 0.9;
 }
 
 /* 確認モーダル */
 .confirm-modal {
   background: hsl(var(--background));
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: var(--space-4);
   width: 90%;
   max-width: 360px;
+  box-shadow: var(--shadow-perfect);
+  animation: scale-in var(--transition-normal) var(--spring-bounce);
 }
 
 .confirm-modal h3 {

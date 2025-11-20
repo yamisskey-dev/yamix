@@ -197,12 +197,12 @@ function goToPost(postId: string) {
   flex: 1;
   padding: 0 10px;
   font-size: 0.8em;
-  font-weight: normal;
+  font-weight: 500;
   color: hsl(var(--foreground-secondary));
   background: none;
   border: none;
   cursor: pointer;
-  transition: opacity var(--transition-normal);
+  transition: all var(--transition-normal) var(--spring-easing);
   position: relative;
   opacity: 0.7;
   height: 100%;
@@ -213,6 +213,11 @@ function goToPost(postId: string) {
 
 .tab-item:hover {
   opacity: 1;
+  background: hsl(var(--item-hover));
+}
+
+.tab-item:active {
+  transform: scale(0.98);
 }
 
 .tab-item.active {
@@ -224,8 +229,9 @@ function goToPost(postId: string) {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
   height: 3px;
   background: hsl(var(--primary));
   border-radius: 999px;
@@ -288,10 +294,22 @@ function goToPost(postId: string) {
   border-bottom: 1px solid hsl(var(--border));
   cursor: pointer;
   transition: all var(--transition-normal) var(--spring-easing);
+  animation: slide-up var(--transition-slow) var(--spring-easing);
+  animation-fill-mode: backwards;
 }
+
+.post-card:nth-child(1) { animation-delay: 0ms; }
+.post-card:nth-child(2) { animation-delay: 30ms; }
+.post-card:nth-child(3) { animation-delay: 60ms; }
+.post-card:nth-child(4) { animation-delay: 90ms; }
+.post-card:nth-child(5) { animation-delay: 120ms; }
 
 .post-card:hover {
   background: hsl(var(--item-hover));
+}
+
+.post-card:active {
+  background: hsl(var(--item-active));
 }
 
 .post-content {
@@ -361,6 +379,7 @@ function goToPost(postId: string) {
 .page-button {
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-base);
+  font-weight: 500;
   border: none;
   border-radius: var(--radius-md);
   background: hsl(var(--item-hover));
@@ -373,8 +392,13 @@ function goToPost(postId: string) {
   background: hsl(var(--item-active));
 }
 
+.page-button:active {
+  transform: scale(0.95);
+}
+
 .page-button.active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
+  box-shadow: var(--shadow-sm);
 }
 </style>
