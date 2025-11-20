@@ -40,7 +40,7 @@
           v-for="post in currentPosts"
           :key="post.id"
           class="post-card"
-          @click="openReader(post)"
+          @click="goToPost(post.id)"
         >
           <div class="post-content">
             <p class="post-excerpt">
@@ -79,82 +79,6 @@
         </div>
       </div>
     </div>
-
-    <!-- 読書モードモーダル -->
-    <div v-if="selectedPost" class="reader-overlay" @click="closeReader">
-      <div class="reader-modal" @click.stop>
-        <div class="reader-header">
-          <button class="close-button" @click="closeReader">×</button>
-        </div>
-        <div class="reader-content">
-          <article class="reader-article">
-            <p class="reader-text">{{ selectedPost.content }}</p>
-          </article>
-          <div class="reader-meta">
-            <span
-              class="reader-wallet"
-              @click="goToProfile(selectedPost.wallet.address)"
-            >
-              <span v-if="selectedPost.wallet.name" class="wallet-name">{{ selectedPost.wallet.name }} </span>{{ truncateAddress(selectedPost.wallet.address) }}
-            </span>
-            <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
-          </div>
-          <div class="reader-actions">
-            <button
-              class="reader-action-button"
-              @click="goToProfile(selectedPost.wallet.address)"
-            >
-              プロフィールを見る
-            </button>
-          </div>
-
-          <!-- 返信セクション -->
-          <div class="replies-section">
-            <h3 class="replies-title">返信</h3>
-
-            <!-- 返信フォーム -->
-            <div class="reply-form">
-              <textarea
-                v-model="replyContent"
-                class="reply-input"
-                placeholder="返信を入力..."
-                rows="3"
-              ></textarea>
-              <button
-                class="reply-submit"
-                @click="submitReply"
-                :disabled="!replyContent.trim() || postsStore.loading"
-              >
-                返信する
-              </button>
-            </div>
-
-            <!-- 返信リスト -->
-            <div v-if="detailedPost?.replies && detailedPost.replies.length > 0" class="replies-list">
-              <article
-                v-for="reply in detailedPost.replies"
-                :key="reply.id"
-                class="reply-card"
-              >
-                <p class="reply-text">{{ reply.content }}</p>
-                <div class="reply-meta">
-                  <span
-                    class="reply-wallet"
-                    @click="goToProfile(reply.wallet.address)"
-                  >
-                    <span v-if="reply.wallet.name" class="wallet-name">{{ reply.wallet.name }} </span>{{ truncateAddress(reply.wallet.address) }}
-                  </span>
-                  <span class="reply-date">{{ formatDate(reply.createdAt) }}</span>
-                </div>
-              </article>
-            </div>
-            <div v-else class="no-replies">
-              <p>まだ返信がありません</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -164,7 +88,6 @@ import { useRouter } from 'vue-router'
 import { usePostsStore } from '../stores/posts'
 import { useWalletStore } from '../stores/wallet'
 import { useFollowsStore } from '../stores/follows'
-import type { PostWithRelations } from '@yamix/shared'
 
 const router = useRouter()
 const postsStore = usePostsStore()
@@ -172,9 +95,6 @@ const walletStore = useWalletStore()
 const followsStore = useFollowsStore()
 
 const activeTab = ref<'home' | 'discover'>('discover')
-const selectedPost = ref<PostWithRelations | null>(null)
-const detailedPost = ref<PostWithRelations | null>(null)
-const replyContent = ref('')
 
 const isLoading = computed(() => {
   return activeTab.value === 'home' ? followsStore.loading : postsStore.loading
@@ -250,52 +170,8 @@ function getExcerpt(content: string): string {
   return excerpt
 }
 
-async function openReader(post: PostWithRelations) {
-  selectedPost.value = post
-  replyContent.value = ''
-
-  // Fetch detailed post with replies
-  await postsStore.fetchPostById(post.id)
-  detailedPost.value = postsStore.currentPost
-}
-
-function closeReader() {
-  selectedPost.value = null
-  detailedPost.value = null
-  replyContent.value = ''
-}
-
-async function submitReply() {
-  if (!selectedPost.value || !replyContent.value.trim()) return
-
-  // Ensure wallet exists
-  if (!walletStore.isConnected) {
-    await walletStore.createWallet()
-  }
-
-  if (!walletStore.walletId) return
-
-  // Create reply
-  const reply = await postsStore.createPost({
-    content: replyContent.value,
-    walletId: walletStore.walletId,
-    parentId: selectedPost.value.id,
-  })
-
-  if (reply) {
-    // Clear input and refresh post
-    replyContent.value = ''
-    await postsStore.fetchPostById(selectedPost.value.id)
-    detailedPost.value = postsStore.currentPost
-
-    // Refresh wallet balance
-    await walletStore.refreshBalance()
-  }
-}
-
-function goToProfile(address: string) {
-  closeReader()
-  router.push(`/${address}`)
+function goToPost(postId: string) {
+  router.push(`/posts/${postId}`)
 }
 </script>
 
@@ -500,221 +376,5 @@ function goToProfile(address: string) {
 .page-button.active {
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-}
-
-/* 読書モードモーダル */
-.reader-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: hsl(var(--background) / 0.95);
-  z-index: 100;
-  overflow-y: auto;
-  padding: var(--space-4);
-}
-
-.reader-modal {
-  max-width: 640px;
-  margin: 0 auto;
-  background: hsl(var(--background));
-  min-height: 100%;
-}
-
-.reader-header {
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--space-2) 0;
-  position: sticky;
-  top: 0;
-  background: hsl(var(--background));
-}
-
-.close-button {
-  padding: var(--space-2);
-  font-size: var(--font-size-lg);
-  color: hsl(var(--foreground-tertiary));
-  background: none;
-  border: none;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.close-button:hover {
-  color: hsl(var(--foreground));
-}
-
-.reader-content {
-  padding: var(--space-4) 0 var(--space-8);
-}
-
-.reader-article {
-  margin-bottom: var(--space-6);
-}
-
-.reader-text {
-  font-size: 1.125rem;
-  line-height: 1.8;
-  color: hsl(var(--foreground));
-  white-space: pre-wrap;
-  margin: 0;
-}
-
-.reader-meta {
-  display: flex;
-  gap: var(--space-3);
-  font-size: var(--font-size-sm);
-  color: hsl(var(--foreground-tertiary));
-  margin-bottom: var(--space-6);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid hsl(var(--border));
-}
-
-.reader-wallet {
-  font-family: monospace;
-  cursor: pointer;
-}
-
-.reader-wallet:hover {
-  color: hsl(var(--primary));
-}
-
-.reader-actions {
-  display: flex;
-  gap: var(--space-3);
-}
-
-.reader-action-button {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--font-size-sm);
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-md);
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.reader-action-button:hover {
-  background: hsl(var(--item-hover));
-}
-
-.reader-action-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.reader-action-button.primary {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
-}
-
-.reader-action-button.primary:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-/* 返信セクション */
-.replies-section {
-  margin-top: var(--space-6);
-  padding-top: var(--space-4);
-  border-top: 1px solid hsl(var(--border));
-}
-
-.replies-title {
-  font-size: var(--font-size-md);
-  font-weight: 500;
-  margin: 0 0 var(--space-4);
-  color: hsl(var(--foreground));
-}
-
-.reply-form {
-  margin-bottom: var(--space-4);
-}
-
-.reply-input {
-  width: 100%;
-  padding: var(--space-3);
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-  color: hsl(var(--foreground));
-  background: hsl(var(--background-secondary));
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-md);
-  resize: none;
-  margin-bottom: var(--space-2);
-}
-
-.reply-input:focus {
-  outline: none;
-  border-color: hsl(var(--primary));
-}
-
-.reply-input::placeholder {
-  color: hsl(var(--foreground-tertiary));
-}
-
-.reply-submit {
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-sm);
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: opacity var(--transition-normal);
-}
-
-.reply-submit:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.reply-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.replies-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.reply-card {
-  padding: var(--space-3);
-  background: hsl(var(--background-secondary));
-  border-radius: var(--radius-md);
-}
-
-.reply-text {
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-relaxed);
-  color: hsl(var(--foreground));
-  margin: 0 0 var(--space-2);
-  white-space: pre-wrap;
-}
-
-.reply-meta {
-  display: flex;
-  gap: var(--space-2);
-  font-size: var(--font-size-xs);
-  color: hsl(var(--foreground-tertiary));
-}
-
-.reply-wallet {
-  font-family: monospace;
-  cursor: pointer;
-}
-
-.reply-wallet:hover {
-  color: hsl(var(--primary));
-}
-
-.no-replies {
-  padding: var(--space-4);
-  text-align: center;
-  color: hsl(var(--foreground-secondary));
-  font-size: var(--font-size-sm);
 }
 </style>
