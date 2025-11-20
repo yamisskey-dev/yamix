@@ -22,6 +22,7 @@
     <div v-else-if="profileWallet" class="profile-content">
       <!-- Wallet info -->
       <div class="wallet-info">
+        <div v-if="profileWallet.name" class="wallet-name-display">{{ profileWallet.name }}</div>
         <div class="wallet-address-display">@{{ profileWallet.address }}</div>
         <div v-if="isOwnWallet" class="wallet-balance">{{ profileWallet.balance }} トークン</div>
         <div v-if="isOwnWallet" class="own-badge">あなたのウォレット</div>
@@ -291,14 +292,22 @@ function formatDate(date: string | Date): string {
   text-align: center;
 }
 
+.wallet-name-display {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin-bottom: var(--space-2);
+}
+
 .wallet-address-display {
   font-family: monospace;
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   padding: var(--space-2) var(--space-3);
   background: hsl(var(--item-hover));
   border-radius: var(--radius-md);
   display: inline-block;
   margin-bottom: var(--space-2);
+  color: hsl(var(--foreground-secondary));
 }
 
 .wallet-balance {
