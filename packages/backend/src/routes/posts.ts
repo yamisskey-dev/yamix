@@ -155,11 +155,6 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'Wallet not found' })
       }
 
-      // Check if wallet has enough balance to post
-      if (wallet.balance < POST_COST) {
-        return reply.code(400).send({ error: 'Insufficient balance to post' })
-      }
-
       // If this is a reply, verify parent post exists
       let parentPost = null
       if (parentId) {
@@ -173,13 +168,23 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         }
       }
 
+      // Check if this is a self-reply (replying to own post)
+      const isSelfReply = parentPost && parentPost.walletId === walletId
+
+      // Check if wallet has enough balance to post (skip for self-replies)
+      if (!isSelfReply && wallet.balance < POST_COST) {
+        return reply.code(400).send({ error: 'Insufficient balance to post' })
+      }
+
       // Create post and handle token economy atomically
       const post = await fastify.prisma.$transaction(async (tx) => {
-        // Decrease sender's wallet balance
-        await tx.wallet.update({
-          where: { id: walletId },
-          data: { balance: { decrement: POST_COST } },
-        })
+        // Decrease sender's wallet balance (skip for self-replies)
+        if (!isSelfReply) {
+          await tx.wallet.update({
+            where: { id: walletId },
+            data: { balance: { decrement: POST_COST } },
+          })
+        }
 
         // If this is a reply, reward the parent post owner (up to MAX_BALANCE)
         if (parentPost && parentPost.walletId !== walletId) {
