@@ -119,15 +119,59 @@
         </div>
       </div>
     </div>
+
+    <!-- モバイル用ボトムナビゲーション -->
+    <nav class="mobile-bottom-nav">
+      <RouterLink to="/" class="nav-item" :class="{ active: route.path === '/' }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>ホーム</span>
+      </RouterLink>
+      <RouterLink to="/posts/new" class="nav-item" :class="{ active: route.path === '/posts/new' }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        <span>投稿</span>
+      </RouterLink>
+      <button class="nav-item" :class="{ active: showWalletMenu }" @click="showWalletMenu = !showWalletMenu">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>人格</span>
+      </button>
+    </nav>
+
+    <!-- モバイル用AIチャットバブル -->
+    <button class="mobile-chat-bubble" @click="showMobileChat = true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </button>
+
+    <!-- モバイル用AIチャットパネル -->
+    <div v-if="showMobileChat" class="mobile-chat-overlay" @click="showMobileChat = false">
+      <div class="mobile-chat-panel" @click.stop>
+        <div class="mobile-chat-header">
+          <h3>AIアシスタント</h3>
+          <button class="close-button" @click="showMobileChat = false">×</button>
+        </div>
+        <ChatPanel />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { RouterView, RouterLink } from 'vue-router'
+import { RouterView, RouterLink, useRoute } from 'vue-router'
 import ChatPanel from './components/ChatPanel.vue'
 import { useWalletStore } from './stores/wallet'
 
+const route = useRoute()
 const walletStore = useWalletStore()
 
 // Truncate ETH-style address for display
@@ -140,6 +184,7 @@ const showWalletMenu = ref(false)
 const walletToDelete = ref<string | null>(null)
 const editingWallet = ref<string | null>(null)
 const editingName = ref('')
+const showMobileChat = ref(false)
 
 function selectWallet(address: string) {
   walletStore.switchWallet(address)
@@ -632,6 +677,154 @@ async function saveName() {
 
   .main-content {
     border-right: none;
+    padding-bottom: 60px; /* ボトムナビの高さ分 */
   }
+}
+
+/* モバイル用ボトムナビゲーション */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: hsl(var(--background-secondary));
+  border-top: 1px solid hsl(var(--border));
+  z-index: 50;
+}
+
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+  }
+}
+
+.mobile-bottom-nav .nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-2);
+  color: hsl(var(--foreground-tertiary));
+  text-decoration: none;
+  font-size: 10px;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-normal) var(--spring-easing);
+  flex: 1;
+  height: 100%;
+}
+
+.mobile-bottom-nav .nav-item:hover {
+  color: hsl(var(--foreground-secondary));
+}
+
+.mobile-bottom-nav .nav-item:active {
+  transform: scale(0.95);
+}
+
+.mobile-bottom-nav .nav-item.active {
+  color: hsl(var(--primary));
+}
+
+.mobile-bottom-nav .nav-item svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* モバイル用チャットバブル */
+.mobile-chat-bubble {
+  display: none;
+  position: fixed;
+  bottom: 80px; /* ボトムナビの上 */
+  right: var(--space-4);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  z-index: 40;
+  transition: all var(--transition-normal) var(--spring-easing);
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .mobile-chat-bubble {
+    display: flex;
+  }
+}
+
+.mobile-chat-bubble:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-xl);
+}
+
+.mobile-chat-bubble:active {
+  transform: scale(0.95);
+}
+
+/* モバイル用チャットオーバーレイ */
+.mobile-chat-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: hsl(var(--shadow-color) / 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 200;
+  animation: fade-in var(--transition-fast) var(--spring-easing);
+}
+
+@media (max-width: 768px) {
+  .mobile-chat-overlay {
+    display: block;
+  }
+}
+
+.mobile-chat-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 400px;
+  background: hsl(var(--background));
+  display: flex;
+  flex-direction: column;
+  animation: slide-in-right var(--transition-slow) var(--spring-easing);
+}
+
+.mobile-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background-secondary));
+}
+
+.mobile-chat-header h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.mobile-chat-panel :deep(.chat-panel) {
+  flex: 1;
+  height: auto;
 }
 </style>
