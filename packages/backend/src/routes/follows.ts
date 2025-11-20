@@ -9,7 +9,7 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Follow a wallet',
+        description: '人格を注目する',
         tags: ['follows'],
       },
     },
@@ -75,7 +75,7 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Unfollow a wallet',
+        description: '注目を解除',
         tags: ['follows'],
       },
     },
@@ -119,7 +119,7 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:walletId',
     {
       schema: {
-        description: 'Get list of wallets being followed',
+        description: '注目一覧を取得',
         tags: ['follows'],
       },
     },
@@ -151,7 +151,7 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:walletId/check/:targetAddress',
     {
       schema: {
-        description: 'Check if following a wallet',
+        description: '注目状態を確認',
         tags: ['follows'],
       },
     },
@@ -188,7 +188,7 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:walletId/timeline',
     {
       schema: {
-        description: 'Get posts from followed wallets',
+        description: 'タイムラインを取得（注目した人格の相談）',
         tags: ['follows'],
       },
     },

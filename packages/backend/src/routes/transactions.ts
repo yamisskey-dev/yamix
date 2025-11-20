@@ -12,7 +12,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['transactions'],
-        description: 'Create a transaction (send tokens to post author)',
+        description: '承認を送る（相談者にトークンを送信）',
       },
     },
     async (request, reply) => {
@@ -84,7 +84,7 @@ export const transactionsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['transactions'],
-        description: 'Get transactions',
+        description: '承認一覧を取得',
       },
     },
     async (request) => {

@@ -23,7 +23,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['wallets'],
-        description: 'Create a new wallet',
+        description: '新しい人格を作成',
       },
     },
     async (request, reply) => {
@@ -67,7 +67,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['wallets'],
-        description: 'Update wallet name',
+        description: '人格名を更新',
       },
     },
     async (request, reply) => {
@@ -97,7 +97,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['wallets'],
-        description: 'Get wallet by address',
+        description: '人格を取得',
       },
     },
     async (request, reply) => {
@@ -121,7 +121,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['wallets'],
-        description: 'Get posts by wallet address',
+        description: '人格の相談一覧を取得',
       },
     },
     async (request, reply) => {
@@ -167,7 +167,7 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
     {
       schema: {
         tags: ['wallets'],
-        description: 'Delete wallet by address (cascade deletes posts and transactions)',
+        description: '人格を削除（関連する相談と承認も削除）',
       },
     },
     async (request, reply) => {

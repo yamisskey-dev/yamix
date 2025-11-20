@@ -13,7 +13,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Get all posts',
+        description: '全ての相談を取得',
         tags: ['posts'],
       },
     },
@@ -61,7 +61,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       schema: {
-        description: 'Get post by ID',
+        description: '相談を取得（反応含む）',
         tags: ['posts'],
       },
     },
@@ -133,7 +133,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
     '/',
     {
       schema: {
-        description: 'Create a new post',
+        description: '新しい相談または反応を作成',
         tags: ['posts'],
       },
     },
@@ -228,7 +228,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
     '/:id',
     {
       schema: {
-        description: 'Delete a post (only by owner)',
+        description: '相談を削除（所有者のみ）',
         tags: ['posts'],
       },
     },
