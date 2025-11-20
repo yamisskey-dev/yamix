@@ -31,7 +31,7 @@
 
       <!-- Home tab - not connected message -->
       <div v-else-if="activeTab === 'home' && !walletStore.isConnected" class="empty-state">
-        <p>ウォレットを作成してフォローを始めましょう</p>
+        <p>人格を作成してフォローを始めましょう</p>
       </div>
 
       <!-- Posts -->
@@ -62,7 +62,7 @@
 
         <!-- Empty state -->
         <div v-if="currentPosts.length === 0" class="empty-state">
-          <p v-if="activeTab === 'home'">まだ投稿がありません。発見タブでウォレットをフォローしましょう</p>
+          <p v-if="activeTab === 'home'">まだ投稿がありません。発見タブで人格をフォローしましょう</p>
           <p v-else>まだ投稿がありません</p>
         </div>
 
@@ -295,7 +295,7 @@ async function submitReply() {
 
 function goToProfile(address: string) {
   closeReader()
-  router.push(`/@${address}`)
+  router.push(`/${address}`)
 }
 </script>
 

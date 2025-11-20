@@ -24,8 +24,8 @@
       <div class="wallet-info">
         <div v-if="profileWallet.name" class="wallet-name-display">{{ profileWallet.name }}</div>
         <div class="wallet-address-display">{{ profileWallet.address }}</div>
-        <div v-if="isOwnWallet" class="wallet-balance">{{ profileWallet.balance }} トークン</div>
-        <div v-if="isOwnWallet" class="own-badge">あなたのウォレット</div>
+        <div v-if="isOwnWallet" class="wallet-balance">{{ profileWallet.balance }} 承認</div>
+        <div v-if="isOwnWallet" class="own-badge">あなたの人格</div>
         <button
           v-else-if="walletStore.isConnected"
           class="follow-button"

@@ -18,13 +18,13 @@
           <span>投稿する</span>
         </RouterLink>
 
-        <!-- ウォレットセクション -->
+        <!-- 人格セクション -->
         <div class="wallet-section">
           <button class="wallet-selector" @click="showWalletMenu = !showWalletMenu">
-            <span class="wallet-label">ウォレット</span>
+            <span class="wallet-label">人格</span>
             <span v-if="walletStore.name" class="wallet-name">{{ walletStore.name }}</span>
             <span class="wallet-address">{{ walletStore.address ? truncateAddress(walletStore.address) : '未作成' }}</span>
-            <span class="wallet-balance">{{ walletStore.balance }} トークン</span>
+            <span class="wallet-balance">{{ walletStore.balance }} 承認</span>
           </button>
         </div>
       </div>
@@ -40,11 +40,11 @@
       <ChatPanel />
     </aside>
 
-    <!-- ウォレット管理メニュー -->
+    <!-- 人格管理メニュー -->
     <div v-if="showWalletMenu" class="wallet-menu-overlay" @click="showWalletMenu = false">
       <div class="wallet-menu" @click.stop>
         <div class="wallet-menu-header">
-          <h3>ウォレット管理</h3>
+          <h3>人格管理</h3>
           <button class="close-button" @click="showWalletMenu = false">×</button>
         </div>
         <div class="wallet-list">
@@ -56,7 +56,7 @@
             <button class="wallet-item-main" @click="selectWallet(w.address)">
               <span v-if="w.name" class="wallet-item-name">{{ w.name }}</span>
               <span class="wallet-item-address">{{ truncateAddress(w.address) }}</span>
-              <span class="wallet-item-balance">{{ w.balance }} トークン</span>
+              <span class="wallet-item-balance">{{ w.balance }} 承認</span>
             </button>
             <button
               class="edit-button"
@@ -74,17 +74,17 @@
             </button>
           </div>
           <div v-if="walletStore.wallets.length === 0" class="wallet-empty">
-            ウォレットがありません
+            人格がありません
           </div>
         </div>
         <div class="wallet-menu-footer">
-          <span class="wallet-count">{{ walletStore.walletCount }} / 10 ウォレット</span>
+          <span class="wallet-count">{{ walletStore.walletCount }} / 10 人格</span>
           <button
             class="action-button primary"
             @click="createAndClose()"
             :disabled="!walletStore.canCreateWallet"
           >
-            新しいウォレットを作成
+            新しい人格を作成
           </button>
         </div>
       </div>
@@ -93,9 +93,9 @@
     <!-- 削除確認モーダル -->
     <div v-if="walletToDelete" class="wallet-menu-overlay" @click="walletToDelete = null">
       <div class="confirm-modal" @click.stop>
-        <h3>ウォレットを削除</h3>
+        <h3>人格を削除</h3>
         <p>{{ walletToDelete }} を削除しますか？</p>
-        <p class="warning-text">このウォレットに紐づく全ての投稿も削除されます。</p>
+        <p class="warning-text">この人格に紐づく全ての投稿も削除されます。</p>
         <div class="modal-actions">
           <button class="action-button" @click="walletToDelete = null">キャンセル</button>
           <button class="action-button danger" @click="executeDelete()">削除</button>

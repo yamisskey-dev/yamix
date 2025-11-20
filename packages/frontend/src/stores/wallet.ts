@@ -60,7 +60,7 @@ export const useWalletStore = defineStore('wallet', () => {
   async function createWallet(walletName?: string) {
     // Check wallet limit
     if (wallets.value.length >= MAX_WALLETS) {
-      error.value = `ウォレットは最大${MAX_WALLETS}個までです`
+      error.value = `人格は最大${MAX_WALLETS}個までです`
       return null
     }
 
@@ -74,7 +74,7 @@ export const useWalletStore = defineStore('wallet', () => {
       saveToStorage()
       return response
     } catch (err: any) {
-      error.value = err.message || 'ウォレットの作成に失敗しました'
+      error.value = err.message || '人格の作成に失敗しました'
       return null
     } finally {
       loading.value = false
@@ -98,7 +98,7 @@ export const useWalletStore = defineStore('wallet', () => {
       saveToStorage()
       return response
     } catch (err: any) {
-      error.value = err.message || '名前の更新に失敗しました'
+      error.value = err.message || '人格名の更新に失敗しました'
       return null
     } finally {
       loading.value = false
@@ -126,7 +126,7 @@ export const useWalletStore = defineStore('wallet', () => {
       // 404 means wallet doesn't exist in DB, but we should still remove from local storage
       // Other errors should be reported but we still remove locally to maintain sync
       if (!err.message?.includes('404')) {
-        error.value = err.message || 'ウォレットの削除に失敗しました'
+        error.value = err.message || '人格の削除に失敗しました'
       }
     }
 
@@ -160,7 +160,7 @@ export const useWalletStore = defineStore('wallet', () => {
       saveToStorage()
       return response
     } catch (err: any) {
-      error.value = err.message || 'ウォレットの取得に失敗しました'
+      error.value = err.message || '人格の取得に失敗しました'
       return null
     } finally {
       loading.value = false
@@ -189,7 +189,7 @@ export const useWalletStore = defineStore('wallet', () => {
   // Send tokens to a post author
   async function sendTokens(postId: string, amount: number = 1) {
     if (!wallet.value?.id) {
-      error.value = 'ウォレットが接続されていません'
+      error.value = '人格が選択されていません'
       return null
     }
 
@@ -208,7 +208,7 @@ export const useWalletStore = defineStore('wallet', () => {
 
       return response
     } catch (err: any) {
-      error.value = err.message || 'トークンの送信に失敗しました'
+      error.value = err.message || '承認の送信に失敗しました'
       return null
     } finally {
       loading.value = false
