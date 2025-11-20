@@ -13,7 +13,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/PostCreatePage.vue'),
   },
   {
-    path: '/wallets/:address',
+    path: '/@:address',
     name: 'profile',
     component: () => import('../pages/ProfilePage.vue'),
   },

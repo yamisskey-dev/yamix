@@ -4,6 +4,7 @@
 export interface Wallet {
   id: string
   address: string
+  name: string | null
   balance: number
   createdAt: string
 }
@@ -15,6 +16,7 @@ export interface Post {
   id: string
   content: string
   walletId: string
+  parentId: string | null
   createdAt: string
 }
 
@@ -24,11 +26,15 @@ export interface Post {
 export interface PostWithRelations extends Post {
   wallet: {
     address: string
+    name: string | null
   }
   _count?: {
     transactions: number
+    replies: number
   }
   transactions?: Transaction[]
+  replies?: PostWithRelations[]
+  parent?: PostWithRelations
 }
 
 /**

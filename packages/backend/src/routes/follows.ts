@@ -209,10 +209,13 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
       // Include own posts in timeline
       const timelineWalletIds = [...followedIds, walletId]
 
-      // Get posts from followed wallets and own
+      // Get posts from followed wallets and own (only top-level posts)
       const [posts, total] = await Promise.all([
         fastify.prisma.post.findMany({
-          where: { walletId: { in: timelineWalletIds } },
+          where: {
+            walletId: { in: timelineWalletIds },
+            parentId: null, // Only top-level posts
+          },
           skip: (page - 1) * limit,
           take: limit,
           orderBy: { createdAt: 'desc' },
@@ -220,17 +223,22 @@ export const followsRoutes: FastifyPluginAsync = async (fastify) => {
             wallet: {
               select: {
                 address: true,
+                name: true,
               },
             },
             _count: {
               select: {
                 transactions: true,
+                replies: true,
               },
             },
           },
         }),
         fastify.prisma.post.count({
-          where: { walletId: { in: timelineWalletIds } },
+          where: {
+            walletId: { in: timelineWalletIds },
+            parentId: null,
+          },
         }),
       ])
 

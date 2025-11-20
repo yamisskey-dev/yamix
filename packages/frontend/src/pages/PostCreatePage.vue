@@ -28,7 +28,7 @@
         <!-- Actions -->
         <div class="form-actions">
           <span class="wallet-info">
-            投稿者: {{ walletStore.address || '自動生成' }}
+            投稿者: @{{ walletStore.address || '自動生成' }}
           </span>
           <button
             type="submit"

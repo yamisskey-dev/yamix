@@ -1,6 +1,9 @@
 import { FastifyPluginAsync } from 'fastify'
 import { ZodTypeProvider } from 'fastify-type-provider-zod'
-import { POST_COST } from './wallets.js'
+import { POST_COST, MAX_BALANCE } from './wallets.js'
+
+// Token reward for receiving a reply
+const REPLY_REWARD = 1
 
 export const postsRoutes: FastifyPluginAsync = async (fastify) => {
   const server = fastify.withTypeProvider<ZodTypeProvider>()
@@ -21,6 +24,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
 
       const [posts, total] = await Promise.all([
         fastify.prisma.post.findMany({
+          where: { parentId: null }, // Only top-level posts
           skip: (page - 1) * limit,
           take: limit,
           orderBy: { createdAt: 'desc' },
@@ -28,16 +32,18 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
             wallet: {
               select: {
                 address: true,
+                name: true,
               },
             },
             _count: {
               select: {
                 transactions: true,
+                replies: true,
               },
             },
           },
         }),
-        fastify.prisma.post.count(),
+        fastify.prisma.post.count({ where: { parentId: null } }),
       ])
 
       return {
@@ -73,6 +79,7 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
           _count: {
             select: {
               transactions: true,
+              replies: true,
             },
           },
           transactions: {
@@ -83,6 +90,31 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
             },
             orderBy: {
               createdAt: 'desc',
+            },
+          },
+          replies: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              wallet: {
+                select: {
+                  address: true,
+                },
+              },
+              _count: {
+                select: {
+                  transactions: true,
+                  replies: true,
+                },
+              },
+            },
+          },
+          parent: {
+            include: {
+              wallet: {
+                select: {
+                  address: true,
+                },
+              },
             },
           },
         },
@@ -106,8 +138,8 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
-      const body = request.body as { content?: string; walletId?: string }
-      const { content, walletId } = body
+      const body = request.body as { content?: string; walletId?: string; parentId?: string }
+      const { content, walletId, parentId } = body
 
       // Validate required fields
       if (!content || !walletId) {
@@ -128,19 +160,56 @@ export const postsRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(400).send({ error: 'Insufficient balance to post' })
       }
 
-      // Create post and decrease balance atomically
+      // If this is a reply, verify parent post exists
+      let parentPost = null
+      if (parentId) {
+        parentPost = await fastify.prisma.post.findUnique({
+          where: { id: parentId },
+          include: { wallet: true },
+        })
+
+        if (!parentPost) {
+          return reply.code(400).send({ error: 'Parent post not found' })
+        }
+      }
+
+      // Create post and handle token economy atomically
       const post = await fastify.prisma.$transaction(async (tx) => {
-        // Decrease wallet balance
+        // Decrease sender's wallet balance
         await tx.wallet.update({
           where: { id: walletId },
           data: { balance: { decrement: POST_COST } },
         })
+
+        // If this is a reply, reward the parent post owner (up to MAX_BALANCE)
+        if (parentPost && parentPost.walletId !== walletId) {
+          const parentWallet = await tx.wallet.findUnique({
+            where: { id: parentPost.walletId },
+          })
+
+          if (parentWallet && parentWallet.balance < MAX_BALANCE) {
+            const newBalance = Math.min(parentWallet.balance + REPLY_REWARD, MAX_BALANCE)
+            await tx.wallet.update({
+              where: { id: parentPost.walletId },
+              data: { balance: newBalance },
+            })
+          }
+        }
 
         // Create post
         return tx.post.create({
           data: {
             content,
             walletId,
+            parentId: parentId || null,
+          },
+          include: {
+            wallet: {
+              select: {
+                address: true,
+                name: true,
+              },
+            },
           },
         })
       })

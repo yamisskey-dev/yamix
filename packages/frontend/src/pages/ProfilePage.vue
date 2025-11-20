@@ -22,8 +22,8 @@
     <div v-else-if="profileWallet" class="profile-content">
       <!-- Wallet info -->
       <div class="wallet-info">
-        <div class="wallet-address-display">{{ profileWallet.address }}</div>
-        <div class="wallet-balance">{{ profileWallet.balance }} トークン</div>
+        <div class="wallet-address-display">@{{ profileWallet.address }}</div>
+        <div v-if="isOwnWallet" class="wallet-balance">{{ profileWallet.balance }} トークン</div>
         <div v-if="isOwnWallet" class="own-badge">あなたのウォレット</div>
         <button
           v-else-if="walletStore.isConnected"
@@ -55,8 +55,8 @@
               <p class="post-excerpt">{{ getExcerpt(post.content) }}</p>
               <div class="post-meta">
                 <span class="date">{{ formatDate(post.createdAt) }}</span>
-                <span v-if="post._count && post._count.transactions > 0" class="tokens">
-                  · {{ post._count.transactions }} トークン
+                <span v-if="post._count && post._count.replies > 0" class="replies">
+                  · {{ post._count.replies }} 返信
                 </span>
               </div>
             </div>
@@ -78,16 +78,8 @@
           <div class="reader-meta">
             <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
           </div>
-          <div class="reader-actions">
+          <div v-if="isOwnWallet" class="reader-actions">
             <button
-              class="reader-action-button primary"
-              @click="sendToken(selectedPost.id)"
-              :disabled="walletStore.loading"
-            >
-              トークンを送る
-            </button>
-            <button
-              v-if="isOwnWallet"
               class="reader-action-button danger"
               @click="confirmDelete(selectedPost.id)"
             >
@@ -198,21 +190,6 @@ function openReader(post: PostWithRelations) {
 
 function closeReader() {
   selectedPost.value = null
-}
-
-async function sendToken(postId: string) {
-  if (!walletStore.isConnected) {
-    await walletStore.createWallet()
-  }
-
-  await walletStore.sendTokens(postId)
-
-  // Refresh posts and wallet balance
-  const address = route.params.address as string
-  if (address) {
-    await postsStore.fetchPostsByWallet(address)
-    profileWallet.value = await api.get<Wallet>(`/api/wallets/${address}`)
-  }
 }
 
 function confirmDelete(postId: string) {
@@ -413,8 +390,8 @@ function formatDate(date: string | Date): string {
   color: hsl(var(--foreground-tertiary));
 }
 
-.tokens {
-  color: hsl(var(--primary));
+.replies {
+  color: hsl(var(--foreground-secondary));
 }
 
 .action-button {

@@ -19,6 +19,7 @@ export const useWalletStore = defineStore('wallet', () => {
   )
   const isConnected = computed(() => wallet.value !== null)
   const address = computed(() => wallet.value?.address || '')
+  const name = computed(() => wallet.value?.name || null)
   const balance = computed(() => wallet.value?.balance || 0)
   const walletId = computed(() => wallet.value?.id || '')
   const walletCount = computed(() => wallets.value.length)
@@ -54,18 +55,42 @@ export const useWalletStore = defineStore('wallet', () => {
   }
 
   // Create a new wallet
-  async function createWallet() {
+  async function createWallet(walletName?: string) {
     loading.value = true
     error.value = null
 
     try {
-      const response = await api.post<Wallet>('/api/wallets')
+      const response = await api.post<Wallet>('/api/wallets', { name: walletName || null })
       wallets.value.push(response)
       activeWalletAddress.value = response.address
       saveToStorage()
       return response
     } catch (err: any) {
       error.value = err.message || 'ウォレットの作成に失敗しました'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Update wallet name
+  async function updateWalletName(walletAddress: string, newName: string | null) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.patch<Wallet>(`/api/wallets/${walletAddress}`, { name: newName })
+
+      // Update in wallets array
+      const index = wallets.value.findIndex(w => w.address === walletAddress)
+      if (index >= 0) {
+        wallets.value[index] = response
+      }
+
+      saveToStorage()
+      return response
+    } catch (err: any) {
+      error.value = err.message || '名前の更新に失敗しました'
       return null
     } finally {
       loading.value = false
@@ -203,10 +228,12 @@ export const useWalletStore = defineStore('wallet', () => {
     error,
     isConnected,
     address,
+    name,
     balance,
     walletId,
     walletCount,
     createWallet,
+    updateWalletName,
     switchWallet,
     deleteWallet,
     fetchWallet,

@@ -72,6 +72,10 @@ class ApiClient {
     return this.request<T>(path, { ...options, method: 'PUT', body })
   }
 
+  async patch<T>(path: string, body?: any, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
+    return this.request<T>(path, { ...options, method: 'PATCH', body })
+  }
+
   async delete<T>(path: string, options?: Omit<RequestOptions, 'method'>): Promise<T> {
     return this.request<T>(path, { ...options, method: 'DELETE' })
   }

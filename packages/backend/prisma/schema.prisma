@@ -14,6 +14,7 @@ datasource db {
 model Wallet {
   id        String   @id @default(uuid())
   address   String   @unique  // 短いハッシュ（8文字）
+  name      String?  // 表示名（任意）
   balance   Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -45,19 +46,23 @@ model Follow {
   @@map("follows")
 }
 
-// Post - 投稿
+// Post - 投稿（返信も投稿として扱う）
 model Post {
   id        String   @id @default(uuid())
   content   String   @db.Text
   walletId  String   @map("wallet_id")
+  parentId  String?  @map("parent_id")  // 返信の場合、親投稿のID
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
   wallet       Wallet        @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  parent       Post?         @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Post[]        @relation("PostReplies")
   transactions Transaction[]
 
   @@index([walletId])
   @@index([createdAt])
+  @@index([parentId])
   @@map("posts")
 }
 

@@ -22,7 +22,8 @@
         <div class="wallet-section">
           <button class="wallet-selector" @click="showWalletMenu = !showWalletMenu">
             <span class="wallet-label">ウォレット</span>
-            <span class="wallet-address">{{ walletStore.address || '未作成' }}</span>
+            <span v-if="walletStore.name" class="wallet-name">{{ walletStore.name }}</span>
+            <span class="wallet-address">{{ walletStore.address ? '@' + walletStore.address : '未作成' }}</span>
             <span class="wallet-balance">{{ walletStore.balance }} トークン</span>
           </button>
         </div>
@@ -53,8 +54,16 @@
             :class="['wallet-item', { active: w.address === walletStore.address }]"
           >
             <button class="wallet-item-main" @click="selectWallet(w.address)">
-              <span class="wallet-item-address">{{ w.address }}</span>
+              <span v-if="w.name" class="wallet-item-name">{{ w.name }}</span>
+              <span class="wallet-item-address">@{{ w.address }}</span>
               <span class="wallet-item-balance">{{ w.balance }} トークン</span>
+            </button>
+            <button
+              class="edit-button"
+              @click.stop="startEditName(w.address, w.name)"
+              title="名前を編集"
+            >
+              ✎
             </button>
             <button
               class="delete-button"
@@ -88,6 +97,23 @@
         </div>
       </div>
     </div>
+
+    <!-- 名前編集モーダル -->
+    <div v-if="editingWallet" class="wallet-menu-overlay" @click="editingWallet = null">
+      <div class="confirm-modal" @click.stop>
+        <h3>名前を編集</h3>
+        <input
+          v-model="editingName"
+          class="name-input"
+          placeholder="名前を入力..."
+          @keyup.enter="saveName"
+        />
+        <div class="modal-actions">
+          <button class="action-button" @click="editingWallet = null">キャンセル</button>
+          <button class="action-button primary" @click="saveName">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -101,6 +127,8 @@ const walletStore = useWalletStore()
 
 const showWalletMenu = ref(false)
 const walletToDelete = ref<string | null>(null)
+const editingWallet = ref<string | null>(null)
+const editingName = ref('')
 
 function selectWallet(address: string) {
   walletStore.switchWallet(address)
@@ -120,6 +148,19 @@ async function executeDelete() {
   if (walletToDelete.value) {
     await walletStore.deleteWallet(walletToDelete.value)
     walletToDelete.value = null
+  }
+}
+
+function startEditName(address: string, currentName: string | null) {
+  editingWallet.value = address
+  editingName.value = currentName || ''
+}
+
+async function saveName() {
+  if (editingWallet.value) {
+    await walletStore.updateWalletName(editingWallet.value, editingName.value || null)
+    editingWallet.value = null
+    editingName.value = ''
   }
 }
 </script>
@@ -240,10 +281,16 @@ async function executeDelete() {
   color: hsl(var(--foreground-tertiary));
 }
 
-.wallet-address {
+.wallet-name {
   font-size: var(--font-size-sm);
-  font-family: monospace;
+  font-weight: 500;
   color: hsl(var(--foreground));
+}
+
+.wallet-address {
+  font-size: var(--font-size-xs);
+  font-family: monospace;
+  color: hsl(var(--foreground-tertiary));
 }
 
 .wallet-balance {
@@ -355,15 +402,34 @@ async function executeDelete() {
   border-radius: var(--radius-md);
 }
 
-.wallet-item-address {
-  font-family: monospace;
+.wallet-item-name {
+  font-weight: 500;
   font-size: var(--font-size-sm);
   color: hsl(var(--foreground));
+}
+
+.wallet-item-address {
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
 }
 
 .wallet-item-balance {
   font-size: var(--font-size-xs);
   color: hsl(var(--foreground-tertiary));
+}
+
+.edit-button {
+  padding: var(--space-2);
+  background: none;
+  border: none;
+  color: hsl(var(--foreground-tertiary));
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.edit-button:hover {
+  color: hsl(var(--primary));
 }
 
 .delete-button {
@@ -377,6 +443,22 @@ async function executeDelete() {
 
 .delete-button:hover {
   color: hsl(var(--error));
+}
+
+.name-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  background: hsl(var(--background-secondary));
+  color: hsl(var(--foreground));
+  margin-bottom: var(--space-3);
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
 }
 
 .wallet-empty {

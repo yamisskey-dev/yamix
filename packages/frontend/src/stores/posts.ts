@@ -74,6 +74,7 @@ export const usePostsStore = defineStore('posts', () => {
   async function createPost(data: {
     content: string
     walletId: string
+    parentId?: string
   }) {
     loading.value = true
     error.value = null

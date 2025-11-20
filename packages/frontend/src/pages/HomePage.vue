@@ -47,11 +47,14 @@
               {{ getExcerpt(post.content) }}
             </p>
             <div class="post-meta">
-              <span class="wallet-address">{{ post.wallet.address }}</span>
+              <span class="wallet-display">
+                <span v-if="post.wallet.name" class="wallet-name">{{ post.wallet.name }}</span>
+                <span class="wallet-address">@{{ post.wallet.address }}</span>
+              </span>
               <span class="separator">·</span>
               <span class="date">{{ formatDate(post.createdAt) }}</span>
-              <span v-if="post._count && post._count.transactions > 0" class="tokens">
-                · {{ post._count.transactions }} トークン
+              <span v-if="post._count && post._count.replies > 0" class="replies">
+                · {{ post._count.replies }} 返信
               </span>
             </div>
           </div>
@@ -92,24 +95,62 @@
               class="reader-wallet"
               @click="goToProfile(selectedPost.wallet.address)"
             >
-              {{ selectedPost.wallet.address }}
+              <span v-if="selectedPost.wallet.name" class="wallet-name">{{ selectedPost.wallet.name }} </span>@{{ selectedPost.wallet.address }}
             </span>
             <span class="reader-date">{{ formatDate(selectedPost.createdAt) }}</span>
           </div>
           <div class="reader-actions">
-            <button
-              class="reader-action-button primary"
-              @click="sendToken(selectedPost.id)"
-              :disabled="walletStore.loading"
-            >
-              トークンを送る
-            </button>
             <button
               class="reader-action-button"
               @click="goToProfile(selectedPost.wallet.address)"
             >
               プロフィールを見る
             </button>
+          </div>
+
+          <!-- 返信セクション -->
+          <div class="replies-section">
+            <h3 class="replies-title">返信</h3>
+
+            <!-- 返信フォーム -->
+            <div class="reply-form">
+              <textarea
+                v-model="replyContent"
+                class="reply-input"
+                placeholder="返信を入力..."
+                rows="3"
+              ></textarea>
+              <button
+                class="reply-submit"
+                @click="submitReply"
+                :disabled="!replyContent.trim() || postsStore.loading"
+              >
+                返信する
+              </button>
+            </div>
+
+            <!-- 返信リスト -->
+            <div v-if="detailedPost?.replies && detailedPost.replies.length > 0" class="replies-list">
+              <article
+                v-for="reply in detailedPost.replies"
+                :key="reply.id"
+                class="reply-card"
+              >
+                <p class="reply-text">{{ reply.content }}</p>
+                <div class="reply-meta">
+                  <span
+                    class="reply-wallet"
+                    @click="goToProfile(reply.wallet.address)"
+                  >
+                    <span v-if="reply.wallet.name" class="wallet-name">{{ reply.wallet.name }} </span>@{{ reply.wallet.address }}
+                  </span>
+                  <span class="reply-date">{{ formatDate(reply.createdAt) }}</span>
+                </div>
+              </article>
+            </div>
+            <div v-else class="no-replies">
+              <p>まだ返信がありません</p>
+            </div>
           </div>
         </div>
       </div>
@@ -132,6 +173,8 @@ const followsStore = useFollowsStore()
 
 const activeTab = ref<'home' | 'discover'>('discover')
 const selectedPost = ref<PostWithRelations | null>(null)
+const detailedPost = ref<PostWithRelations | null>(null)
+const replyContent = ref('')
 
 const isLoading = computed(() => {
   return activeTab.value === 'home' ? followsStore.loading : postsStore.loading
@@ -201,24 +244,52 @@ function getExcerpt(content: string): string {
   return excerpt
 }
 
-function openReader(post: PostWithRelations) {
+async function openReader(post: PostWithRelations) {
   selectedPost.value = post
+  replyContent.value = ''
+
+  // Fetch detailed post with replies
+  await postsStore.fetchPostById(post.id)
+  detailedPost.value = postsStore.currentPost
 }
 
 function closeReader() {
   selectedPost.value = null
+  detailedPost.value = null
+  replyContent.value = ''
+}
+
+async function submitReply() {
+  if (!selectedPost.value || !replyContent.value.trim()) return
+
+  // Ensure wallet exists
+  if (!walletStore.isConnected) {
+    await walletStore.createWallet()
+  }
+
+  if (!walletStore.walletId) return
+
+  // Create reply
+  const reply = await postsStore.createPost({
+    content: replyContent.value,
+    walletId: walletStore.walletId,
+    parentId: selectedPost.value.id,
+  })
+
+  if (reply) {
+    // Clear input and refresh post
+    replyContent.value = ''
+    await postsStore.fetchPostById(selectedPost.value.id)
+    detailedPost.value = postsStore.currentPost
+
+    // Refresh wallet balance
+    await walletStore.refreshBalance()
+  }
 }
 
 function goToProfile(address: string) {
   closeReader()
-  router.push(`/wallets/${address}`)
-}
-
-async function sendToken(postId: string) {
-  if (!walletStore.isConnected) {
-    await walletStore.createWallet()
-  }
-  await walletStore.sendTokens(postId)
+  router.push(`/@${address}`)
 }
 </script>
 
@@ -363,16 +434,28 @@ async function sendToken(postId: string) {
   color: hsl(var(--foreground-tertiary));
 }
 
+.wallet-display {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.wallet-name {
+  font-weight: 500;
+  color: hsl(var(--foreground));
+}
+
 .wallet-address {
   font-family: monospace;
+  color: hsl(var(--foreground-tertiary));
 }
 
 .separator {
   opacity: 0.5;
 }
 
-.tokens {
-  color: hsl(var(--primary));
+.replies {
+  color: hsl(var(--foreground-secondary));
 }
 
 /* 空状態 */
@@ -524,5 +607,108 @@ async function sendToken(postId: string) {
 
 .reader-action-button.primary:hover:not(:disabled) {
   opacity: 0.9;
+}
+
+/* 返信セクション */
+.replies-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid hsl(var(--border));
+}
+
+.replies-title {
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  margin: 0 0 var(--space-4);
+  color: hsl(var(--foreground));
+}
+
+.reply-form {
+  margin-bottom: var(--space-4);
+}
+
+.reply-input {
+  width: 100%;
+  padding: var(--space-3);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: hsl(var(--foreground));
+  background: hsl(var(--background-secondary));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-md);
+  resize: none;
+  margin-bottom: var(--space-2);
+}
+
+.reply-input:focus {
+  outline: none;
+  border-color: hsl(var(--primary));
+}
+
+.reply-input::placeholder {
+  color: hsl(var(--foreground-tertiary));
+}
+
+.reply-submit {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-sm);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-normal);
+}
+
+.reply-submit:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.reply-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.replies-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reply-card {
+  padding: var(--space-3);
+  background: hsl(var(--background-secondary));
+  border-radius: var(--radius-md);
+}
+
+.reply-text {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+  color: hsl(var(--foreground));
+  margin: 0 0 var(--space-2);
+  white-space: pre-wrap;
+}
+
+.reply-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: hsl(var(--foreground-tertiary));
+}
+
+.reply-wallet {
+  font-family: monospace;
+  cursor: pointer;
+}
+
+.reply-wallet:hover {
+  color: hsl(var(--primary));
+}
+
+.no-replies {
+  padding: var(--space-4);
+  text-align: center;
+  color: hsl(var(--foreground-secondary));
+  font-size: var(--font-size-sm);
 }
 </style>

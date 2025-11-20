@@ -27,6 +27,9 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       },
     },
     async (request, reply) => {
+      const body = request.body as { name?: string } | undefined
+      const name = body?.name || null
+
       // Generate unique address
       let address = generateAddress()
       let attempts = 0
@@ -49,11 +52,42 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       const wallet = await fastify.prisma.wallet.create({
         data: {
           address,
+          name,
           balance: INITIAL_BALANCE,
         },
       })
 
       return reply.status(201).send(wallet)
+    }
+  )
+
+  // Update wallet name
+  server.patch(
+    '/:address',
+    {
+      schema: {
+        tags: ['wallets'],
+        description: 'Update wallet name',
+      },
+    },
+    async (request, reply) => {
+      const { address } = request.params as { address: string }
+      const body = request.body as { name?: string }
+
+      const wallet = await fastify.prisma.wallet.findUnique({
+        where: { address },
+      })
+
+      if (!wallet) {
+        return reply.status(404).send({ error: 'Wallet not found' })
+      }
+
+      const updated = await fastify.prisma.wallet.update({
+        where: { address },
+        data: { name: body.name || null },
+      })
+
+      return updated
     }
   )
 
@@ -102,17 +136,22 @@ export const walletsRoutes: FastifyPluginAsync = async (fastify) => {
       }
 
       const posts = await fastify.prisma.post.findMany({
-        where: { walletId: wallet.id },
+        where: {
+          walletId: wallet.id,
+          parentId: null, // Only top-level posts
+        },
         orderBy: { createdAt: 'desc' },
         include: {
           wallet: {
             select: {
               address: true,
+              name: true,
             },
           },
           _count: {
             select: {
               transactions: true,
+              replies: true,
             },
           },
         },
