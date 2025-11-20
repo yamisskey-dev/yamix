@@ -31,7 +31,7 @@
 
       <!-- Home tab - not connected message -->
       <div v-else-if="activeTab === 'home' && !walletStore.isConnected" class="empty-state">
-        <p>人格を作成してフォローを始めましょう</p>
+        <p>人格を作成して注目を始めましょう</p>
       </div>
 
       <!-- Posts -->
@@ -54,7 +54,7 @@
               <span class="separator">·</span>
               <span class="date">{{ formatDate(post.createdAt) }}</span>
               <span v-if="post._count && post._count.replies > 0" class="replies">
-                · {{ post._count.replies }} 返信
+                · {{ post._count.replies }} 反応
               </span>
             </div>
           </div>
@@ -62,8 +62,8 @@
 
         <!-- Empty state -->
         <div v-if="currentPosts.length === 0" class="empty-state">
-          <p v-if="activeTab === 'home'">まだ投稿がありません。発見タブで人格をフォローしましょう</p>
-          <p v-else>まだ投稿がありません</p>
+          <p v-if="activeTab === 'home'">まだ相談がありません。発見タブで人格を注目しましょう</p>
+          <p v-else>まだ相談がありません</p>
         </div>
 
         <!-- Pagination -->

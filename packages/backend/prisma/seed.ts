@@ -33,7 +33,7 @@ async function main() {
       create: {
         name: 'その他',
         slug: 'other',
-        description: 'その他の投稿',
+        description: 'その他の相談',
         order: 3,
       },
     }),

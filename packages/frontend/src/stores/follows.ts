@@ -30,7 +30,7 @@ export const useFollowsStore = defineStore('follows', () => {
       await fetchFollowing(followerId)
       return true
     } catch (err: any) {
-      error.value = err.message || 'フォローに失敗しました'
+      error.value = err.message || '注目に失敗しました'
       return false
     } finally {
       loading.value = false
@@ -52,7 +52,7 @@ export const useFollowsStore = defineStore('follows', () => {
       await fetchFollowing(followerId)
       return true
     } catch (err: any) {
-      error.value = err.message || 'フォロー解除に失敗しました'
+      error.value = err.message || '注目解除に失敗しました'
       return false
     } finally {
       loading.value = false
@@ -67,7 +67,7 @@ export const useFollowsStore = defineStore('follows', () => {
       const response = await api.get<Wallet[]>(`/api/follows/${walletId}`)
       following.value = response
     } catch (err: any) {
-      error.value = err.message || 'フォロー一覧の取得に失敗しました'
+      error.value = err.message || '注目一覧の取得に失敗しました'
     } finally {
       loading.value = false
     }

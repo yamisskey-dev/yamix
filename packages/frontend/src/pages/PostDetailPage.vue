@@ -42,20 +42,20 @@
           class="action-button"
           @click="goToProfile(post.wallet.address)"
         >
-          プロフィールを見る
+          人格を見る
         </button>
       </div>
 
       <!-- Replies section -->
       <div class="replies-section">
-        <h3 class="replies-title">返信</h3>
+        <h3 class="replies-title">反応</h3>
 
         <!-- Reply form -->
         <div class="reply-form">
           <textarea
             v-model="replyContent"
             class="reply-input"
-            placeholder="返信を入力..."
+            placeholder="反応を入力..."
             rows="3"
           ></textarea>
           <button
@@ -63,7 +63,7 @@
             @click="submitReply"
             :disabled="!replyContent.trim() || postsStore.loading"
           >
-            返信する
+            反応する
           </button>
         </div>
 
@@ -87,7 +87,7 @@
           </article>
         </div>
         <div v-else class="no-replies">
-          <p>まだ返信がありません</p>
+          <p>まだ反応がありません</p>
         </div>
       </div>
     </div>
@@ -119,10 +119,10 @@ onMounted(async () => {
   try {
     await postsStore.fetchPostById(postId)
     if (!postsStore.currentPost) {
-      error.value = '投稿が見つかりません'
+      error.value = '相談が見つかりません'
     }
   } catch (err: any) {
-    error.value = err.message || '投稿の読み込みに失敗しました'
+    error.value = err.message || '相談の読み込みに失敗しました'
   } finally {
     loading.value = false
   }

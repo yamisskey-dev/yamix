@@ -76,7 +76,7 @@ describe('App - 3カラムレイアウト', () => {
   })
 
   describe('サイドバー - アクション', () => {
-    it('投稿するボタンが存在する', () => {
+    it('相談するボタンが存在する', () => {
       const wrapper = mount(App, {
         global: {
           plugins: [router],
@@ -111,7 +111,7 @@ describe('App - 3カラムレイアウト', () => {
       expect(registerLink.exists()).toBe(true)
     })
 
-    it('投稿ボタンと認証ボタンが下部セクションにある', () => {
+    it('相談ボタンと認証ボタンが下部セクションにある', () => {
       const wrapper = mount(App, {
         global: {
           plugins: [router],

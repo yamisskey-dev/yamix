@@ -5,7 +5,7 @@
       <button class="back-button" @click="router.push('/')">
         ← 戻る
       </button>
-      <span class="page-title">新規投稿</span>
+      <span class="page-title">新規相談</span>
     </div>
 
     <!-- フォーム -->
@@ -28,14 +28,14 @@
         <!-- Actions -->
         <div class="form-actions">
           <span class="wallet-info">
-            投稿者: {{ walletStore.address ? truncateAddress(walletStore.address) : '自動生成' }}
+            相談者: {{ walletStore.address ? truncateAddress(walletStore.address) : '自動生成' }}
           </span>
           <button
             type="submit"
             class="submit-button"
             :disabled="postsStore.loading || !content.trim()"
           >
-            {{ postsStore.loading ? '投稿中...' : '投稿する' }}
+            {{ postsStore.loading ? '相談中...' : '相談する' }}
           </button>
         </div>
       </form>

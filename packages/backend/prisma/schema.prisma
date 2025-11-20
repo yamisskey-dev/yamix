@@ -30,7 +30,7 @@ model Wallet {
   @@map("wallets")
 }
 
-// Follow - サイレントウォッチ（フォローされた側には見えない）
+// Follow - サイレントウォッチ（注目された側には見えない）
 model Follow {
   id         String   @id @default(uuid())
   followerId String   @map("follower_id")
@@ -46,12 +46,12 @@ model Follow {
   @@map("follows")
 }
 
-// Post - 投稿（返信も投稿として扱う）
+// Post - 相談（反応も相談として扱う）
 model Post {
   id        String   @id @default(uuid())
   content   String   @db.Text
   walletId  String   @map("wallet_id")
-  parentId  String?  @map("parent_id")  // 返信の場合、親投稿のID
+  parentId  String?  @map("parent_id")  // 反応の場合、親投稿のID
   createdAt DateTime @default(now()) @map("created_at")
 
   // Relations

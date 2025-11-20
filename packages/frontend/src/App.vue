@@ -9,13 +9,13 @@
 
       <!-- 下部セクション -->
       <div class="bottom-section">
-        <!-- 投稿するボタン -->
+        <!-- 相談するボタン -->
         <RouterLink to="/posts/new" class="post-button">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 20h9"></path>
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
           </svg>
-          <span>投稿する</span>
+          <span>相談する</span>
         </RouterLink>
 
         <!-- 人格セクション -->
@@ -95,7 +95,7 @@
       <div class="confirm-modal" @click.stop>
         <h3>人格を削除</h3>
         <p>{{ walletToDelete }} を削除しますか？</p>
-        <p class="warning-text">この人格に紐づく全ての投稿も削除されます。</p>
+        <p class="warning-text">この人格に紐づく全ての相談も削除されます。</p>
         <div class="modal-actions">
           <button class="action-button" @click="walletToDelete = null">キャンセル</button>
           <button class="action-button danger" @click="executeDelete()">削除</button>
@@ -134,7 +134,7 @@
           <path d="M12 20h9"></path>
           <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
         </svg>
-        <span>投稿</span>
+        <span>相談</span>
       </RouterLink>
       <button class="nav-item" :class="{ active: showWalletMenu }" @click="showWalletMenu = !showWalletMenu">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -285,7 +285,7 @@ async function saveName() {
   gap: var(--space-3);
 }
 
-/* 投稿するボタン */
+/* 相談するボタン */
 .post-button {
   display: flex;
   align-items: center;

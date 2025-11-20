@@ -33,16 +33,16 @@
           @click="toggleFollow"
           :disabled="followsStore.loading"
         >
-          {{ isFollowing ? 'フォロー中' : 'フォローする' }}
+          {{ isFollowing ? '注目中' : '注目する' }}
         </button>
       </div>
 
       <!-- Posts list -->
       <div class="posts-section">
-        <h2 class="section-title">投稿一覧</h2>
+        <h2 class="section-title">相談一覧</h2>
 
         <div v-if="postsStore.posts.length === 0" class="empty-state">
-          <p>まだ投稿がありません</p>
+          <p>まだ相談がありません</p>
         </div>
 
         <div v-else class="posts-list">
@@ -57,7 +57,7 @@
               <div class="post-meta">
                 <span class="date">{{ formatDate(post.createdAt) }}</span>
                 <span v-if="post._count && post._count.replies > 0" class="replies">
-                  · {{ post._count.replies }} 返信
+                  · {{ post._count.replies }} 反応
                 </span>
               </div>
             </div>
@@ -94,8 +94,8 @@
     <!-- 削除確認モーダル -->
     <div v-if="showDeleteConfirm" class="modal-overlay" @click="showDeleteConfirm = false">
       <div class="confirm-modal" @click.stop>
-        <h3>投稿を削除</h3>
-        <p>この投稿を削除しますか？</p>
+        <h3>相談を削除</h3>
+        <p>この相談を削除しますか？</p>
         <p class="warning-text">この操作は取り消せません。</p>
         <div class="modal-actions">
           <button class="action-button" @click="showDeleteConfirm = false">キャンセル</button>

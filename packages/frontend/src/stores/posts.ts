@@ -37,7 +37,7 @@ export const usePostsStore = defineStore('posts', () => {
         totalPages: response.totalPages,
       }
     } catch (err: any) {
-      error.value = err.message || '投稿の取得に失敗しました'
+      error.value = err.message || '相談の取得に失敗しました'
     } finally {
       loading.value = false
     }
@@ -51,7 +51,7 @@ export const usePostsStore = defineStore('posts', () => {
       const response = await api.get<PostWithRelations>(`/api/posts/${id}`)
       currentPost.value = response
     } catch (err: any) {
-      error.value = err.message || '投稿が見つかりませんでした'
+      error.value = err.message || '相談が見つかりませんでした'
     } finally {
       loading.value = false
     }
@@ -65,7 +65,7 @@ export const usePostsStore = defineStore('posts', () => {
       const response = await api.get<PostWithRelations[]>(`/api/wallets/${address}/posts`)
       posts.value = response
     } catch (err: any) {
-      error.value = err.message || '投稿の取得に失敗しました'
+      error.value = err.message || '相談の取得に失敗しました'
     } finally {
       loading.value = false
     }
@@ -83,7 +83,7 @@ export const usePostsStore = defineStore('posts', () => {
       const response = await api.post<PostWithRelations>('/api/posts', data)
       return response
     } catch (err: any) {
-      error.value = err.message || '投稿の作成に失敗しました'
+      error.value = err.message || '相談の作成に失敗しました'
       return null
     } finally {
       loading.value = false
@@ -105,7 +105,7 @@ export const usePostsStore = defineStore('posts', () => {
       }
       return true
     } catch (err: any) {
-      error.value = err.message || '投稿の削除に失敗しました'
+      error.value = err.message || '相談の削除に失敗しました'
       return false
     } finally {
       loading.value = false
