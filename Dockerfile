@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install all dependencies
 RUN pnpm install --frozen-lockfile
 
 # Generate Prisma client
@@ -31,7 +31,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
 # Production stage
-FROM node:22-alpine AS production
+FROM base AS production
 WORKDIR /app
 
 # Set environment variables
@@ -39,6 +39,9 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     HOSTNAME=0.0.0.0 \
     PORT=3000
+
+# Install prisma CLI globally for migrations
+RUN npm install -g prisma@6
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
@@ -49,11 +52,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Copy prisma for migrations (from deps stage where prisma:generate was run)
+# Copy prisma schema for migrations
 COPY --from=deps /app/prisma ./prisma
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./
