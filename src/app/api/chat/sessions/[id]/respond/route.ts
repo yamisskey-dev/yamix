@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Cannot respond to own session
       if (session.userId === payload.userId) {
         return NextResponse.json(
-          { error: "Cannot respond to your own consultation" },
+          { error: "自分の相談には回答できません" },
           { status: 400 }
         );
       }
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       if (session.userId === payload.userId) {
         return NextResponse.json(
-          { error: "Cannot respond to your own consultation" },
+          { error: "自分の相談には回答できません" },
           { status: 400 }
         );
       }
