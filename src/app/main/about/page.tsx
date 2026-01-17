@@ -34,8 +34,7 @@ export default function AboutPage() {
         <div className="rounded-xl bg-base-200 p-4">
           <div className="text-xs text-base-content/50 mb-1">説明</div>
           <p className="text-sm text-base-content/80">
-            故 menhera.jp の精神を継ぐ、OSS人生相談プラットフォーム。
-            AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現します。
+            AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
           </p>
         </div>
 
