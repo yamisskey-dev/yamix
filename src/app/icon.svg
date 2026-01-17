@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+<defs>
+  <!-- 月のグラデーション：紫を強調したバージョン -->
+  <radialGradient id="moonGradient" cx="38.2%" cy="38.2%" r="85%">
+    <stop offset="0%" style="stop-color:#A32E6B;stop-opacity:1" />
+    <stop offset="12%" style="stop-color:#982A70;stop-opacity:1" />
+    <stop offset="24%" style="stop-color:#8D2675;stop-opacity:1" />
+    <stop offset="36%" style="stop-color:#82227A;stop-opacity:1" />
+    <stop offset="48%" style="stop-color:#771E7F;stop-opacity:1" />
+    <stop offset="60%" style="stop-color:#6C1A84;stop-opacity:1" />
+    <stop offset="72%" style="stop-color:#611689;stop-opacity:1" />
+    <stop offset="84%" style="stop-color:#56128E;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#371566;stop-opacity:1" />
+  </radialGradient>
+  
+  <!-- 鍵のグラデーション：より深い紫寄りの配色 -->
+  <linearGradient id="keyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#5A2C99;stop-opacity:1" />
+    <stop offset="12.5%" style="stop-color:#5634A3;stop-opacity:1" />
+    <stop offset="25%" style="stop-color:#523CAD;stop-opacity:1" />
+    <stop offset="37.5%" style="stop-color:#4E44B7;stop-opacity:1" />
+    <stop offset="50%" style="stop-color:#4A4CC1;stop-opacity:1" />
+    <stop offset="62.5%" style="stop-color:#4654CB;stop-opacity:1" />
+    <stop offset="75%" style="stop-color:#425CD5;stop-opacity:1" />
+    <stop offset="87.5%" style="stop-color:#3A70DD;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#2B8AC9;stop-opacity:0.98" />
+  </linearGradient>
+  
+  <!-- 精密に調整されたグロー効果 -->
+  <filter id="refinedGlow" x="-24%" y="-24%" width="148%" height="148%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="1.45" result="blur"/>
+    <feColorMatrix in="blur" type="matrix" values="
+      1 0 0 0 0
+      0 1 0 0 0
+      0 0 1 0 0
+      0 0 0 3.6 -1.4" result="glow"/>
+    <feBlend in="SourceGraphic" in2="glow" mode="screen"/>
+  </filter>
+  
+  <!-- 最適化されたシャイン効果 -->
+  <filter id="optimizedShine" x="-21%" y="-21%" width="142%" height="142%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="1.35" result="blur"/>
+    <feOffset in="blur" dx="0" dy="0" result="offsetBlur"/>
+    <feFlood flood-color="#A32E6B" flood-opacity="0.26" result="pinkGlow"/>
+    <feFlood flood-color="#2B8AC9" flood-opacity="0.26" result="blueGlow"/>
+    <feComposite in="pinkGlow" in2="offsetBlur" operator="in" result="pinkBlur"/>
+    <feComposite in="blueGlow" in2="offsetBlur" operator="in" result="blueBlur"/>
+    <feMerge>
+      <feMergeNode in="pinkBlur"/>
+      <feMergeNode in="blueBlur"/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+
+<!-- 背景の超繊細なグラデーション -->
+<rect width="320" height="320" fill="url(#backgroundGradient)" opacity="0.04"/>
+
+<defs>
+  <radialGradient id="backgroundGradient" cx="50%" cy="50%" r="68.5%">
+    <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.02" />
+    <stop offset="38.2%" style="stop-color:#C060D0;stop-opacity:0.015" />
+    <stop offset="61.8%" style="stop-color:#9040B0;stop-opacity:0.01" />
+    <stop offset="100%" style="stop-color:#6020A0;stop-opacity:0.008" />
+  </radialGradient>
+</defs>
+
+<g transform="translate(0.000000,320.000000) scale(0.100000,-0.100000)">
+  <!-- 月のシルエット -->
+  <path d="M1451 3139 c-233 -27 -543 -145 -706 -269 -33 -25 -87 -67 -121 -93 -64 -48 -204 -202 -274 -300 -102 -143 -208 -398 -246 -592 -27 -140 -25 -485 4 -622 31 -142 73 -257 149 -403 143 -276 353 -492 618 -634 257 -139 455 -189 740 -189 300 0 536 66 801 224 302 179 544 483 646 814 47 150 44 160 -16 60 -67 -108 -131 -183 -241 -278 -110 -96 -225 -163 -363 -209 -266 -90 -497 -89 -762 5 -239 84 -425 228 -570 438 -125 183 -184 354 -196 571 -15 285 44 504 200 741 59 89 194 224 299 298 141 99 345 178 532 205 102 15 138 16 240 6 126 -11 241 -38 338 -77 78 -31 58 -9 -57 62 -310 192 -682 280 -1015 242z" 
+    fill="url(#moonGradient)" 
+    filter="url(#refinedGlow)"/>
+</g>
+    
+<g transform="translate(0.000000,320.000000) scale(0.100000,-0.100000)">    
+  <!-- 鍵のシルエット -->
+  <path d="M2270 2584 c-176 -34 -292 -143 -336 -317 -20 -77 -14 -190 14 -264 l19 -51 -353 -354 c-195 -194 -357 -361 -360 -370 -7 -24 17 -66 68 -115 l43 -43 32 30 c18 17 36 30 42 30 5 0 43 -31 82 -70 40 -38 75 -70 78 -70 3 0 59 51 123 113 l118 113 -75 74 c-41 41 -75 80 -75 87 0 11 164 179 357 365 l62 60 64 -32 c51 -25 83 -33 145 -37 183 -13 338 82 421 257 23 49 26 67 26 170 0 110 -2 119 -32 180 -30 61 -104 146 -160 185 -60 42 -226 74 -303 59z m178 -241 c20 -10 50 -38 67 -61 27 -39 30 -52 30 -116 0 -64 -4 -78 -29 -114 -35 -52 -112 -92 -174 -92 -64 0 -137 42 -170 99 -50 86 -28 217 46 269 61 44 158 50 230 15z" 
+    fill="url(#keyGradient)" 
+    filter="url(#optimizedShine)"/>
+</g>
+</svg>

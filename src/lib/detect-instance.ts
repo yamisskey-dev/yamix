@@ -6,9 +6,81 @@ interface NodeInfo {
   };
 }
 
+interface MisskeyMeta {
+  features?: {
+    miauth?: boolean;
+  };
+  version?: string;
+}
+
 export async function detectInstance(host: string): Promise<InstanceType | null> {
   try {
-    // Try nodeinfo 2.1 first
+    // First, try Misskey API directly (most reliable for Misskey forks)
+    // This works even when nodeinfo is blocked by CDN/firewall
+    const misskeyType = await detectMisskeyByApi(host);
+    if (misskeyType) {
+      return misskeyType;
+    }
+
+    // Fallback to nodeinfo for non-Misskey instances
+    const nodeInfoType = await detectByNodeInfo(host);
+    if (nodeInfoType) {
+      return nodeInfoType;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Failed to detect instance type for ${host}:`, error);
+    return null;
+  }
+}
+
+async function detectMisskeyByApi(host: string): Promise<InstanceType | null> {
+  try {
+    const metaResponse = await fetch(`https://${host}/api/meta`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+
+    if (!metaResponse.ok) {
+      return null;
+    }
+
+    const meta: MisskeyMeta = await metaResponse.json();
+
+    // Check if MiAuth is supported (indicates Misskey-like instance)
+    if (meta.features?.miauth === true) {
+      // Try to detect specific fork by version string
+      const version = meta.version?.toLowerCase() || "";
+
+      if (version.includes("cherrypick")) {
+        return "cherrypick";
+      }
+      if (version.includes("sharkey")) {
+        return "sharkey";
+      }
+      if (version.includes("iceshrimp")) {
+        return "iceshrimp";
+      }
+
+      // Default to misskey for any MiAuth-compatible instance
+      return "misskey";
+    }
+
+    // Even without miauth feature flag, if /api/meta works it's likely Misskey
+    if (meta.version) {
+      return "misskey";
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function detectByNodeInfo(host: string): Promise<InstanceType | null> {
+  try {
     const nodeInfoResponse = await fetch(
       `https://${host}/.well-known/nodeinfo`,
       { next: { revalidate: 3600 } }
@@ -51,23 +123,9 @@ export async function detectInstance(host: string): Promise<InstanceType | null>
       case "iceshrimp.net":
         return "Iceshrimp.NET";
       default:
-        // Check if it's a Misskey fork by trying the API
-        try {
-          const metaResponse = await fetch(`https://${host}/api/meta`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: "{}",
-          });
-          if (metaResponse.ok) {
-            return "misskey";
-          }
-        } catch {
-          // Not a Misskey instance
-        }
         return null;
     }
-  } catch (error) {
-    console.error(`Failed to detect instance type for ${host}:`, error);
+  } catch {
     return null;
   }
 }
