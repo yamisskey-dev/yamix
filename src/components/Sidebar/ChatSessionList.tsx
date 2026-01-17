@@ -49,6 +49,7 @@ export function ChatSessionList({ onSessionSelect }: Props) {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
+  const [updatingPublic, setUpdatingPublic] = useState<string | null>(null);
 
   const currentSessionId = pathname?.match(/\/main\/chat\/([^/]+)/)?.[1];
 
@@ -106,6 +107,31 @@ export function ChatSessionList({ onSessionSelect }: Props) {
       }
     } catch (error) {
       console.error("Error deleting session:", error);
+    }
+  };
+
+  const handleTogglePublic = async (e: React.MouseEvent, session: ChatSessionListItem) => {
+    e.stopPropagation();
+    if (updatingPublic === session.id) return;
+
+    setUpdatingPublic(session.id);
+    try {
+      const res = await fetch(`/api/chat/sessions/${session.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: !session.isPublic }),
+      });
+      if (!res.ok) throw new Error("Failed to update public status");
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === session.id ? { ...s, isPublic: !s.isPublic } : s
+        )
+      );
+    } catch (error) {
+      console.error("Error updating public status:", error);
+    } finally {
+      setUpdatingPublic(null);
     }
   };
 
@@ -204,27 +230,54 @@ export function ChatSessionList({ onSessionSelect }: Props) {
                 )}
               </div>
 
-              {/* Delete button */}
-              <button
-                onClick={(e) => handleDelete(e, session.id)}
-                className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle shrink-0"
-                title="削除"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              {/* Action buttons */}
+              <div className="flex items-center gap-0.5 shrink-0">
+                {/* Public toggle button */}
+                <button
+                  onClick={(e) => handleTogglePublic(e, session)}
+                  className={`btn btn-ghost btn-xs btn-circle ${
+                    session.isPublic
+                      ? "text-primary"
+                      : "opacity-0 group-hover:opacity-100 text-base-content/50"
+                  }`}
+                  title={session.isPublic ? "公開中（クリックで非公開に）" : "非公開（クリックで公開に）"}
+                  disabled={updatingPublic === session.id}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                  {updatingPublic === session.id ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : session.isPublic ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Delete button */}
+                <button
+                  onClick={(e) => handleDelete(e, session.id)}
+                  className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle"
+                  title="削除"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           title: true,
+          isPublic: true,
           updatedAt: true,
           messages: {
             orderBy: { createdAt: "desc" },
@@ -81,6 +82,7 @@ export async function GET(req: NextRequest) {
           id: s.id,
           title: s.title,
           preview: s.messages[0]?.content?.slice(0, 50) || null,
+          isPublic: s.isPublic,
           updatedAt: s.updatedAt,
         })
       );
@@ -119,6 +121,7 @@ export async function GET(req: NextRequest) {
           id: s.id,
           title: s.title,
           preview: lastMessage?.content?.slice(0, 50) || null,
+          isPublic: s.isPublic,
           updatedAt: s.updatedAt,
         };
       });
