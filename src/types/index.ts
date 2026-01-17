@@ -298,3 +298,65 @@ export interface WalletLink {
   ethAddress: string;
   linkedAt: Date;
 }
+
+// ============================================
+// Chat Session types (ChatGPT-style history)
+// ============================================
+export type MessageRole = "USER" | "ASSISTANT";
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ChatMessage {
+  id: string;
+  sessionId: string;
+  role: MessageRole;
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
+
+export interface ChatSessionWithMessages extends ChatSession {
+  messages: ChatMessage[];
+}
+
+// サイドバー用の軽量セッション情報
+export interface ChatSessionListItem {
+  id: string;
+  title: string | null;
+  updatedAt: Date;
+}
+
+// タイムライン用の公開相談
+export interface TimelineConsultation {
+  id: string;
+  sessionId: string;
+  question: string;
+  answer: string;
+  user: {
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+  createdAt: Date;
+}
+
+// セッション一覧APIレスポンス
+export interface ChatSessionsResponse {
+  sessions: ChatSessionListItem[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+// タイムラインAPIレスポンス
+export interface TimelineResponse {
+  consultations: TimelineConsultation[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}

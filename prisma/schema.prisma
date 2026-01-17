@@ -39,10 +39,11 @@ model User {
   ethAddress String? @unique
 
   // Relations
-  serverId String
-  server   Server   @relation(fields: [serverId], references: [id])
-  profile  Profile?
-  wallet   Wallet?  // 1:1 relation - one user has one wallet
+  serverId     String
+  server       Server        @relation(fields: [serverId], references: [id])
+  profile      Profile?
+  wallet       Wallet?       // 1:1 relation - one user has one wallet
+  chatSessions ChatSession[] // AI相談セッション
 
   @@map("users")
 }
@@ -263,4 +264,50 @@ model EconomyConfig {
   updatedByDaoProposal  String?  // DAO提案ID
 
   @@map("economy_config")
+}
+
+// ============================================
+// ChatSession - AI相談セッション
+// ChatGPTスタイルのチャット履歴管理
+// ============================================
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?  // 最初のメッセージから自動生成
+  isPublic  Boolean  @default(false) // タイムラインに公開
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([isPublic, createdAt])
+  @@map("chat_sessions")
+}
+
+// ============================================
+// ChatMessage - チャットメッセージ
+// セッション内の個別メッセージ
+// ============================================
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole @default(USER)
+  content   String      @db.Text
+  isCrisis  Boolean     @default(false) // 危機検出フラグ
+  createdAt DateTime    @default(now())
+
+  // Relations
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
+}
+
+// メッセージの送信者
+enum MessageRole {
+  USER
+  ASSISTANT
 }

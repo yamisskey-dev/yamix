@@ -9,9 +9,10 @@ import type { UserProfile } from "@/types";
 
 interface HeaderProps {
   user?: UserProfile | null;
+  onMenuClick?: () => void;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const logoutModalRef = useRef<HTMLDialogElement>(null);
@@ -32,6 +33,30 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <header className="navbar bg-base-100/80 backdrop-blur-md border-b border-base-300 sticky top-0 z-50">
+      <div className="flex-none lg:hidden">
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="btn btn-square btn-ghost"
+            aria-label="メニューを開く"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
       <div className="flex-1">
         <Link href="/main" className="btn btn-ghost text-xl font-bold">
           Yamix

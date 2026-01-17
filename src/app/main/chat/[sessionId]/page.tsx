@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
+import type { ChatMessage, ChatSessionWithMessages } from "@/types";
+
+interface PageProps {
+  params: Promise<{ sessionId: string }>;
+}
 
 interface LocalMessage {
   id: string;
@@ -11,15 +16,50 @@ interface LocalMessage {
   timestamp: Date;
 }
 
-export default function NewChatPage() {
+export default function ChatSessionPage({ params }: PageProps) {
+  const { sessionId } = use(params);
   const router = useRouter();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch session data
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            router.replace("/main");
+            return;
+          }
+          throw new Error("Failed to fetch session");
+        }
+
+        const session: ChatSessionWithMessages = await res.json();
+        setMessages(
+          session.messages.map((m: ChatMessage) => ({
+            id: m.id,
+            role: m.role === "USER" ? "user" : "assistant",
+            content: m.content,
+            timestamp: new Date(m.createdAt),
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching session:", err);
+        setError("セッションの読み込みに失敗しました");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchSession();
+  }, [sessionId, router]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -51,38 +91,33 @@ export default function NewChatPage() {
     setError(undefined);
 
     try {
-      // Create new session
-      const createRes = await fetch("/api/chat/sessions", {
-        method: "POST",
-      });
-
-      if (!createRes.ok) {
-        throw new Error("セッションの作成に失敗しました");
-      }
-
-      const session = await createRes.json();
-
-      // Send message
-      const msgRes = await fetch(`/api/chat/sessions/${session.id}/messages`, {
+      const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage.content }),
       });
 
-      if (!msgRes.ok) {
+      if (!res.ok) {
         throw new Error("メッセージの送信に失敗しました");
       }
 
-      const data = await msgRes.json();
+      const data = await res.json();
 
       if (data.isCrisis) {
         setShowCrisisAlert(true);
       }
 
-      // Navigate to the session page (this preserves the conversation)
-      router.push(`/main/chat/${session.id}`);
+      const assistantMessage: LocalMessage = {
+        id: data.assistantMessage.id,
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
       setIsLoading(false);
     }
   };
@@ -93,6 +128,14 @@ export default function NewChatPage() {
       handleSubmit(e as unknown as React.FormEvent);
     }
   };
+
+  if (isFetching) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full">

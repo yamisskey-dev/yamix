@@ -75,6 +75,24 @@ interface TransactionRecord {
   createdAt: Date;
 }
 
+interface ChatSessionRecord {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ChatMessageRecord {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
+
 interface MemoryDB {
   servers: Map<string, ServerRecord>;
   users: Map<string, UserRecord>;
@@ -83,6 +101,8 @@ interface MemoryDB {
   posts: Map<string, PostRecord>;
   follows: Map<string, FollowRecord>;
   transactions: Map<string, TransactionRecord>;
+  chatSessions: Map<string, ChatSessionRecord>;
+  chatMessages: Map<string, ChatMessageRecord>;
 }
 
 // Initialize in-memory storage
@@ -95,6 +115,8 @@ if (!globalForPrisma.memoryDB) {
     posts: new Map(),
     follows: new Map(),
     transactions: new Map(),
+    chatSessions: new Map(),
+    chatMessages: new Map(),
   };
 }
 
