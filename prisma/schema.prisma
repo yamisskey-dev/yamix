@@ -39,11 +39,12 @@ model User {
   ethAddress String? @unique
 
   // Relations
-  serverId     String
-  server       Server        @relation(fields: [serverId], references: [id])
-  profile      Profile?
-  wallet       Wallet?       // 1:1 relation - one user has one wallet
-  chatSessions ChatSession[] // AI相談セッション
+  serverId      String
+  server        Server        @relation(fields: [serverId], references: [id])
+  profile       Profile?
+  wallet        Wallet?       // 1:1 relation - one user has one wallet
+  chatSessions  ChatSession[] // AI相談セッション
+  chatResponses ChatMessage[] @relation("ChatResponses") // 人間として回答したメッセージ
 
   @@map("users")
 }
@@ -301,7 +302,8 @@ model ChatMessage {
   createdAt   DateTime    @default(now())
 
   // Relations
-  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  responder User?       @relation("ChatResponses", fields: [responderId], references: [id], onDelete: SetNull)
 
   @@index([sessionId, createdAt])
   @@index([responderId])
