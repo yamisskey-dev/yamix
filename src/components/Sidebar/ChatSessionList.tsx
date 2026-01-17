@@ -135,10 +135,10 @@ export function ChatSessionList({ onSessionSelect }: Props) {
             {group.label}
           </div>
           {group.sessions.map((session) => (
-            <button
+            <div
               key={session.id}
               onClick={() => handleSessionClick(session.id)}
-              className={`w-full group flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors hover:bg-base-200 ${
+              className={`w-full group flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors hover:bg-base-200 cursor-pointer ${
                 currentSessionId === session.id ? "bg-base-200" : ""
               }`}
             >
@@ -165,7 +165,7 @@ export function ChatSessionList({ onSessionSelect }: Props) {
                   />
                 </svg>
               </button>
-            </button>
+            </div>
           ))}
         </div>
       ))}
