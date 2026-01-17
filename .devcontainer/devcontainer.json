@@ -1,0 +1,27 @@
+{
+  "name": "Yamix",
+  "dockerComposeFile": "compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
+    "ghcr.io/devcontainers-extra/features/pnpm:2": {
+      "version": "10.18.2"
+    }
+  },
+  "forwardPorts": [3000, 8000],
+  "postCreateCommand": "/bin/bash .devcontainer/init.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "dbaeumer.vscode-eslint",
+        "Prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

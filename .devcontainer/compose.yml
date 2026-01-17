@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../:/workspace:cached
+      - node_modules:/workspace/node_modules
+    command: sleep infinity
+    networks:
+      - internal_network
+      - external_network
+    environment:
+      DATABASE_URL: postgresql://yamix:password@postgres:5432/yamix
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: devcontainer-secret-key
+      WEB_URL: http://localhost:3000
+      YAMII_API_URL: http://yamii:8000
+
+  yamii:
+    build:
+      context: ../../yamii
+      dockerfile: Dockerfile
+    networks:
+      - internal_network
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      YAMII_DATA_DIR: /app/data
+    volumes:
+      - yamii-data:/app/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:16-alpine
+    networks:
+      - internal_network
+    environment:
+      POSTGRES_USER: yamix
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: yamix
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U yamix']
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - internal_network
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 20
+
+volumes:
+  postgres-data:
+  redis-data:
+  yamii-data:
+  node_modules:
+
+networks:
+  internal_network:
+    internal: true
+  external_network:
