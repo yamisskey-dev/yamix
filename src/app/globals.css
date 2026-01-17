@@ -82,6 +82,11 @@ body {
   box-shadow: 0 2px 8px rgba(163, 116, 255, 0.2);
 }
 
+/* Fix tail color for user bubble */
+.chat-end .chat-user::before {
+  background: linear-gradient(135deg, hsl(var(--s)), hsl(var(--s)));
+}
+
 [data-theme="light"] .chat-user {
   box-shadow: 0 2px 8px rgba(150, 107, 255, 0.25);
 }
@@ -92,15 +97,32 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Fix tail color for assistant bubble */
+.chat-start .chat-assistant::before {
+  background-color: hsl(var(--b3));
+  border-color: rgba(163, 116, 255, 0.2);
+}
+
 [data-theme="light"] .chat-assistant {
   @apply bg-base-200;
   border: 1px solid rgba(150, 107, 255, 0.2);
   box-shadow: 0 2px 8px rgba(147, 137, 255, 0.12);
 }
 
+[data-theme="light"] .chat-start .chat-assistant::before {
+  background-color: hsl(var(--b2));
+  border-color: rgba(150, 107, 255, 0.2);
+}
+
 .chat-assistant-loading {
   @apply bg-base-300 text-base-content rounded-2xl rounded-bl-sm;
   border: 1px solid rgba(163, 116, 255, 0.15);
+}
+
+/* Fix tail color for loading bubble */
+.chat-start .chat-assistant-loading::before {
+  background-color: hsl(var(--b3));
+  border-color: rgba(163, 116, 255, 0.15);
 }
 
 /* Human response bubble - distinct from AI */
@@ -110,9 +132,20 @@ body {
   box-shadow: 0 2px 8px rgba(179, 45, 182, 0.15);
 }
 
+/* Fix tail color for human response bubble */
+.chat-start .chat-human-response::before {
+  background-color: hsl(var(--b2));
+  border-color: rgba(179, 45, 182, 0.3);
+}
+
 [data-theme="light"] .chat-human-response {
   border: 1px solid rgba(255, 157, 255, 0.4);
   box-shadow: 0 2px 8px rgba(255, 157, 255, 0.2);
+}
+
+[data-theme="light"] .chat-start .chat-human-response::before {
+  background-color: hsl(var(--b2));
+  border-color: rgba(255, 157, 255, 0.4);
 }
 
 /* Typing animation - gradient pulse (Misskey-inspired) */
