@@ -229,7 +229,7 @@ export default function ChatSessionPage({ params }: PageProps) {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {messages.length === 0 && !isLoading && (
             <div className="flex flex-col items-center justify-center h-full text-center py-20">
               <p className="text-base-content/50 text-lg">
@@ -263,7 +263,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       <div className="p-4">
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-2 max-w-4xl mx-auto"
+          className="flex items-center gap-2 max-w-5xl mx-auto"
         >
           <div className="flex-1 relative">
             <textarea
