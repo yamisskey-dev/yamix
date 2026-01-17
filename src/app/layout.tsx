@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import "./globals.css";
 
 const sarasaGothic = localFont({
@@ -40,15 +41,17 @@ export default async function RootLayout({
   return (
     <html lang={lng} data-theme="dark">
       <body className={`${sarasaGothic.variable} relative min-h-screen`}>
-        <Suspense
-          fallback={
-            <div className="w-full h-screen flex items-center justify-center">
-              <span className="loading loading-spinner loading-lg" />
-            </div>
-          }
-        >
-          <div className="relative z-10 min-h-screen">{children}</div>
-        </Suspense>
+        <ThemeProvider>
+          <Suspense
+            fallback={
+              <div className="w-full h-screen flex items-center justify-center">
+                <span className="loading loading-spinner loading-lg" />
+              </div>
+            }
+          >
+            <div className="relative z-10 min-h-screen">{children}</div>
+          </Suspense>
+        </ThemeProvider>
       </body>
     </html>
   );

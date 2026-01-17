@@ -108,7 +108,7 @@ export function TimelineFeed() {
         <img
           src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yui/yui-256x256.webp"
           alt="Yui"
-          className="w-32 h-32 mb-6 opacity-60"
+          className="w-32 h-32 mb-6"
           draggable={false}
         />
         <h3 className="text-lg font-medium text-base-content/70 mb-2">
