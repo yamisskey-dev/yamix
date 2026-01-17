@@ -1,0 +1,3 @@
+[submodule "yamii"]
+	path = yamii
+	url = https://github.com/yamisskey-dev/yamii.git
