@@ -1,5 +1,5 @@
 services:
-  # Yamix Application
+  # Yamix Application (Frontend)
   yamix:
     build: .
     container_name: yamix
@@ -10,11 +10,13 @@ services:
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       WEB_URL: ${WEB_URL:-http://localhost:3000}
-      YAMII_API_URL: ${YAMII_API_URL:-http://localhost:8000}
+      YAMII_API_URL: http://yamii:8000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      yamii:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -23,6 +25,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  # Yamii API (AI Counseling Backend)
+  yamii:
+    build:
+      context: ../yamii
+      dockerfile: Dockerfile
+    container_name: yamii
+    ports:
+      - '8000:8000'
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      YAMII_DATA_DIR: /app/data
+    volumes:
+      - yamii-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Database
   postgres:
@@ -59,3 +82,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  yamii-data:

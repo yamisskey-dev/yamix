@@ -35,16 +35,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         include: {
           messages: {
             orderBy: { createdAt: "asc" },
-            include: {
-              responder: {
-                select: {
-                  id: true,
-                  handle: true,
-                  displayName: true,
-                  avatarUrl: true,
-                },
-              },
-            },
           },
         },
       });
