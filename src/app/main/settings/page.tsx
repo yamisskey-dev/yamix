@@ -158,27 +158,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* About Section */}
-        <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg">About</h2>
-            <p className="text-sm text-base-content/60">
-              Yamix v0.2.0
-              <br />
-              プライバシーファーストのAI相談プラットフォーム
-            </p>
-            <div className="card-actions justify-end">
-              <a
-                href="https://github.com/yamisskey-dev/yamix"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-ghost btn-sm"
-              >
-                GitHub
-              </a>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
