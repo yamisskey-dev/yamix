@@ -47,15 +47,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         include: { user: true },
       });
 
-      if (!session) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
-      }
-
-      // Only public sessions can receive human responses
-      if (!session.isPublic) {
+      // Check session exists AND is public (combined check prevents enumeration)
+      if (!session || !session.isPublic) {
         return NextResponse.json(
-          { error: "This session is not public" },
-          { status: 403 }
+          { error: "Session not found or not public" },
+          { status: 404 }
         );
       }
 
@@ -92,14 +88,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // In-memory fallback
       const session = chatSessionsStore.get(id);
 
-      if (!session) {
-        return NextResponse.json({ error: "Session not found" }, { status: 404 });
-      }
-
-      if (!session.isPublic) {
+      // Check session exists AND is public (combined check prevents enumeration)
+      if (!session || !session.isPublic) {
         return NextResponse.json(
-          { error: "This session is not public" },
-          { status: 403 }
+          { error: "Session not found or not public" },
+          { status: 404 }
         );
       }
 
