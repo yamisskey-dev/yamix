@@ -20,7 +20,7 @@ services:
 
   yamii:
     build:
-      context: ../../yamii
+      context: ../yamii
       dockerfile: Dockerfile
     networks:
       - internal_network
