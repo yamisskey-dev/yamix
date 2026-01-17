@@ -5,7 +5,6 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ../:/workspace:cached
-      - node_modules:/workspace/node_modules
     command: sleep infinity
     networks:
       - internal_network
@@ -65,7 +64,6 @@ volumes:
   postgres-data:
   redis-data:
   yamii-data:
-  node_modules:
 
 networks:
   internal_network:
