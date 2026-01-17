@@ -44,7 +44,7 @@ export default function AboutPage() {
           <div>
             <div className="text-xs text-base-content/50 mb-1">Yamix</div>
             <p className="text-xs text-base-content/60">
-              オープンソースのAI相談フロントエンドです。
+              AI相談と人間相談を統合したOSS相談プラットフォームです。
             </p>
           </div>
           <a
