@@ -105,39 +105,41 @@ export default function NewChatPage() {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <p className="text-base-content/50 text-lg">
-              今日はどうしましたか？
-            </p>
-          </div>
-        )}
+        <div className="max-w-4xl mx-auto">
+          {messages.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center justify-center h-full text-center py-20">
+              <p className="text-base-content/50 text-lg">
+                今日はどうしましたか？
+              </p>
+            </div>
+          )}
 
-        {messages.map((msg) => (
-          <ChatBubble
-            key={msg.id}
-            role={msg.role}
-            content={msg.content}
-            timestamp={msg.timestamp}
-          />
-        ))}
+          {messages.map((msg) => (
+            <ChatBubble
+              key={msg.id}
+              role={msg.role}
+              content={msg.content}
+              timestamp={msg.timestamp}
+            />
+          ))}
 
-        {isLoading && <ChatBubble role="assistant" content="" isLoading />}
+          {isLoading && <ChatBubble role="assistant" content="" isLoading />}
 
-        {error && (
-          <div className="alert alert-error text-sm">
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div className="alert alert-error text-sm">
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
       <div className="p-4">
         <form
           onSubmit={handleSubmit}
-          className="flex items-center gap-2 max-w-3xl mx-auto"
+          className="flex items-center gap-2 max-w-4xl mx-auto"
         >
           <div className="flex-1 relative">
             <textarea
