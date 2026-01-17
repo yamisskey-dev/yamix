@@ -18,9 +18,43 @@ function detectLanguage(acceptLanguage: string | null): string {
   return ["ja", "en", "ko"].includes(lang) ? lang : "ja";
 }
 
+const siteUrl = process.env.WEB_URL || "https://mix.yami.ski";
+
 export const metadata: Metadata = {
-  title: "やみっくす",
-  description: "プライバシーファーストのAI相談プラットフォーム",
+  title: {
+    default: "やみっくす - AI相談プラットフォーム",
+    template: "%s | やみっくす",
+  },
+  description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
+  keywords: ["AI相談", "悩み相談", "メンタルヘルス", "匿名相談", "Misskey"],
+  authors: [{ name: "Yamix Team" }],
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    type: "website",
+    locale: "ja_JP",
+    url: siteUrl,
+    siteName: "やみっくす",
+    title: "やみっくす - AI相談プラットフォーム",
+    description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
+    images: [
+      {
+        url: "/og-image.gif",
+        width: 540,
+        height: 304,
+        alt: "やみっくす",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "やみっくす - AI相談プラットフォーム",
+    description: "プライバシーファーストのAI相談プラットフォーム",
+    images: ["/og-image.gif"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {
