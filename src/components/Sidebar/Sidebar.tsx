@@ -57,7 +57,7 @@ export function Sidebar({ user, onClose }: Props) {
       {/* Header - Instance icon */}
       <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center">
         <Link
-          href="/main/about"
+          href="/main"
           onClick={onClose}
           className="flex items-center justify-center hover:opacity-80 transition-opacity"
         >
