@@ -3,8 +3,8 @@ services:
   yamix:
     build: .
     container_name: yamix
-    ports:
-      - '3000:3000'
+    expose:
+      - '3000'
     environment:
       DATABASE_URL: postgresql://yamix:${POSTGRES_PASSWORD:-password}@postgres:5432/yamix
       REDIS_URL: redis://redis:6379
@@ -32,8 +32,8 @@ services:
       context: ../yamii
       dockerfile: Dockerfile
     container_name: yamii
-    ports:
-      - '8000:8000'
+    expose:
+      - '8000'
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       YAMII_DATA_DIR: /app/data
