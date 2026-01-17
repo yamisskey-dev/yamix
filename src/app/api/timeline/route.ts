@@ -33,11 +33,8 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: "asc" },
             include: {
               responder: {
-                select: {
-                  id: true,
-                  handle: true,
-                  displayName: true,
-                  avatarUrl: true,
+                include: {
+                  profile: true,
                 },
               },
             },
@@ -65,8 +62,8 @@ export async function GET(req: NextRequest) {
               responder: m.responder ? {
                 id: m.responder.id,
                 handle: m.responder.handle,
-                displayName: m.responder.displayName,
-                avatarUrl: m.responder.avatarUrl,
+                displayName: m.responder.profile?.displayName || null,
+                avatarUrl: m.responder.profile?.avatarUrl || null,
               } : null,
             }));
 
