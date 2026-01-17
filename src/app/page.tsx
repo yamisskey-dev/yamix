@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { Modal } from "@/components/Modal";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface FormValue {
   address: string;
@@ -98,7 +99,7 @@ export default function LoginPage() {
     return (
       <div className="w-screen h-screen flex items-center justify-center">
         <div className="animated-bg" />
-        <span className="loading loading-spinner loading-lg text-purple-400" />
+        <LoadingSpinner size={64} />
       </div>
     );
   }

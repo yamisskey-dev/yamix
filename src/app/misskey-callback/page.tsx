@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { Modal } from "@/components/Modal";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 function CallbackContent() {
   const router = useRouter();
@@ -70,8 +71,7 @@ function CallbackContent() {
 
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-4">
-      <span className="loading loading-spinner loading-lg" />
-      <p className="text-base-content/70">認証中...</p>
+      <LoadingSpinner size={64} text="認証中..." />
 
       <Modal
         ref={errorModalRef}
@@ -89,7 +89,7 @@ export default function MisskeyCallbackPage() {
     <Suspense
       fallback={
         <div className="w-screen h-screen flex items-center justify-center">
-          <span className="loading loading-spinner loading-lg" />
+          <LoadingSpinner size={64} />
         </div>
       }
     >

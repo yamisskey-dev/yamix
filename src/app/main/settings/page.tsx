@@ -69,8 +69,6 @@ export default function SettingsPage() {
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">設定</h1>
-
         {/* Theme Section */}
         <div className="card bg-base-200">
           <div className="card-body">
