@@ -185,8 +185,8 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
               >
                 {displayName}
               </Link>
-              <span className="text-[0.85em] text-base-content/50 truncate max-w-[120px]">
-                @{consultation.user.handle.split("@")[0]}
+              <span className="text-[0.85em] text-base-content/50 truncate max-w-[180px]">
+                {consultation.user.handle}
               </span>
             </>
           )}
@@ -229,7 +229,7 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
               const isAI = !reply.responder;
               const responderName = isAI
                 ? "AI"
-                : reply.responder?.displayName || reply.responder?.handle?.split("@")[0] || "匿名";
+                : reply.responder?.displayName || reply.responder?.handle || "匿名";
 
               return (
                 <div key={reply.id}>
