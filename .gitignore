@@ -6,6 +6,8 @@ node_modules
 dist
 built
 *.tsbuildinfo
+.next
+out
 
 # Environment
 .env
@@ -52,3 +54,6 @@ coverage
 tmp
 temp
 *.tmp
+
+# Next.js
+.vercel

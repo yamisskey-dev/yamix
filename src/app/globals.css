@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #100b22;
+  --foreground: #ededed;
+  --accent-purple: #a374ff;
+  --accent-pink: #b32db6;
+}
+
+:root:has(.no-doc-scroll) {
+  overflow: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sarasa-gothic), Arial, Helvetica, sans-serif;
+}
+
+/* Background with image */
+.animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('https://angelkawaii.com/wp-content/uploads/2024/01/33.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.animated-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 11, 34, 0.6);
+}
+
+/* Spinner animation */
+@keyframes spinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinner 6s linear infinite;
+}
+
+/* Glass effect */
+.glass-card {
+  @apply backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/30;
+}
+
+/* Chat bubbles */
+.chat-user {
+  @apply bg-primary text-primary-content rounded-2xl rounded-br-sm;
+}
+
+.chat-assistant {
+  @apply bg-base-200 text-base-content rounded-2xl rounded-bl-sm shadow-sm;
+}
+
+/* Typing animation */
+@keyframes typing {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  @apply w-1.5 h-1.5 rounded-full bg-primary;
+  animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* Emotion indicator colors */
+.emotion-happiness { @apply bg-yellow-400; }
+.emotion-sadness { @apply bg-blue-400; }
+.emotion-anxiety { @apply bg-purple-400; }
+.emotion-anger { @apply bg-red-400; }
+.emotion-loneliness { @apply bg-indigo-400; }
+.emotion-depression { @apply bg-gray-600; }
+.emotion-stress { @apply bg-orange-400; }
+.emotion-confusion { @apply bg-teal-400; }
+.emotion-hope { @apply bg-green-400; }
+.emotion-neutral { @apply bg-gray-400; }
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}

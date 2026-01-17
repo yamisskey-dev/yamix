@@ -1,14 +1,14 @@
 {
   "name": "yamix",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Open-source anonymous SNS template engine with approval economy - 承認経済による匿名SNSテンプレートエンジン",
+  "description": "Yamii AI Counseling Frontend - 人生相談AIフロントエンド",
   "keywords": [
     "life-advice",
-    "sns",
-    "self-hosted",
-    "anonymous",
-    "token-economy"
+    "mental-health",
+    "ai-counseling",
+    "misskey",
+    "self-hosted"
   ],
   "repository": {
     "type": "git",
@@ -19,20 +19,40 @@
   "engines": {
     "node": ">=22.15.0"
   },
-  "workspaces": [
-    "packages/frontend",
-    "packages/backend",
-    "packages/shared"
-  ],
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "clean": "pnpm -r clean && rm -rf node_modules"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.1",
+    "daisyui": "^4.12.14",
+    "i18next": "^24.2.1",
+    "i18next-browser-languagedetector": "^8.0.2",
+    "i18next-resources-to-backend": "^1.2.1",
+    "ioredis": "^5.4.1",
+    "jose": "^5.9.6",
+    "next": "^15.1.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.1",
+    "react-i18next": "^15.4.0",
+    "react-icons": "^5.3.0"
   },
   "devDependencies": {
+    "@types/node": "^20.17.6",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.1.7",
+    "postcss": "^8",
+    "prisma": "^6.0.1",
+    "tailwindcss": "^3.4.1",
     "typescript": "^5.9.3"
   }
 }

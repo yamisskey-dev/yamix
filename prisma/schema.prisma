@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Misskey/Mastodon instance information
+// ============================================
+model Server {
+  id           String   @id @default(cuid())
+  instances    String   @unique
+  instanceType String   // misskey, cherrypick, mastodon, etc.
+  appSecret    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users User[]
+
+  @@map("servers")
+}
+
+// ============================================
+// User account (Misskey-linked)
+// ============================================
+model User {
+  id        String   @id @default(cuid())
+  handle    String   @unique // @username@instance.tld
+  account   String   // username only
+  hostName  String   // instance hostname
+  token     String   // Encrypted access token
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Future ETH wallet linking (yamidao integration)
+  ethAddress String? @unique
+
+  // Relations
+  serverId String
+  server   Server   @relation(fields: [serverId], references: [id])
+  profile  Profile?
+  wallet   Wallet?  // 1:1 relation - one user has one wallet
+
+  @@map("users")
+}
+
+// ============================================
+// User profile information
+// ============================================
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+// ============================================
+// Wallet - ユーザーのYAMIトークン口座
+// 1 User = 1 Wallet（1対1）
+// Network: Optimism (YAMI DAOと共通)
+// ============================================
+model Wallet {
+  id              String     @id @default(cuid())
+  address         String     @unique // 0x + 40 hex chars (Optimism address)
+  balance         Int        @default(10) // YAMI トークン残高
+  walletType      WalletType @default(HUMAN) // 人格タイプ
+  createdAt       DateTime   @default(now())
+
+  // Misskeyユーザーとの紐づけ（1:1必須）
+  userId String   @unique
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  posts            Post[]
+  sentTransactions Transaction[]   @relation("sender")
+  following        Follow[]        @relation("follower")
+  purchases        TokenPurchase[]
+  withdrawals      TokenWithdrawal[]
+
+  @@index([walletType])
+  @@map("wallets")
+}
+
+// 人格タイプ（コスト計算に影響）
+enum WalletType {
+  HUMAN      // 人間ユーザー
+  AI_SYSTEM  // AIシステム（Yamii等）
+  AI_AGENT   // ユーザー所有のAIエージェント
+  DAO        // DAO運営アカウント
+}
+
+// ============================================
+// Follow - サイレントウォッチ
+// 注目された側には見えない設計
+// ============================================
+model Follow {
+  id         String   @id @default(cuid())
+  followerId String
+  targetId   String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  follower Wallet @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, targetId])
+  @@index([followerId])
+  @@index([targetId])
+  @@map("follows")
+}
+
+// ============================================
+// Post - 相談（反応も相談として扱う）
+// 投稿と返信の階層構造
+// ============================================
+model Post {
+  id           String         @id @default(cuid())
+  content      String         @db.Text
+  walletId     String
+  parentId     String?        // 返信の場合、親投稿のID
+  postType     PostType       @default(CONSULTATION) // 投稿タイプ
+  targetType   ConsultTarget? // 相談対象（AI/人間）
+  tokenCost    Int            @default(0) // この投稿で消費されたトークン
+  tokenReward  Int            @default(0) // この投稿で獲得したトークン
+  createdAt    DateTime       @default(now())
+
+  // Relations
+  wallet       Wallet        @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  parent       Post?         @relation("PostReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Post[]        @relation("PostReplies")
+  transactions Transaction[]
+
+  @@index([walletId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@index([postType])
+  @@map("posts")
+}
+
+// 投稿タイプ
+enum PostType {
+  CONSULTATION  // 相談（トークン消費）
+  RESPONSE      // 回答（トークン獲得）
+  DISCUSSION    // 一般投稿（低コスト）
+}
+
+// 相談対象
+enum ConsultTarget {
+  AI      // AI相談（低コスト）
+  HUMAN   // 人間相談（高コスト）
+  ANY     // どちらでも可（中コスト）
+}
+
+// ============================================
+// Transaction - YAMIトークン移動
+// 相談・回答・リアクションによるトークン移動
+// ============================================
+model Transaction {
+  id        String          @id @default(cuid())
+  postId    String?         // 投稿に紐づく場合
+  senderId  String
+  amount    Int             @default(1)
+  txType    TransactionType @default(REACTION)
+  createdAt DateTime        @default(now())
+
+  // Relations
+  post   Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sender Wallet @relation("sender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([senderId])
+  @@index([txType])
+  @@map("transactions")
+}
+
+// トランザクションタイプ
+enum TransactionType {
+  CONSULT_AI       // AI相談コスト
+  CONSULT_HUMAN    // 人間相談コスト
+  RESPONSE_REWARD  // 回答報酬
+  REACTION         // リアクション（投げ銭）
+  PURCHASE         // Optimism ETHでYAMI購入
+  WITHDRAWAL       // YAMIをOptimism ETHに換金
+  SYSTEM_GRANT     // システム付与（初期配布等）
+  DAO_DIVIDEND     // YAMI DAO配当
+}
+
+// ============================================
+// YamiPurchase - Optimism ETHによるYAMI購入
+// YAMIトークンをOptimism ETHで購入
+// ============================================
+model TokenPurchase {
+  id            String         @id @default(cuid())
+  walletId      String
+  amount        Int            // 購入YAMI数
+  ethAmount     String         // 支払いOptimism ETH額（Wei単位、文字列で保存）
+  txHash        String?        // Optimismトランザクションハッシュ
+  status        PurchaseStatus @default(PENDING)
+  createdAt     DateTime       @default(now())
+  confirmedAt   DateTime?
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([status])
+  @@map("token_purchases")
+}
+
+// ============================================
+// YamiWithdrawal - YAMIのOptimism ETH換金
+// YAMIトークンをOptimism ETHに換金
+// ============================================
+model TokenWithdrawal {
+  id            String            @id @default(cuid())
+  walletId      String
+  amount        Int               // 換金YAMI数
+  ethAmount     String            // 受取Optimism ETH額（Wei単位）
+  ethAddress    String            // 送金先Optimismアドレス
+  txHash        String?           // Optimismトランザクションハッシュ
+  status        WithdrawalStatus  @default(PENDING)
+  createdAt     DateTime          @default(now())
+  processedAt   DateTime?
+
+  // Relations
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([status])
+  @@map("token_withdrawals")
+}
+
+enum PurchaseStatus {
+  PENDING    // 支払い待ち
+  CONFIRMED  // 確認済み
+  FAILED     // 失敗
+}
+
+enum WithdrawalStatus {
+  PENDING    // 処理待ち
+  PROCESSING // 処理中
+  COMPLETED  // 完了
+  FAILED     // 失敗
+}
+
+// ============================================
+// EconomyConfig - YAMI経済パラメータ設定
+// YAMI DAO投票で変更可能な経済パラメータ
+// ============================================
+model EconomyConfig {
+  id                    String   @id @default(cuid())
+  key                   String   @unique
+  value                 Int
+  description           String?
+  updatedAt             DateTime @updatedAt
+  updatedByDaoProposal  String?  // DAO提案ID
+
+  @@map("economy_config")
+}
