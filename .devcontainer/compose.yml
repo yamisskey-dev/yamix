@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ../:/workspace:cached
+    env_file:
+      - ../.env
     command: sleep infinity
     networks:
       - internal_network
@@ -22,8 +24,9 @@ services:
       dockerfile: Dockerfile
     networks:
       - internal_network
+    env_file:
+      - ../.env
     environment:
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
       YAMII_DATA_DIR: /app/data
     volumes:
       - yamii-data:/app/data
