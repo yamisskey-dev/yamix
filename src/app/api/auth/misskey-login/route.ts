@@ -4,7 +4,7 @@ import { RedisService } from "@/lib/redis";
 import { detectInstance, isMisskeyLike } from "@/lib/detect-instance";
 import type { MiAuthSession } from "@/types";
 
-const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
+const WEB_URL = process.env.WEB_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 interface LoginRequest {
   host: string;
