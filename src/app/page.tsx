@@ -108,6 +108,44 @@ export default function LoginPage() {
       {/* Animated background (down.yami.ski style) */}
       <div className="animated-bg" />
 
+      {/* GitHub Corner (yamisskey-down style) */}
+      <a
+        href="https://github.com/yamisskey-dev/yamix"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="github-corner"
+        aria-label="View source on GitHub"
+      >
+        <svg
+          width="80"
+          height="80"
+          viewBox="0 0 250 250"
+          style={{
+            fill: "rgba(16, 11, 34, 0.86)",
+            color: "#C2CBE0",
+            position: "fixed",
+            zIndex: 10,
+            top: 0,
+            border: 0,
+            right: 0,
+          }}
+          aria-hidden="true"
+        >
+          <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z" />
+          <path
+            d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+            fill="currentColor"
+            className="octo-arm"
+            style={{ transformOrigin: "130px 106px" }}
+          />
+          <path
+            d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+            fill="currentColor"
+            className="octo-body"
+          />
+        </svg>
+      </a>
+
       <main className="w-full h-full flex flex-col justify-center items-center p-6">
         {/* Logo & Title (NeoQuesdon style) */}
         <div className="mb-4 flex flex-col items-center">
@@ -172,29 +210,6 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer (NeoQuesdon style) */}
-      <footer className="w-full row-start-3 flex gap-6 flex-wrap items-center justify-end p-4">
-        <a
-          href="https://github.com/yamisskey-dev/yamix"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-white/40 hover:text-white/60 transition-colors flex items-center gap-2"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-              clipRule="evenodd"
-            />
-          </svg>
-          GitHub
-        </a>
-      </footer>
 
       {/* Error Modal */}
       <Modal
