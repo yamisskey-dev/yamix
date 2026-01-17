@@ -17,7 +17,14 @@
       "Bash(pnpm build:*)",
       "Bash(ls:*)",
       "Bash(curl:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "Bash(docker compose:*)",
+      "Bash(./node_modules/.bin/next build:*)",
+      "Bash(ss:*)",
+      "Bash(kill:*)",
+      "Bash(git diff:*)",
+      "Bash(chmod:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []
