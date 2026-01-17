@@ -72,6 +72,11 @@ body {
 }
 
 /* Chat bubbles - enhanced styling */
+/* Override DaisyUI default max-width for wider bubbles */
+.chat-bubble {
+  max-width: 90%;
+}
+
 .chat-user {
   @apply bg-gradient-to-br from-primary to-secondary text-primary-content rounded-2xl rounded-br-sm;
   box-shadow: 0 2px 8px rgba(163, 116, 255, 0.2);
