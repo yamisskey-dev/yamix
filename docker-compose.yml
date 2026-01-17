@@ -11,6 +11,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       WEB_URL: ${WEB_URL:-http://localhost:3000}
       YAMII_API_URL: http://yamii:8000
+    networks:
+      - internal_network
+      - external_network
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,6 +40,9 @@ services:
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       YAMII_DATA_DIR: /app/data
+    networks:
+      - internal_network
+      - external_network
     volumes:
       - yamii-data:/app/data
     restart: unless-stopped
@@ -55,6 +61,8 @@ services:
       POSTGRES_USER: yamix
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: yamix
+    networks:
+      - internal_network
     expose:
       - '5432'
     volumes:
@@ -69,6 +77,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: yamix-redis
+    networks:
+      - internal_network
     expose:
       - '6379'
     volumes:
@@ -83,3 +93,8 @@ volumes:
   postgres-data:
   redis-data:
   yamii-data:
+
+networks:
+  internal_network:
+    internal: true
+  external_network:
