@@ -1,13 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 
 interface RouteParams {
   params: Promise<{ walletId: string }>;
 }
 
-// GET /api/follows/[walletId]/timeline - Get home timeline
+// GET /api/follows/[walletId]/timeline - Get home timeline (only own wallet)
 export async function GET(req: NextRequest, { params }: RouteParams) {
+  const token = getTokenFromCookie(req.headers.get("cookie"));
+
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const payload = await verifyJWT(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
   const { walletId } = await params;
+
+  // Verify the wallet belongs to the authenticated user
+  if (walletId !== payload.walletId) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = parseInt(searchParams.get("limit") || "20", 10);
