@@ -6,7 +6,6 @@ import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import type {
   ConversationMessage,
   YamiiCounselingResponse,
-  EmotionAnalysis,
 } from "@/types";
 
 interface ChatMessage {
@@ -14,7 +13,6 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
-  emotionAnalysis?: EmotionAnalysis;
 }
 
 interface FormValue {
@@ -104,7 +102,6 @@ export default function ChatPage() {
         role: "assistant",
         content: response.response,
         timestamp: new Date(),
-        emotionAnalysis: response.emotion_analysis,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -152,7 +149,6 @@ export default function ChatPage() {
             role={msg.role}
             content={msg.content}
             timestamp={msg.timestamp}
-            emotionAnalysis={msg.emotionAnalysis}
           />
         ))}
 

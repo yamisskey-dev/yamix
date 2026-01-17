@@ -1,46 +1,16 @@
 "use client";
 
-import type { EmotionType, EmotionAnalysis } from "@/types";
-
 interface ChatBubbleProps {
   role: "user" | "assistant";
   content: string;
   timestamp?: Date;
-  emotionAnalysis?: EmotionAnalysis;
   isLoading?: boolean;
 }
-
-const emotionLabels: Record<EmotionType, string> = {
-  happiness: "喜び",
-  sadness: "悲しみ",
-  anxiety: "不安",
-  anger: "怒り",
-  loneliness: "孤独",
-  depression: "落ち込み",
-  stress: "ストレス",
-  confusion: "混乱",
-  hope: "希望",
-  neutral: "平静",
-};
-
-const emotionColors: Record<EmotionType, string> = {
-  happiness: "bg-yellow-400",
-  sadness: "bg-blue-400",
-  anxiety: "bg-purple-400",
-  anger: "bg-red-400",
-  loneliness: "bg-indigo-400",
-  depression: "bg-gray-600",
-  stress: "bg-orange-400",
-  confusion: "bg-teal-400",
-  hope: "bg-green-400",
-  neutral: "bg-gray-400",
-};
 
 export function ChatBubble({
   role,
   content,
   timestamp,
-  emotionAnalysis,
   isLoading,
 }: ChatBubbleProps) {
   const isUser = role === "user";
@@ -62,22 +32,6 @@ export function ChatBubble({
       <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"}`}>
         <p className="whitespace-pre-wrap break-words">{content}</p>
       </div>
-
-      {/* Emotion indicator for assistant messages */}
-      {!isUser && emotionAnalysis && (
-        <div className="chat-footer flex items-center gap-2 mt-1 opacity-70">
-          <div
-            className={`w-2 h-2 rounded-full ${emotionColors[emotionAnalysis.primary_emotion]}`}
-          />
-          <span className="text-xs">
-            {emotionLabels[emotionAnalysis.primary_emotion]}
-            {emotionAnalysis.intensity > 0.7 && " (強)"}
-          </span>
-          {emotionAnalysis.is_crisis && (
-            <span className="badge badge-error badge-xs">要注意</span>
-          )}
-        </div>
-      )}
 
       {/* Timestamp */}
       {timestamp && (
