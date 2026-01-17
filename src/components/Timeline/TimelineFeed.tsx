@@ -5,6 +5,7 @@ import { ConsultationCard } from "./ConsultationCard";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
 export function TimelineFeed() {
+  const [currentUserHandle, setCurrentUserHandle] = useState<string>();
   const [consultations, setConsultations] = useState<TimelineConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -52,6 +53,11 @@ export function TimelineFeed() {
   // Initial fetch
   useEffect(() => {
     fetchTimeline();
+    // Get current user handle from localStorage
+    const handle = localStorage.getItem("yamix_handle");
+    if (handle) {
+      setCurrentUserHandle(handle);
+    }
   }, [fetchTimeline]);
 
   // Infinite scroll with IntersectionObserver
@@ -129,6 +135,7 @@ export function TimelineFeed() {
         <ConsultationCard
           key={consultation.id}
           consultation={consultation}
+          currentUserHandle={currentUserHandle}
         />
       ))}
 

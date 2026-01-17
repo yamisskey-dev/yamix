@@ -9,11 +9,17 @@ interface PageProps {
   params: Promise<{ sessionId: string }>;
 }
 
+interface ResponderInfo {
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
 interface LocalMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  responder?: ResponderInfo | null;
 }
 
 export default function ChatSessionPage({ params }: PageProps) {
@@ -48,6 +54,10 @@ export default function ChatSessionPage({ params }: PageProps) {
             role: m.role === "USER" ? "user" : "assistant",
             content: m.content,
             timestamp: new Date(m.createdAt),
+            responder: m.responder ? {
+              displayName: m.responder.displayName,
+              avatarUrl: m.responder.avatarUrl,
+            } : undefined,
           }))
         );
       } catch (err) {
@@ -187,6 +197,7 @@ export default function ChatSessionPage({ params }: PageProps) {
               role={msg.role}
               content={msg.content}
               timestamp={msg.timestamp}
+              responder={msg.responder || undefined}
             />
           ))}
 

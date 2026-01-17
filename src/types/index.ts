@@ -320,6 +320,7 @@ export interface ChatMessage {
   content: string;
   isCrisis: boolean;
   responderId?: string | null; // 人間回答者のID
+  responder?: ResponderInfo | null; // 人間回答者の情報（includeで取得時）
   createdAt: Date;
 }
 
@@ -350,17 +351,32 @@ export interface ChatSessionListItem {
   updatedAt: Date;
 }
 
+// タイムライン用の回答情報
+export interface TimelineReply {
+  id: string;
+  content: string;
+  createdAt: Date;
+  responder: {
+    id: string;
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null; // nullの場合はAI回答
+}
+
 // タイムライン用の公開相談
 export interface TimelineConsultation {
   id: string;
   sessionId: string;
   question: string;
-  answer: string;
+  answer: string; // 最初のAI回答
   user: {
     handle: string;
     displayName: string | null;
     avatarUrl: string | null;
   };
+  replyCount: number; // 回答数（AI含む）
+  replies: TimelineReply[]; // 回答一覧
   createdAt: Date;
 }
 

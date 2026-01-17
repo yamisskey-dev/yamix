@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
-import type { TimelineConsultation, TimelineResponse } from "@/types";
+import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
 
 // Access memory stores from memoryDB
 const chatSessionsStore = memoryDB.chatSessions;
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   try {
     if (isPrismaAvailable() && prisma) {
-      // Get public sessions with their first Q&A pair
+      // Get public sessions with all messages (for reply tree)
       const sessions = await prismaAny.chatSession.findMany({
         where: { isPublic: true },
         orderBy: { createdAt: "desc" },
@@ -31,7 +31,16 @@ export async function GET(req: NextRequest) {
           },
           messages: {
             orderBy: { createdAt: "asc" },
-            take: 2, // First user message and first assistant response
+            include: {
+              responder: {
+                select: {
+                  id: true,
+                  handle: true,
+                  displayName: true,
+                  avatarUrl: true,
+                },
+              },
+            },
           },
         },
       });
@@ -44,18 +53,35 @@ export async function GET(req: NextRequest) {
         .filter((s: any) => s.messages.length >= 2)
         .map((s: any) => {
           const userMsg = s.messages.find((m: any) => m.role === "USER");
-          const assistantMsg = s.messages.find((m: any) => m.role === "ASSISTANT");
+          const firstAssistantMsg = s.messages.find((m: any) => m.role === "ASSISTANT");
+
+          // All assistant messages as replies
+          const allReplies: TimelineReply[] = s.messages
+            .filter((m: any) => m.role === "ASSISTANT")
+            .map((m: any) => ({
+              id: m.id,
+              content: m.content,
+              createdAt: m.createdAt,
+              responder: m.responder ? {
+                id: m.responder.id,
+                handle: m.responder.handle,
+                displayName: m.responder.displayName,
+                avatarUrl: m.responder.avatarUrl,
+              } : null,
+            }));
 
           return {
             id: s.id,
             sessionId: s.id,
             question: userMsg?.content || "",
-            answer: assistantMsg?.content || "",
+            answer: firstAssistantMsg?.content || "",
             user: {
               handle: s.user.handle,
               displayName: s.user.profile?.displayName || null,
               avatarUrl: s.user.profile?.avatarUrl || null,
             },
+            replyCount: allReplies.length,
+            replies: allReplies,
             createdAt: s.createdAt,
           };
         });
@@ -92,20 +118,32 @@ export async function GET(req: NextRequest) {
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
           const userMsg = messages.find((m) => m.role === "USER");
-          const assistantMsg = messages.find((m) => m.role === "ASSISTANT");
+          const firstAssistantMsg = messages.find((m) => m.role === "ASSISTANT");
 
-          if (!userMsg || !assistantMsg) return null;
+          if (!userMsg || !firstAssistantMsg) return null;
+
+          // All assistant messages as replies
+          const allReplies: TimelineReply[] = messages
+            .filter((m) => m.role === "ASSISTANT")
+            .map((m) => ({
+              id: m.id,
+              content: m.content,
+              createdAt: m.createdAt,
+              responder: null, // In-memory doesn't have responder info
+            }));
 
           return {
             id: s.id,
             sessionId: s.id,
             question: userMsg.content,
-            answer: assistantMsg.content,
+            answer: firstAssistantMsg.content,
             user: {
               handle: "anonymous",
               displayName: null as string | null,
               avatarUrl: null as string | null,
             },
+            replyCount: allReplies.length,
+            replies: allReplies,
             createdAt: s.createdAt,
           } as TimelineConsultation;
         })
