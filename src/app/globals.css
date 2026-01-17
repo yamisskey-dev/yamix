@@ -82,19 +82,20 @@ body {
 }
 
 .chat-assistant {
-  @apply bg-base-200/80 text-base-content rounded-2xl rounded-bl-sm;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  @apply bg-base-300 text-base-content rounded-2xl rounded-bl-sm;
+  border: 1px solid rgba(163, 116, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 [data-theme="light"] .chat-assistant {
-  @apply bg-base-200/90;
-  box-shadow: 0 1px 6px rgba(147, 137, 255, 0.15);
+  @apply bg-base-200;
+  border: 1px solid rgba(150, 107, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(147, 137, 255, 0.12);
 }
 
 .chat-assistant-loading {
-  @apply bg-base-200/60 text-base-content rounded-2xl rounded-bl-sm;
-  backdrop-filter: blur(4px);
+  @apply bg-base-300 text-base-content rounded-2xl rounded-bl-sm;
+  border: 1px solid rgba(163, 116, 255, 0.15);
 }
 
 /* Typing animation - gradient pulse (Misskey-inspired) */
