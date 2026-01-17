@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, generateId } from "@/lib/prisma";
+import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const prismaAny = prisma as any;
 import { yamiiClient } from "@/lib/yamii-client";
-import {
-  chatSessionsStore,
-  chatMessagesStore,
-  type MemoryChatMessage,
-} from "../../route";
 import type { ConversationMessage } from "@/types";
+
+// Access memory stores from memoryDB
+const chatSessionsStore = memoryDB.chatSessions;
+const chatMessagesStore = memoryDB.chatMessages;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -94,12 +93,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
 
       const messages = Array.from(chatMessagesStore.values())
-        .filter((m: MemoryChatMessage) => m.sessionId === sessionId)
+        .filter((m) => m.sessionId === sessionId)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .slice(-10);
 
       isFirstMessage = messages.length === 0;
-      existingMessages = messages.map((m: MemoryChatMessage) => ({
+      existingMessages = messages.map((m) => ({
         role: m.role === "USER" ? "user" : "assistant",
         content: m.content,
       })) as ConversationMessage[];
@@ -174,20 +173,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
     } else {
       // In-memory fallback
-      const userMsg: MemoryChatMessage = {
+      const userMsg = {
         id: generateId(),
         sessionId,
-        role: "USER",
+        role: "USER" as const,
         content: userMessage,
         isCrisis: false,
         createdAt: now,
       };
       chatMessagesStore.set(userMsg.id, userMsg);
 
-      const assistantMsg: MemoryChatMessage = {
+      const assistantMsg = {
         id: generateId(),
         sessionId,
-        role: "ASSISTANT",
+        role: "ASSISTANT" as const,
         content: yamiiResponse.response,
         isCrisis: yamiiResponse.is_crisis,
         createdAt: new Date(now.getTime() + 1),

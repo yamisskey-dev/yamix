@@ -113,43 +113,69 @@ export function ChatSessionList({ onSessionSelect }: Props) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <span className="loading loading-spinner loading-sm" />
+      <div className="flex flex-col gap-2 p-2">
+        {/* Skeleton loading for session list */}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-start gap-2 px-3 py-2.5 rounded-xl">
+            <div className="skeleton w-4 h-4 rounded-full shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="skeleton h-4 w-3/4 mb-1.5" />
+              <div className="skeleton h-3 w-1/2" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (sessions.length === 0) {
     return (
-      <div className="text-center py-8 text-base-content/50 text-sm">
-        まだ相談履歴がありません
+      <div className="flex flex-col items-center justify-center py-8 text-center">
+        <div className="w-12 h-12 rounded-full bg-base-200/50 flex items-center justify-center mb-3">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-base-content/30"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.5"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+        </div>
+        <p className="text-base-content/40 text-sm">まだ相談履歴がありません</p>
+        <p className="text-base-content/30 text-xs mt-1">新しい相談を始めてみましょう</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
-      {groupedSessions.map((group) => (
+    <div className="flex flex-col">
+      {groupedSessions.map((group, index) => (
         <div key={group.label}>
-          <div className="px-3 py-2 text-xs font-semibold text-base-content/50">
-            {group.label}
+          {/* Date group header with subtle divider */}
+          <div className={`flex items-center gap-2 px-3 py-2 ${index > 0 ? "mt-2" : ""}`}>
+            <span className="text-xs font-medium text-base-content/40 uppercase tracking-wider">
+              {group.label}
+            </span>
+            <div className="flex-1 h-px bg-base-content/10" />
           </div>
           {group.sessions.map((session) => (
             <div
               key={session.id}
               onClick={() => handleSessionClick(session.id)}
-              className={`w-full group flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors hover:bg-base-200 cursor-pointer ${
-                currentSessionId === session.id ? "bg-base-200" : ""
+              className={`w-full group flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                currentSessionId === session.id
+                  ? "bg-primary/10 border border-primary/20"
+                  : "hover:bg-base-200/70 border border-transparent"
               }`}
             >
-              <span className="flex-1 truncate">
-                {session.title || "新しい相談"}
-              </span>
-              <button
-                onClick={(e) => handleDelete(e, session.id)}
-                className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle"
-                title="削除"
-              >
+              {/* Chat icon */}
+              <div className={`mt-0.5 ${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-4 w-4"
@@ -161,7 +187,41 @@ export function ChatSessionList({ onSessionSelect }: Props) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </div>
+
+              {/* Title and preview */}
+              <div className="flex-1 min-w-0">
+                <span className={`text-sm font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
+                  {session.title || "新しい相談"}
+                </span>
+                {session.preview && (
+                  <span className="text-xs text-base-content/50 truncate block mt-0.5">
+                    {session.preview}...
+                  </span>
+                )}
+              </div>
+
+              {/* Delete button */}
+              <button
+                onClick={(e) => handleDelete(e, session.id)}
+                className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle shrink-0"
+                title="削除"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3.5 w-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
               </button>

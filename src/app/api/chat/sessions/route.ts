@@ -66,11 +66,24 @@ export async function GET(req: NextRequest) {
           id: true,
           title: true,
           updatedAt: true,
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { content: true, role: true },
+          },
         },
       });
 
       const hasMore = sessions.length > limit;
-      const items = sessions.slice(0, limit);
+      const items: ChatSessionListItem[] = sessions.slice(0, limit).map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (s: any) => ({
+          id: s.id,
+          title: s.title,
+          preview: s.messages[0]?.content?.slice(0, 50) || null,
+          updatedAt: s.updatedAt,
+        })
+      );
 
       const response: ChatSessionsResponse = {
         sessions: items,
@@ -95,11 +108,20 @@ export async function GET(req: NextRequest) {
 
       const sessions = allSessions.slice(startIndex, startIndex + limit + 1);
       const hasMore = sessions.length > limit;
-      const items: ChatSessionListItem[] = sessions.slice(0, limit).map((s) => ({
-        id: s.id,
-        title: s.title,
-        updatedAt: s.updatedAt,
-      }));
+      const items: ChatSessionListItem[] = sessions.slice(0, limit).map((s) => {
+        // Get last message for preview
+        const sessionMessages = Array.from(chatMessagesStore.values())
+          .filter((m) => m.sessionId === s.id)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        const lastMessage = sessionMessages[0];
+
+        return {
+          id: s.id,
+          title: s.title,
+          preview: lastMessage?.content?.slice(0, 50) || null,
+          updatedAt: s.updatedAt,
+        };
+      });
 
       const response: ChatSessionsResponse = {
         sessions: items,
@@ -181,6 +203,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Export stores for use in other API routes
-export { chatSessionsStore, chatMessagesStore };
-export type { MemoryChatSession, MemoryChatMessage };

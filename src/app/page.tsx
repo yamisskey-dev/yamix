@@ -147,17 +147,17 @@ export default function LoginPage() {
       </a>
 
       <main className="w-full h-full flex flex-col justify-center items-center p-6">
-        {/* Logo & Title (NeoQuesdon style) */}
-        <div className="mb-4 flex flex-col items-center">
-          <div className="relative text-7xl font-bold z-10">
-            <h1 className="absolute -inset-0 -z-10 bg-gradient-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg">
+        {/* Logo */}
+        <div className="mb-6 flex flex-col items-center">
+          <div className="relative">
+            <h1 className="absolute -inset-0 -z-10 bg-gradient-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg text-7xl font-bold">
               Yamix
             </h1>
             <h1 className="text-7xl font-bold z-10 mb-2 desktop:mb-0 text-white">
               Yamix
             </h1>
           </div>
-          <span className="font-thin tracking-wider text-base desktop:text-lg text-white/80">
+          <span className="mt-4 font-thin tracking-wider text-base desktop:text-lg text-white/80">
             AIと人間が寄り添う、Fediverse向け相談プラットフォーム
           </span>
         </div>

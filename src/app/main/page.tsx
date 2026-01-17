@@ -106,13 +106,9 @@ export default function NewChatPage() {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {messages.length === 0 && !isLoading && (
-          <div className="flex flex-col items-center justify-center h-full text-center text-base-content/50">
-            <div className="text-6xl mb-4">💬</div>
-            <h2 className="text-xl font-bold mb-2">Yamii へようこそ</h2>
-            <p className="text-sm max-w-xs">
-              何でも相談してください。
-              <br />
-              あなたの話を聴きます。
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <p className="text-base-content/50 text-lg">
+              今日はどうしましたか？
             </p>
           </div>
         )}
@@ -141,15 +137,15 @@ export default function NewChatPage() {
       <div className="p-4">
         <form
           onSubmit={handleSubmit}
-          className="flex items-end gap-2 max-w-3xl mx-auto"
+          className="flex items-center gap-2 max-w-3xl mx-auto"
         >
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="メッセージを入力..."
-              className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-12 rounded-2xl"
+              placeholder="相談してみましょう"
+              className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
               rows={1}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
@@ -157,19 +153,19 @@ export default function NewChatPage() {
           </div>
           <button
             type="submit"
-            className={`btn btn-primary btn-circle btn-sm ${
+            className={`btn btn-primary btn-circle flex-shrink-0 ${
               isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
             }`}
             disabled={isLoading || !inputValue.trim()}
           >
             {isLoading ? (
-              <span className="loading loading-spinner loading-xs" />
+              <span className="loading loading-spinner loading-sm" />
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
-                className="w-4 h-4"
+                className="w-5 h-5"
               >
                 <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
               </svg>

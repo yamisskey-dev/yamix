@@ -330,6 +330,7 @@ export interface ChatSessionWithMessages extends ChatSession {
 export interface ChatSessionListItem {
   id: string;
   title: string | null;
+  preview: string | null; // 最後のメッセージのプレビュー
   updatedAt: Date;
 }
 

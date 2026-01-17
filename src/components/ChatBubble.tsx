@@ -18,10 +18,10 @@ export function ChatBubble({
   if (isLoading) {
     return (
       <div className={`chat ${isUser ? "chat-end" : "chat-start"}`}>
-        <div className="chat-bubble chat-assistant flex items-center gap-1 min-h-[2.5rem]">
-          <div className="typing-dot" />
-          <div className="typing-dot" />
-          <div className="typing-dot" />
+        <div className="chat-bubble chat-assistant-loading flex items-center gap-1.5 min-h-[2.5rem] px-4">
+          <div className="typing-dot-gradient" />
+          <div className="typing-dot-gradient" />
+          <div className="typing-dot-gradient" />
         </div>
       </div>
     );
@@ -29,13 +29,22 @@ export function ChatBubble({
 
   return (
     <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-slide-up`}>
-      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"}`}>
-        <p className="whitespace-pre-wrap break-words">{content}</p>
+      {/* Avatar for assistant */}
+      {!isUser && (
+        <div className="chat-image avatar">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+            <span className="text-white text-xs font-bold">Y</span>
+          </div>
+        </div>
+      )}
+
+      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} shadow-sm`}>
+        <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
       </div>
 
       {/* Timestamp */}
       {timestamp && (
-        <div className="chat-footer opacity-50">
+        <div className="chat-footer opacity-40 mt-1">
           <time className="text-xs">
             {timestamp.toLocaleTimeString("ja-JP", {
               hour: "2-digit",

@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useUser } from "../layout";
+import { useUser } from "@/contexts/UserContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
 
 export default function SettingsPage() {

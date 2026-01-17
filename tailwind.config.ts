@@ -33,7 +33,64 @@ const config: Config = {
   },
   plugins: [daisyui],
   daisyui: {
-    themes: ["light", "dark"],
+    themes: [
+      {
+        // NGO - NEEDY GIRL OVERDOSE inspired light theme
+        light: {
+          "primary": "#966BFF",           // accent
+          "primary-content": "#FFFFFF",   // fgOnAccent
+          "secondary": "#FF9DFF",         // buttonGradateA
+          "secondary-content": "#391E60", // fg
+          "accent": "#A398FF",            // buttonGradateB
+          "accent-content": "#FFFFFF",
+          "neutral": "#391E60",           // fg
+          "neutral-content": "#FFF5FC",   // bg
+          "base-100": "#FFF5FC",          // bg (rgba to hex)
+          "base-200": "#FCF9FF",          // panel
+          "base-300": "#FBF0FF",          // navBg
+          "base-content": "#391E60",      // fg
+          "info": "#3A7DFF",              // mention
+          "info-content": "#FFFFFF",
+          "success": "#86EFAC",           // success
+          "success-content": "#391E60",
+          "warning": "#FAD25A",           // warn
+          "warning-content": "#391E60",
+          "error": "#EB5050",             // error
+          "error-content": "#FFFFFF",
+          "--rounded-box": "1rem",
+          "--rounded-btn": "0.5rem",
+          "--rounded-badge": "1.9rem",
+        },
+      },
+      {
+        // DXM - Dextromethorphan inspired dark theme
+        dark: {
+          "primary": "#A374FF",           // accent
+          "primary-content": "#FFFFFF",   // fgOnAccent
+          "secondary": "#B32DB6",         // buttonGradateA / indicator
+          "secondary-content": "#FFFFFF",
+          "accent": "#966BFF",            // buttonGradateB
+          "accent-content": "#FFFFFF",
+          "neutral": "#C2CBE0",           // fg
+          "neutral-content": "#130E26",   // bg
+          "base-100": "#130E26",          // bg (rgba to hex)
+          "base-200": "#100B22",          // panel
+          "base-300": "#170F2A",          // navBg
+          "base-content": "#C2CBE0",      // fg
+          "info": "#44A4C1",              // link color
+          "info-content": "#FFFFFF",
+          "success": "#79FFC2",           // success
+          "success-content": "#130E26",
+          "warning": "#FFAF63",           // warn
+          "warning-content": "#130E26",
+          "error": "#FF66C2",             // error
+          "error-content": "#FFFFFF",
+          "--rounded-box": "1rem",
+          "--rounded-btn": "0.5rem",
+          "--rounded-badge": "1.9rem",
+        },
+      },
+    ],
     darkTheme: "dark",
     base: true,
     styled: true,

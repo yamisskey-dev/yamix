@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable } from "@/lib/prisma";
+import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
-import {
-  chatSessionsStore,
-  chatMessagesStore,
-  type MemoryChatMessage,
-} from "../chat/sessions/route";
+
+// Access memory stores from memoryDB
+const chatSessionsStore = memoryDB.chatSessions;
+const chatMessagesStore = memoryDB.chatMessages;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const prismaAny = prisma as any;
@@ -89,11 +88,11 @@ export async function GET(req: NextRequest) {
       const consultations: TimelineConsultation[] = items
         .map((s) => {
           const messages = Array.from(chatMessagesStore.values())
-            .filter((m: MemoryChatMessage) => m.sessionId === s.id)
+            .filter((m) => m.sessionId === s.id)
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-          const userMsg = messages.find((m: MemoryChatMessage) => m.role === "USER");
-          const assistantMsg = messages.find((m: MemoryChatMessage) => m.role === "ASSISTANT");
+          const userMsg = messages.find((m) => m.role === "USER");
+          const assistantMsg = messages.find((m) => m.role === "ASSISTANT");
 
           if (!userMsg || !assistantMsg) return null;
 

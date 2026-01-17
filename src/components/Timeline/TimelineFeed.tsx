@@ -103,10 +103,18 @@ export function TimelineFeed() {
 
   if (consultations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center text-base-content/50">
-        <div className="text-6xl mb-4">📭</div>
-        <h3 className="text-lg font-semibold mb-2">公開相談がありません</h3>
-        <p className="text-sm max-w-xs">
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        {/* Yui mascot image */}
+        <img
+          src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yui/yui-256x256.webp"
+          alt="Yui"
+          className="w-32 h-32 mb-6 opacity-60"
+          draggable={false}
+        />
+        <h3 className="text-lg font-medium text-base-content/70 mb-2">
+          公開相談がありません
+        </h3>
+        <p className="text-sm text-base-content/50 max-w-xs leading-relaxed">
           相談を公開するとここに表示されます。
           <br />
           みんなの悩みを共有してみましょう。

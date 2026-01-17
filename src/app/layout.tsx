@@ -18,7 +18,7 @@ function detectLanguage(acceptLanguage: string | null): string {
 }
 
 export const metadata: Metadata = {
-  title: "Yamix",
+  title: "やみっくす",
   description: "プライバシーファーストのAI相談プラットフォーム",
 };
 

@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable } from "@/lib/prisma";
+import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const prismaAny = prisma as any;
-import {
-  chatSessionsStore,
-  chatMessagesStore,
-  type MemoryChatMessage,
-} from "../route";
+
+// Access memory stores from memoryDB
+const chatSessionsStore = memoryDB.chatSessions;
+const chatMessagesStore = memoryDB.chatMessages;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -62,7 +61,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       }
 
       const messages = Array.from(chatMessagesStore.values())
-        .filter((m: MemoryChatMessage) => m.sessionId === id)
+        .filter((m) => m.sessionId === id)
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
       return NextResponse.json({
@@ -202,7 +201,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       // Delete session and its messages
       chatSessionsStore.delete(id);
       for (const [msgId, msg] of chatMessagesStore.entries()) {
-        if ((msg as MemoryChatMessage).sessionId === id) {
+        if (msg.sessionId === id) {
           chatMessagesStore.delete(msgId);
         }
       }
