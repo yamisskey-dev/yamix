@@ -105,10 +105,10 @@ export default function LoginPage() {
 
   return (
     <div className="w-screen h-screen absolute flex flex-col items-center justify-center">
-      {/* Animated background (down.yami.ski style) */}
+      {/* Animated background */}
       <div className="animated-bg" />
 
-      {/* GitHub Corner (yamisskey-down style) */}
+      {/* GitHub Corner */}
       <a
         href="https://github.com/yamisskey-dev/yamix"
         target="_blank"
@@ -147,22 +147,20 @@ export default function LoginPage() {
       </a>
 
       <main className="w-full h-full flex flex-col justify-center items-center p-6">
-        {/* Logo */}
-        <div className="mb-6 flex flex-col items-center">
-          <div className="relative">
-            <h1 className="absolute -inset-0 -z-10 bg-gradient-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg text-7xl font-bold">
+        {/* Logo - NeoQuesdon style */}
+        <div className="mb-4 flex flex-col items-center">
+          <div className="relative text-7xl font-bold z-10">
+            <h1 className="absolute -inset-0 -z-10 bg-gradient-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg">
               Yamix
             </h1>
-            <h1 className="text-7xl font-bold z-10 mb-2 desktop:mb-0 text-white">
-              Yamix
-            </h1>
+            <h1 className="text-7xl font-bold z-10 mb-2 desktop:mb-0">Yamix</h1>
           </div>
-          <span className="mt-4 font-thin tracking-wider text-base desktop:text-lg text-white/80">
-            AIと人間が寄り添う、Fediverse向け相談プラットフォーム
+          <span className="font-thin tracking-wider text-base desktop:text-lg">
+            AIと人間が寄り添う、Misskey向け相談プラットフォーム
           </span>
         </div>
 
-        {/* Login Form (NeoQuesdon style - horizontal on desktop) */}
+        {/* Login Form - NeoQuesdon style horizontal layout */}
         <div className="flex flex-col desktop:flex-row items-center">
           <form
             className="flex flex-col desktop:flex-row"
