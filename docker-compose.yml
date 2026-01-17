@@ -1,4 +1,29 @@
 services:
+  # Yamix Application
+  yamix:
+    build: .
+    container_name: yamix
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://yamix:${POSTGRES_PASSWORD:-password}@postgres:5432/yamix
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      WEB_URL: ${WEB_URL:-http://localhost:3000}
+      YAMII_API_URL: ${YAMII_API_URL:-http://localhost:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # Database
   postgres:
     image: postgres:16-alpine
