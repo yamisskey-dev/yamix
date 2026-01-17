@@ -292,17 +292,19 @@ model ChatSession {
 // セッション内の個別メッセージ
 // ============================================
 model ChatMessage {
-  id        String      @id @default(cuid())
-  sessionId String
-  role      MessageRole @default(USER)
-  content   String      @db.Text
-  isCrisis  Boolean     @default(false) // 危機検出フラグ
-  createdAt DateTime    @default(now())
+  id          String      @id @default(cuid())
+  sessionId   String
+  role        MessageRole @default(USER)
+  content     String      @db.Text
+  isCrisis    Boolean     @default(false) // 危機検出フラグ
+  responderId String?     // 人間が回答した場合の回答者ID
+  createdAt   DateTime    @default(now())
 
   // Relations
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, createdAt])
+  @@index([responderId])
   @@map("chat_messages")
 }
 

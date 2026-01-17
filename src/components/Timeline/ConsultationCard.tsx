@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { TimelineConsultation } from "@/types";
 
 interface Props {
   consultation: TimelineConsultation;
+  currentUserHandle?: string;
 }
 
 function formatDate(date: Date): string {
@@ -26,8 +28,45 @@ function formatDate(date: Date): string {
   });
 }
 
-export function ConsultationCard({ consultation }: Props) {
+export function ConsultationCard({ consultation, currentUserHandle }: Props) {
+  const [showResponseForm, setShowResponseForm] = useState(false);
+  const [responseContent, setResponseContent] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string>();
+
   const displayName = consultation.user.displayName || consultation.user.handle.split("@")[1] || "匿名";
+
+  // Check if this is the user's own consultation (they shouldn't respond to their own)
+  const isOwnConsultation = currentUserHandle && consultation.user.handle === currentUserHandle;
+
+  const handleSubmitResponse = async () => {
+    if (!responseContent.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(undefined);
+
+    try {
+      const res = await fetch(`/api/chat/sessions/${consultation.sessionId}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: responseContent.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "回答の送信に失敗しました");
+      }
+
+      setSubmitted(true);
+      setShowResponseForm(false);
+      setResponseContent("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="card bg-base-100/50 backdrop-blur-sm shadow-lg border border-base-300/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
@@ -112,8 +151,52 @@ export function ConsultationCard({ consultation }: Props) {
           </p>
         </div>
 
-        {/* View Full */}
-        <div className="mt-3 text-right">
+        {/* Actions */}
+        <div className="mt-3 flex items-center justify-between">
+          {/* Response Button */}
+          {!isOwnConsultation && !submitted && (
+            <button
+              onClick={() => setShowResponseForm(!showResponseForm)}
+              className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm
+                transition-colors duration-150
+                ${showResponseForm
+                  ? "bg-primary/20 text-primary"
+                  : "bg-base-200 text-base-content/60 hover:bg-primary/10 hover:text-primary"
+                }
+              `}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+                />
+              </svg>
+              <span>回答する</span>
+            </button>
+          )}
+
+          {submitted && (
+            <span className="text-sm text-success flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              回答を送信しました
+            </span>
+          )}
+
+          {isOwnConsultation && (
+            <span className="text-xs text-base-content/40">自分の相談</span>
+          )}
+
           <Link
             href={`/main/chat/${consultation.sessionId}`}
             className="link link-primary text-xs"
@@ -121,6 +204,51 @@ export function ConsultationCard({ consultation }: Props) {
             全文を見る →
           </Link>
         </div>
+
+        {/* Response Form */}
+        {showResponseForm && (
+          <div className="mt-4 pt-4 border-t border-base-300/50 animate-fade-in">
+            <div className="text-xs text-base-content/50 mb-2">
+              あなたの回答
+            </div>
+            <textarea
+              value={responseContent}
+              onChange={(e) => setResponseContent(e.target.value)}
+              placeholder="相談者への回答を入力してください..."
+              className="textarea textarea-bordered w-full min-h-[100px] text-sm resize-none bg-base-200/50"
+              disabled={isSubmitting}
+            />
+            {error && (
+              <div className="text-error text-xs mt-1">{error}</div>
+            )}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                onClick={() => {
+                  setShowResponseForm(false);
+                  setResponseContent("");
+                  setError(undefined);
+                }}
+                className="btn btn-ghost btn-sm"
+                disabled={isSubmitting}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleSubmitResponse}
+                className={`btn btn-primary btn-sm ${
+                  isSubmitting || !responseContent.trim() ? "btn-disabled" : ""
+                }`}
+                disabled={isSubmitting || !responseContent.trim()}
+              >
+                {isSubmitting ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  "送信"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

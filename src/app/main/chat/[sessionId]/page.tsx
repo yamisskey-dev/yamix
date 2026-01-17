@@ -25,6 +25,8 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [isUpdatingPublic, setIsUpdatingPublic] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,6 +44,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         }
 
         const session: ChatSessionWithMessages = await res.json();
+        setIsPublic(session.isPublic);
         setMessages(
           session.messages.map((m: ChatMessage) => ({
             id: m.id,
@@ -129,6 +132,30 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
   };
 
+  const handleTogglePublic = async () => {
+    if (isUpdatingPublic) return;
+    setIsUpdatingPublic(true);
+
+    try {
+      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublic: !isPublic }),
+      });
+
+      if (!res.ok) {
+        throw new Error("公開設定の更新に失敗しました");
+      }
+
+      setIsPublic(!isPublic);
+    } catch (err) {
+      console.error("Error updating public status:", err);
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+    } finally {
+      setIsUpdatingPublic(false);
+    }
+  };
+
   if (isFetching) {
     return (
       <div className="flex-1 flex flex-col h-full p-4 space-y-4">
@@ -163,6 +190,36 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   return (
     <div className="flex-1 flex flex-col h-full">
+      {/* Session Header with Public Toggle */}
+      <div className="flex items-center justify-end px-4 py-2 border-b border-base-content/10">
+        <button
+          onClick={handleTogglePublic}
+          disabled={isUpdatingPublic}
+          className={`
+            flex items-center gap-2 px-3 py-1.5 rounded-full text-sm
+            transition-colors duration-150
+            ${isPublic
+              ? "bg-primary/20 text-primary"
+              : "bg-base-200 text-base-content/60 hover:bg-base-300"
+            }
+            ${isUpdatingPublic ? "opacity-50 cursor-not-allowed" : ""}
+          `}
+        >
+          {isUpdatingPublic ? (
+            <span className="loading loading-spinner loading-xs" />
+          ) : isPublic ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          )}
+          <span>{isPublic ? "公開中" : "非公開"}</span>
+        </button>
+      </div>
+
       {/* Crisis Alert */}
       {showCrisisAlert && (
         <div className="p-4">

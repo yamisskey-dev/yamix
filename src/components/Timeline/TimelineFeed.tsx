@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useUser } from "@/contexts/UserContext";
 import { ConsultationCard } from "./ConsultationCard";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
 export function TimelineFeed() {
+  const { user } = useUser();
   const [consultations, setConsultations] = useState<TimelineConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -126,7 +128,11 @@ export function TimelineFeed() {
   return (
     <div className="space-y-4">
       {consultations.map((consultation) => (
-        <ConsultationCard key={consultation.id} consultation={consultation} />
+        <ConsultationCard
+          key={consultation.id}
+          consultation={consultation}
+          currentUserHandle={user?.handle}
+        />
       ))}
 
       {/* Load more trigger */}

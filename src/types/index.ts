@@ -319,7 +319,22 @@ export interface ChatMessage {
   role: MessageRole;
   content: string;
   isCrisis: boolean;
+  responderId?: string | null; // 人間回答者のID
   createdAt: Date;
+}
+
+// 人間回答のリクエスト
+export interface HumanResponseRequest {
+  sessionId: string;
+  content: string;
+}
+
+// 人間回答者の情報
+export interface ResponderInfo {
+  id: string;
+  handle: string;
+  displayName: string | null;
+  avatarUrl: string | null;
 }
 
 export interface ChatSessionWithMessages extends ChatSession {

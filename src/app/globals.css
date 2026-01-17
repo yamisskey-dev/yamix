@@ -98,6 +98,18 @@ body {
   border: 1px solid rgba(163, 116, 255, 0.15);
 }
 
+/* Human response bubble - distinct from AI */
+.chat-human-response {
+  @apply bg-base-200 text-base-content;
+  border: 1px solid rgba(179, 45, 182, 0.3);
+  box-shadow: 0 2px 8px rgba(179, 45, 182, 0.15);
+}
+
+[data-theme="light"] .chat-human-response {
+  border: 1px solid rgba(255, 157, 255, 0.4);
+  box-shadow: 0 2px 8px rgba(255, 157, 255, 0.2);
+}
+
 /* Typing animation - gradient pulse (Misskey-inspired) */
 @keyframes typing-pulse {
   0%, 100% {

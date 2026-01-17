@@ -1,10 +1,18 @@
 "use client";
 
+import Image from "next/image";
+
+interface ResponderInfo {
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
 interface ChatBubbleProps {
   role: "user" | "assistant";
   content: string;
   timestamp?: Date;
   isLoading?: boolean;
+  responder?: ResponderInfo; // 人間回答者の情報
 }
 
 export function ChatBubble({
@@ -12,8 +20,10 @@ export function ChatBubble({
   content,
   timestamp,
   isLoading,
+  responder,
 }: ChatBubbleProps) {
   const isUser = role === "user";
+  const isHumanResponse = !isUser && responder;
 
   if (isLoading) {
     return (
@@ -32,14 +42,43 @@ export function ChatBubble({
       {/* Avatar for assistant */}
       {!isUser && (
         <div className="chat-image avatar">
-          <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
-            <span className="text-lg">🤖</span>
-          </div>
+          {isHumanResponse ? (
+            // Human responder avatar
+            <div className="w-8 h-8 rounded-full ring-2 ring-secondary/30">
+              {responder.avatarUrl ? (
+                <Image
+                  src={responder.avatarUrl}
+                  alt={responder.displayName || "回答者"}
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
+                  {(responder.displayName || "?").charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          ) : (
+            // AI avatar
+            <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
+              <span className="text-lg">🤖</span>
+            </div>
+          )}
         </div>
       )}
 
-      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} shadow-sm`}>
-        <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+      <div className="flex flex-col gap-0.5">
+        {/* Responder name for human responses */}
+        {isHumanResponse && (
+          <div className="text-xs text-secondary font-medium ml-1">
+            {responder.displayName || "匿名の回答者"}
+          </div>
+        )}
+
+        <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
+          <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+        </div>
       </div>
 
       {/* Timestamp */}
