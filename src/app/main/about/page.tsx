@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { useUser } from "@/contexts/UserContext";
 
 // Misskey風のFormLinkコンポーネント
 function FormLink({
@@ -75,11 +74,7 @@ function MkKeyValue({
 }
 
 export default function AboutPage() {
-  const { user } = useUser();
   const [prompt, setPrompt] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [promptSaved, setPromptSaved] = useState(false);
-  const [promptError, setPromptError] = useState("");
 
   // デフォルトプロンプトを取得
   useEffect(() => {
@@ -96,31 +91,6 @@ export default function AboutPage() {
     }
     fetchPrompt();
   }, []);
-
-  // プロンプトを保存
-  async function handleSave() {
-    setIsSaving(true);
-    setPromptError("");
-    try {
-      const res = await fetch("/api/system/prompt", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save");
-      }
-
-      setPromptSaved(true);
-      setTimeout(() => setPromptSaved(false), 2000);
-    } catch (err) {
-      setPromptError(err instanceof Error ? err.message : "保存に失敗しました");
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
@@ -156,38 +126,23 @@ export default function AboutPage() {
           </p>
         </FormSection>
 
-        {/* デフォルトプロンプト編集 */}
+        {/* デフォルトプロンプト（閲覧のみ） */}
         <FormSection label="デフォルトプロンプト">
           <textarea
-            className="textarea textarea-bordered w-full h-32 text-sm"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="読み込み中..."
-            disabled={!user}
+            readOnly
+            value={prompt || "読み込み中..."}
+            className="textarea textarea-bordered w-full h-48 text-xs bg-base-300 resize-none"
           />
-          <div className="flex justify-end items-center mt-2 gap-2">
-            {promptError && (
-              <span className="text-error text-sm">{promptError}</span>
-            )}
-            {user ? (
-              <button
-                className={`btn btn-primary btn-sm ${isSaving ? "btn-disabled" : ""}`}
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : promptSaved ? (
-                  "保存しました"
-                ) : (
-                  "保存"
-                )}
-              </button>
-            ) : (
-              <span className="text-xs text-base-content/50">
-                編集するにはログインしてください
-              </span>
-            )}
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-xs text-base-content/40">
+              YAMI DAO連携後に編集機能を開放予定
+            </span>
+            <button
+              className="btn btn-primary btn-sm btn-disabled"
+              disabled
+            >
+              Coming Soon
+            </button>
           </div>
         </FormSection>
 
@@ -220,8 +175,16 @@ export default function AboutPage() {
         {/* 管理者・連絡先 */}
         <FormSection>
           <div className="grid grid-cols-2 gap-4">
-            <MkKeyValue label="管理者">YAMI DAO</MkKeyValue>
-            <MkKeyValue label="連絡先">admin@yami.ski</MkKeyValue>
+            <MkKeyValue label="管理者">
+              <a href="https://dao.yami.ski/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+                YAMI DAO
+              </a>
+            </MkKeyValue>
+            <MkKeyValue label="連絡先">
+              <a href="mailto:admin@yami.ski" className="link link-primary">
+                admin@yami.ski
+              </a>
+            </MkKeyValue>
           </div>
         </FormSection>
 
