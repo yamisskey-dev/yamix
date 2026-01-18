@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import Image from "next/image";
 
 interface ResponderInfo {
@@ -15,7 +16,7 @@ interface ChatBubbleProps {
   responder?: ResponderInfo; // 人間回答者の情報
 }
 
-export function ChatBubble({
+export const ChatBubble = memo(function ChatBubble({
   role,
   content,
   timestamp,
@@ -94,13 +95,13 @@ export function ChatBubble({
       )}
     </div>
   );
-}
+});
 
 interface CrisisAlertProps {
   onClose: () => void;
 }
 
-export function CrisisAlert({ onClose }: CrisisAlertProps) {
+export const CrisisAlert = memo(function CrisisAlert({ onClose }: CrisisAlertProps) {
   return (
     <div className="alert alert-warning shadow-lg animate-fade-in">
       <div>
@@ -133,4 +134,4 @@ export function CrisisAlert({ onClose }: CrisisAlertProps) {
       </button>
     </div>
   );
-}
+});

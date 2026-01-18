@@ -1,0 +1,28 @@
+{
+  "name": "やみっくす - AI相談プラットフォーム",
+  "short_name": "Yamix",
+  "description": "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
+  "start_url": "/main",
+  "display": "standalone",
+  "background_color": "#130E26",
+  "theme_color": "#A374FF",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "lifestyle", "social"],
+  "lang": "ja",
+  "dir": "ltr"
+}

@@ -1,13 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { getPrismaClient, memoryDB } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
-// Access memory stores from memoryDB
-const chatSessionsStore = memoryDB.chatSessions;
-const chatMessagesStore = memoryDB.chatMessages;
+// In-memory types
+interface MemoryChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
+interface MemoryChatMessage {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
+
+// Prisma結果の型
+interface PrismaUser {
+  id: string;
+  handle: string;
+  profile: { displayName: string | null; avatarUrl: string | null } | null;
+}
+
+interface PrismaSessionWithMessages {
+  id: string;
+  createdAt: Date;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+}
+
+// Access memory stores from memoryDB
+const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
+const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
 interface RouteParams {
   params: Promise<{ handle: string }>;
@@ -23,19 +56,21 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const cursor = searchParams.get("cursor");
 
   try {
-    if (isPrismaAvailable() && prisma) {
+    const db = getPrismaClient();
+
+    if (db) {
       // Find user by handle
-      const user = await prismaAny.user.findUnique({
+      const user = await db.user.findUnique({
         where: { handle: decodedHandle },
         include: { profile: true },
-      });
+      }) as PrismaUser | null;
 
       if (!user) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
       // Get user's public sessions
-      const sessions = await prismaAny.chatSession.findMany({
+      const sessions = await db.chatSession.findMany({
         where: {
           userId: user.id,
           isPublic: true,
@@ -49,17 +84,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             take: 2,
           },
         },
-      });
+      }) as PrismaSessionWithMessages[];
 
       const hasMore = sessions.length > limit;
       const items = sessions.slice(0, limit);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const consultations: TimelineConsultation[] = items
-        .filter((s: any) => s.messages.length >= 2)
-        .map((s: any) => {
-          const userMsg = s.messages.find((m: any) => m.role === "USER");
-          const assistantMsg = s.messages.find((m: any) => m.role === "ASSISTANT");
+        .filter((s) => s.messages.length >= 2)
+        .map((s) => {
+          const userMsg = s.messages.find((m) => m.role === "USER");
+          const assistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
 
           return {
             id: s.id,
@@ -71,6 +105,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
               displayName: user.profile?.displayName || null,
               avatarUrl: user.profile?.avatarUrl || null,
             },
+            replyCount: 0,
+            replies: [],
             createdAt: s.createdAt,
           };
         });
@@ -128,6 +164,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
               displayName: null as string | null,
               avatarUrl: null as string | null,
             },
+            replyCount: 0,
+            replies: [],
             createdAt: s.createdAt,
           } as TimelineConsultation;
         })
@@ -149,7 +187,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Get user timeline error:", error);
+    logger.error("Get user timeline error", { handle: decodedHandle }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

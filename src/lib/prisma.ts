@@ -2,10 +2,21 @@ import { PrismaClient } from "@prisma/client";
 import type { WalletType, PostType, ConsultTarget, TransactionType } from "@/types";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: PrismaClient | null;
   prismaAvailable: boolean;
   memoryDB: MemoryDB;
 };
+
+/**
+ * Prismaクライアントが利用可能な場合のみ返す型安全なゲッター
+ * 使用例: const db = getPrismaClient(); if (db) { await db.user.findMany(); }
+ */
+export function getPrismaClient(): PrismaClient | null {
+  if (globalForPrisma.prismaAvailable && prisma) {
+    return prisma;
+  }
+  return null;
+}
 
 // In-memory storage types
 interface ServerRecord {

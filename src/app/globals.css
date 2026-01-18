@@ -259,6 +259,22 @@ body {
   animation: scaleIn 0.2s ease-out;
 }
 
+/* Slide in right animation (for toasts) */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
 /* GitHub Corner (yamisskey-down style) */
 .github-corner:hover .octo-arm {
   animation: octocat-wave 560ms ease-in-out;

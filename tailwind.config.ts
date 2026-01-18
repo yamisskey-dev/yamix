@@ -9,8 +9,15 @@ const config: Config = {
   ],
   theme: {
     screens: {
-      window: "680px",
-      desktop: "1280px",
+      // 標準Tailwindブレークポイント + カスタム
+      sm: "640px",      // 小型タブレット
+      md: "768px",      // タブレット
+      lg: "1024px",     // 小型デスクトップ
+      xl: "1280px",     // デスクトップ
+      "2xl": "1536px",  // 大型デスクトップ
+      // 後方互換性のためのエイリアス
+      window: "640px",  // sm相当（旧680px）
+      desktop: "1280px", // xl相当
     },
     extend: {
       colors: {

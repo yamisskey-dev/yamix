@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ToastProvider } from "@/components/Toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const sarasaGothic = localFont({
@@ -29,6 +32,12 @@ export const metadata: Metadata = {
   keywords: ["AI相談", "悩み相談", "メンタルヘルス", "匿名相談", "Misskey"],
   authors: [{ name: "Yamix Team" }],
   metadataBase: new URL(siteUrl),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Yamix",
+  },
   openGraph: {
     type: "website",
     locale: "ja_JP",
@@ -62,6 +71,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#A374FF",
 };
 
 export default async function RootLayout({
@@ -76,15 +86,20 @@ export default async function RootLayout({
     <html lang={lng} data-theme="dark">
       <body className={`${sarasaGothic.variable} relative min-h-screen`}>
         <ThemeProvider>
-          <Suspense
-            fallback={
-              <div className="w-full h-screen flex items-center justify-center">
-                <span className="loading loading-spinner loading-lg" />
-              </div>
-            }
-          >
-            <div className="relative z-10 min-h-screen">{children}</div>
-          </Suspense>
+          <ToastProvider>
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="w-full h-screen flex items-center justify-center">
+                    <span className="loading loading-spinner loading-lg" />
+                  </div>
+                }
+              >
+                <div className="relative z-10 min-h-screen">{children}</div>
+              </Suspense>
+            </ErrorBoundary>
+          </ToastProvider>
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>

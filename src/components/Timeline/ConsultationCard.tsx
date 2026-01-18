@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { TimelineConsultation } from "@/types";
 
@@ -29,7 +29,7 @@ function formatDate(date: Date): string {
   });
 }
 
-export function ConsultationCard({ consultation, currentUserHandle }: Props) {
+export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -362,4 +362,4 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
     )}
     </>
   );
-}
+});
