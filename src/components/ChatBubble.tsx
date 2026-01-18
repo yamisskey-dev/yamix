@@ -110,7 +110,10 @@ export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: Cri
       </div>
       <div className="chat-bubble chat-assistant shadow-sm">
         <p className="whitespace-pre-wrap break-words leading-relaxed">
-          つらい気持ちを感じていませんか？ 相談窓口: いのちの電話 0570-783-556 / よりそいホットライン 0120-279-338
+          つらい気持ちを感じていませんか？ 24時間チャット相談:{" "}
+          <a href="https://talkme.jp/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+            あなたのいばしょ
+          </a>
         </p>
         <div className="flex justify-end gap-2 mt-2">
           <button className="btn btn-xs btn-ghost opacity-60" onClick={onDisable}>
