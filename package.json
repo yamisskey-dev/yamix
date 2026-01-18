@@ -27,7 +27,11 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "npx tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.1",

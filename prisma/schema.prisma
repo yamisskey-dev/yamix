@@ -268,6 +268,20 @@ model EconomyConfig {
 }
 
 // ============================================
+// SystemConfig - システム全体の設定
+// デフォルトプロンプト等、コミュニティで編集可能な設定
+// ============================================
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique // "default_prompt" 等
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+  updatedBy String?  // 最終更新者のユーザーID
+
+  @@map("system_config")
+}
+
+// ============================================
 // ChatSession - AI相談セッション
 // ChatGPTスタイルのチャット履歴管理
 // ============================================

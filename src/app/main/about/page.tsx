@@ -1,8 +1,79 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useUser } from "@/contexts/UserContext";
+
+interface PromptData {
+  prompt: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+  source: "database" | "empty";
+}
 
 export default function AboutPage() {
+  const { user } = useUser();
+  const [promptData, setPromptData] = useState<PromptData | null>(null);
+  const [editedPrompt, setEditedPrompt] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // デフォルトプロンプトを取得
+  useEffect(() => {
+    async function fetchPrompt() {
+      try {
+        const res = await fetch("/api/system/prompt");
+        if (res.ok) {
+          const data = await res.json();
+          setPromptData(data);
+          setEditedPrompt(data.prompt);
+        }
+      } catch (err) {
+        console.error("Failed to fetch prompt:", err);
+      }
+    }
+    fetchPrompt();
+  }, []);
+
+  // プロンプトを保存
+  async function handleSave() {
+    setIsSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const res = await fetch("/api/system/prompt", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: editedPrompt }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      const data = await res.json();
+      setPromptData(data);
+      setIsEditing(false);
+      setSuccessMessage("保存しました");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存に失敗しました");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  // 編集をキャンセル
+  function handleCancel() {
+    setEditedPrompt(promptData?.prompt || "");
+    setIsEditing(false);
+    setError(null);
+  }
+
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
       <div className="max-w-xl mx-auto space-y-4 my-8">
@@ -36,6 +107,98 @@ export default function AboutPage() {
           <p className="text-sm text-base-content/80">
             AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
           </p>
+        </div>
+
+        {/* Yamii デフォルトプロンプト */}
+        <div className="rounded-xl bg-base-200 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-base-content/50 mb-1">
+                Yamii デフォルトプロンプト
+              </div>
+              <p className="text-xs text-base-content/60">
+                AIの基本的な振る舞いを定義します。ログインユーザーは誰でも編集できます。
+              </p>
+            </div>
+            {user && !isEditing && (
+              <button
+                className="btn btn-sm btn-ghost"
+                onClick={() => setIsEditing(true)}
+              >
+                編集
+              </button>
+            )}
+          </div>
+
+          {/* エラー・成功メッセージ */}
+          {error && (
+            <div className="alert alert-error text-sm py-2">
+              {error}
+            </div>
+          )}
+          {successMessage && (
+            <div className="alert alert-success text-sm py-2">
+              {successMessage}
+            </div>
+          )}
+
+          {isEditing ? (
+            // 編集モード
+            <div className="space-y-3">
+              <textarea
+                className="textarea textarea-bordered w-full h-64 text-sm font-mono"
+                value={editedPrompt}
+                onChange={(e) => setEditedPrompt(e.target.value)}
+                placeholder="デフォルトプロンプトを入力..."
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  className="btn btn-sm btn-ghost"
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : (
+                    "保存"
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            // 表示モード
+            <div className="space-y-2">
+              <pre className="text-xs text-base-content/70 whitespace-pre-wrap bg-base-300 p-3 rounded-lg max-h-48 overflow-y-auto">
+                {promptData?.prompt || "読み込み中..."}
+              </pre>
+              {promptData && (
+                <div className="text-xs text-base-content/40">
+                  {promptData.source === "database" ? (
+                    <>
+                      最終更新:{" "}
+                      {promptData.updatedAt
+                        ? new Date(promptData.updatedAt).toLocaleString("ja-JP")
+                        : "不明"}
+                    </>
+                  ) : (
+                    <>未設定（prisma db seed を実行してください）</>
+                  )}
+                </div>
+              )}
+              {!user && (
+                <p className="text-xs text-base-content/50">
+                  編集するにはログインしてください
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Yamix */}
