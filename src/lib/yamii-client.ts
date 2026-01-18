@@ -86,6 +86,16 @@ export class YamiiClient {
       method: "DELETE",
     });
   }
+
+  async updateUserProfile(
+    userId: string,
+    data: { explicit_profile?: string; display_name?: string }
+  ): Promise<{ message: string; user_id: string }> {
+    return this.request(`/v1/users/${encodeURIComponent(userId)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 // Default client instance

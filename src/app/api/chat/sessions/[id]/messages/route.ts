@@ -137,7 +137,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         userMessage,
         payload.userId,
         {
-          userName: payload.sub,
           sessionId: sessionId,
           conversationHistory: existingMessages,
         }

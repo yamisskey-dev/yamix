@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -17,6 +17,51 @@ export default function SettingsPage() {
   const exportModalRef = useRef<HTMLDialogElement>(null);
   const successModalRef = useRef<HTMLDialogElement>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [isSavingPrompt, setIsSavingPrompt] = useState(false);
+  const [promptSaved, setPromptSaved] = useState(false);
+  const [promptError, setPromptError] = useState("");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/yamii/user");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.explicit_profile) {
+            setCustomPrompt(data.explicit_profile);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSaveCustomPrompt = async () => {
+    setIsSavingPrompt(true);
+    setPromptError("");
+    try {
+      const res = await fetch("/api/yamii/user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ explicit_profile: customPrompt }),
+      });
+      if (res.ok) {
+        setPromptSaved(true);
+        setTimeout(() => setPromptSaved(false), 2000);
+      } else {
+        const data = await res.json();
+        setPromptError(data.error || "保存に失敗しました");
+      }
+    } catch (error) {
+      console.error("Failed to save custom prompt:", error);
+      setPromptError("保存に失敗しました");
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -206,6 +251,37 @@ export default function SettingsPage() {
                   }
                 }}
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Custom Prompt Section */}
+        <div className="card bg-base-200">
+          <div className="card-body">
+            <h2 className="card-title text-lg">カスタムプロンプト</h2>
+            <textarea
+              className="textarea textarea-bordered w-full h-32 text-sm"
+              placeholder="例: 敬語で話してください / アドバイスより共感を重視して / 私は20代エンジニアです"
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+            />
+            <div className="card-actions justify-end items-center">
+              {promptError && (
+                <span className="text-error text-sm">{promptError}</span>
+              )}
+              <button
+                className={`btn btn-primary btn-sm ${isSavingPrompt ? "btn-disabled" : ""}`}
+                onClick={handleSaveCustomPrompt}
+                disabled={isSavingPrompt}
+              >
+                {isSavingPrompt ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : promptSaved ? (
+                  "保存しました"
+                ) : (
+                  "保存"
+                )}
+              </button>
             </div>
           </div>
         </div>
