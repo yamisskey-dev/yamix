@@ -83,8 +83,8 @@ export default async function RootLayout({
   const lng = detectLanguage(headersList.get("accept-language"));
 
   return (
-    <html lang={lng} data-theme="dark">
-      <body className={`${sarasaGothic.variable} relative min-h-screen`}>
+    <html lang={lng} data-theme="dark" suppressHydrationWarning>
+      <body className={`${sarasaGothic.variable} relative min-h-screen`} suppressHydrationWarning>
         <ThemeProvider>
           <ToastProvider>
             <ErrorBoundary>

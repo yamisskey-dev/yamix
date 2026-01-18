@@ -40,10 +40,31 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// キャッシュ可能なリクエストかチェック
+function isCacheable(request) {
+  // http/httpsスキームのみ
+  if (!request.url.startsWith("http")) {
+    return false;
+  }
+  // GETメソッドのみ
+  if (request.method !== "GET") {
+    return false;
+  }
+  // APIリクエストはキャッシュしない
+  if (request.url.includes("/api/")) {
+    return false;
+  }
+  // _nextの動的チャンクはキャッシュしない（開発時に問題を起こす）
+  if (request.url.includes("/_next/")) {
+    return false;
+  }
+  return true;
+}
+
 // フェッチイベント - ネットワーク優先、フォールバックでキャッシュ
 self.addEventListener("fetch", (event) => {
-  // APIリクエストはキャッシュしない
-  if (event.request.url.includes("/api/")) {
+  // キャッシュ不可能なリクエストはスキップ
+  if (!isCacheable(event.request)) {
     return;
   }
 
@@ -63,8 +84,8 @@ self.addEventListener("fetch", (event) => {
       return cache.match(event.request).then((cachedResponse) => {
         const fetchPromise = fetch(event.request)
           .then((networkResponse) => {
-            // 成功したらキャッシュを更新
-            if (networkResponse.ok) {
+            // 成功したらキャッシュを更新（GETのみ）
+            if (networkResponse.ok && event.request.method === "GET") {
               cache.put(event.request, networkResponse.clone());
             }
             return networkResponse;
