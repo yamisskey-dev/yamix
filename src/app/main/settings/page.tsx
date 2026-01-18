@@ -2,7 +2,6 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
@@ -211,35 +210,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Profile Section */}
-        <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg">プロフィール</h2>
-            <div className="flex items-center gap-4">
-              <div className="avatar">
-                <div className="w-16 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                  {user.avatarUrl ? (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.displayName || user.account}
-                      width={64}
-                      height={64}
-                    />
-                  ) : (
-                    <div className="bg-primary text-primary-content flex items-center justify-center w-full h-full text-2xl font-bold">
-                      {(user.displayName || user.account).charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div>
-                <p className="font-bold">{user.displayName || user.account}</p>
-                <p className="text-sm text-base-content/60">{user.handle}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* ETH Wallet Section (Coming Soon) */}
         <div className="card bg-base-200">
           <div className="card-body">
@@ -248,8 +218,8 @@ export default function SettingsPage() {
               <span className="badge badge-outline badge-sm">Coming Soon</span>
             </h2>
             <p className="text-sm text-base-content/60">
-              将来的にETHアドレスとMisskeyアカウントを紐づけて、
-              YAMI DAOのガバナンスに参加できるようになります。
+              YAMIが不足したときにOptimism
+              ETHで購入できるようになります。
             </p>
             <div className="card-actions justify-end">
               <button className="btn btn-disabled btn-sm">
