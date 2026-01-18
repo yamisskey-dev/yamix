@@ -1,8 +1,97 @@
 "use client";
 
 import Image from "next/image";
+import { useState, useEffect } from "react";
+
+// Misskey風のFormLinkコンポーネント
+function FormLink({
+  href,
+  icon,
+  children,
+  external = false,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  external?: boolean;
+}) {
+  return (
+    <a
+      href={href}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      className="flex items-center w-full px-3.5 py-2.5 bg-base-300/50 hover:bg-base-300 rounded-md text-sm transition-colors"
+    >
+      <span className="mr-3 text-base-content/75">{icon}</span>
+      <span className="flex-1">{children}</span>
+      <span className="text-base-content/50">
+        {external ? (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        )}
+      </span>
+    </a>
+  );
+}
+
+// Misskey風のFormSectionコンポーネント
+function FormSection({
+  label,
+  children,
+}: {
+  label?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl bg-base-200 p-4">
+      {label && (
+        <div className="text-xs text-base-content/50 font-medium mb-3">{label}</div>
+      )}
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+// Misskey風のMkKeyValueコンポーネント
+function MkKeyValue({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="text-xs text-base-content/50 mb-1">{label}</div>
+      <div className="text-sm">{children}</div>
+    </div>
+  );
+}
 
 export default function AboutPage() {
+  const [prompt, setPrompt] = useState("");
+
+  // デフォルトプロンプトを取得
+  useEffect(() => {
+    async function fetchPrompt() {
+      try {
+        const res = await fetch("/api/system/prompt");
+        if (res.ok) {
+          const data = await res.json();
+          setPrompt(data.prompt);
+        }
+      } catch (err) {
+        console.error("Failed to fetch prompt:", err);
+      }
+    }
+    fetchPrompt();
+  }, []);
+
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
       <div className="max-w-xl mx-auto space-y-4 my-8">
@@ -14,7 +103,7 @@ export default function AboutPage() {
               "url(https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yami.ski/yami-banner.gif)",
           }}
         >
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="absolute inset-0 bottom-10 flex flex-col items-center justify-center">
             <Image
               src="/icon.svg"
               alt="Yamix"
@@ -24,90 +113,89 @@ export default function AboutPage() {
             />
           </div>
           <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent">
-            <span className="text-lg font-bold text-white drop-shadow-md">
-              Yamix
+            <span className="text-sm font-bold text-white drop-shadow-md">
+              やみっくす
             </span>
           </div>
         </div>
 
         {/* 説明 */}
-        <div className="rounded-xl bg-base-200 p-4">
-          <div className="text-xs text-base-content/50 mb-1">説明</div>
+        <FormSection>
           <p className="text-sm text-base-content/80">
             AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
           </p>
-        </div>
+        </FormSection>
 
-        {/* Yamix */}
-        <div className="rounded-xl bg-base-200 p-4 space-y-3">
-          <div>
-            <div className="text-xs text-base-content/50 mb-1">Yamix</div>
-            <p className="text-xs text-base-content/60">
-              AI相談と人間相談を統合したOSS相談プラットフォームです。
-            </p>
+        {/* デフォルトプロンプト（閲覧のみ） */}
+        <FormSection label="デフォルトプロンプト">
+          <textarea
+            readOnly
+            value={prompt || "読み込み中..."}
+            className="textarea textarea-bordered w-full h-48 text-xs bg-base-300 resize-none"
+          />
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-xs text-base-content/40">
+              YAMI DAO連携後に編集機能を開放予定
+            </span>
+            <button
+              className="btn btn-primary btn-sm btn-disabled"
+              disabled
+            >
+              Coming Soon
+            </button>
           </div>
-          <a
+        </FormSection>
+
+        {/* ソースコード */}
+        <FormSection>
+          <FormLink
             href="https://github.com/yamisskey-dev/yamix"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
+            icon={
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+            }
+            external
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-            ソースコード
-          </a>
-        </div>
-
-        {/* Yamii */}
-        <div className="rounded-xl bg-base-200 p-4 space-y-3">
-          <div>
-            <div className="text-xs text-base-content/50 mb-1">Yamii</div>
-            <p className="text-xs text-base-content/60">
-              AI相談APIサーバーです。OpenAI APIを通じて回答を生成します。
-            </p>
-          </div>
-          <a
+            ソースコード (Yamix)
+          </FormLink>
+          <FormLink
             href="https://github.com/yamisskey-dev/yamii"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm text-primary hover:underline"
+            icon={
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+            }
+            external
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-            </svg>
-            ソースコード
-          </a>
-        </div>
+            ソースコード (Yamii)
+          </FormLink>
+        </FormSection>
 
         {/* 管理者・連絡先 */}
-        <div className="rounded-xl bg-base-200 p-4">
+        <FormSection>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs text-base-content/50 mb-1">管理者</div>
-              <p className="text-sm">YAMI DAO</p>
-            </div>
-            <div>
-              <div className="text-xs text-base-content/50 mb-1">連絡先</div>
-              <p className="text-sm">admin@yami.ski</p>
-            </div>
+            <MkKeyValue label="管理者">
+              <a href="https://dao.yami.ski/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+                YAMI DAO
+              </a>
+            </MkKeyValue>
+            <MkKeyValue label="連絡先">
+              <a href="mailto:admin@yami.ski" className="link link-primary">
+                admin@yami.ski
+              </a>
+            </MkKeyValue>
           </div>
-        </div>
+        </FormSection>
 
         {/* プライバシー */}
-        <div className="rounded-xl bg-base-200 p-4">
-          <div className="flex items-center gap-2 text-sm mb-2">
-            <svg className="w-4 h-4 text-base-content/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            プライバシーポリシー
-          </div>
-          <ul className="text-xs text-base-content/60 space-y-1 ml-6 list-disc">
+        <FormSection label="プライバシーポリシー">
+          <ul className="text-xs text-base-content/60 space-y-1 ml-4 list-disc">
             <li>非公開の相談は、あなた本人のみが閲覧できます</li>
             <li>AI相談はOpenAI APIを通じて処理されます</li>
             <li>パスワードやアクセストークンは保存されません</li>
           </ul>
-        </div>
+        </FormSection>
       </div>
     </div>
   );
