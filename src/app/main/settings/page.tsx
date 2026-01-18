@@ -10,7 +10,7 @@ import { ConfirmModal, Modal } from "@/components/Modal";
 export default function SettingsPage() {
   const router = useRouter();
   const { user } = useUser();
-  const { preference, setPreference } = useTheme();
+  const { theme, preference, setPreference } = useTheme();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportData, setExportData] = useState<string>();
@@ -69,80 +69,144 @@ export default function SettingsPage() {
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Theme Section */}
-        <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg">テーマ</h2>
-            <p className="text-sm text-base-content/60">
-              アプリの外観を切り替えます
-            </p>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              <button
-                onClick={() => setPreference("system")}
-                className={`flex-1 btn btn-sm min-w-fit ${
-                  preference === "system" ? "btn-primary" : "btn-ghost"
-                }`}
+        {/* Theme Section - Misskey style */}
+        <div className="card bg-base-200 overflow-hidden">
+          <div className="card-body p-0">
+            {/* Dark/Light Toggle - Misskey style */}
+            <div className="flex justify-center py-6">
+              <div
+                onClick={() => setPreference(theme === "dark" ? "light" : "dark")}
+                className={`
+                  relative w-[90px] h-[40px] rounded-full cursor-pointer
+                  transition-colors duration-200 ease-[cubic-bezier(0.445,0.05,0.55,0.95)]
+                  ${theme === "dark" ? "bg-[#749DD6]" : "bg-[#83D8FF]"}
+                `}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                {/* Light label */}
+                <span
+                  className={`
+                    absolute left-[-70px] top-1/2 -translate-y-1/2
+                    text-sm font-medium transition-colors duration-200
+                    ${theme === "light" ? "text-primary" : "text-base-content/40"}
+                  `}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                自動
-              </button>
-              <button
-                onClick={() => setPreference("dark")}
-                className={`flex-1 btn btn-sm min-w-fit ${
-                  preference === "dark" ? "btn-primary" : "btn-ghost"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  Light
+                </span>
+
+                {/* Dark label */}
+                <span
+                  className={`
+                    absolute right-[-60px] top-1/2 -translate-y-1/2
+                    text-sm font-medium transition-colors duration-200
+                    ${theme === "dark" ? "text-primary" : "text-base-content/40"}
+                  `}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                  />
-                </svg>
-                DXM
-              </button>
-              <button
-                onClick={() => setPreference("light")}
-                className={`flex-1 btn btn-sm min-w-fit ${
-                  preference === "light" ? "btn-primary" : "btn-ghost"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                  Dark
+                </span>
+
+                {/* Handler (Moon/Sun) */}
+                <span
+                  className={`
+                    absolute top-[3px] left-[3px] w-[34px] h-[34px]
+                    bg-[#FFCF96] rounded-full
+                    transition-all duration-200 ease-[cubic-bezier(0.445,0.05,0.55,0.95)]
+                    ${theme === "dark" ? "translate-x-[50px] rotate-0" : "rotate-[-45deg]"}
+                  `}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                  {/* Craters (visible in dark mode) */}
+                  <span
+                    className={`
+                      absolute top-[14px] left-[8px] w-[4px] h-[4px]
+                      bg-[#E8CDA5] rounded-full
+                      transition-opacity duration-200
+                      ${theme === "dark" ? "opacity-100" : "opacity-0"}
+                    `}
                   />
-                </svg>
-                NGO
-              </button>
+                  <span
+                    className={`
+                      absolute top-[6px] left-[18px] w-[6px] h-[6px]
+                      bg-[#E8CDA5] rounded-full
+                      transition-opacity duration-200
+                      ${theme === "dark" ? "opacity-100" : "opacity-0"}
+                    `}
+                  />
+                  <span
+                    className={`
+                      absolute top-[21px] left-[18px] w-[3px] h-[3px]
+                      bg-[#E8CDA5] rounded-full
+                      transition-opacity duration-200
+                      ${theme === "dark" ? "opacity-100" : "opacity-0"}
+                    `}
+                  />
+                </span>
+
+                {/* Stars (visible in dark mode) */}
+                <span
+                  className={`
+                    absolute top-[5px] left-[28px] w-[3px] h-[3px]
+                    bg-white rounded-full
+                    transition-all duration-200
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+                <span
+                  className={`
+                    absolute top-[13px] left-[20px] w-[3px] h-[3px]
+                    bg-white rounded-full
+                    transition-all duration-200
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+                <span
+                  className={`
+                    absolute top-[24px] left-[26px] w-[2px] h-[2px]
+                    bg-white rounded-full
+                    transition-all duration-200
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+                <span
+                  className={`
+                    absolute top-[8px] left-[10px] w-[2px] h-[2px]
+                    bg-white rounded-full
+                    transition-all duration-300 delay-[200ms]
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+                <span
+                  className={`
+                    absolute top-[28px] left-[14px] w-[2px] h-[2px]
+                    bg-white rounded-full
+                    transition-all duration-300 delay-[300ms]
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+                <span
+                  className={`
+                    absolute top-[18px] left-[8px] w-[2px] h-[2px]
+                    bg-white rounded-full
+                    transition-all duration-300 delay-[400ms]
+                    ${theme === "dark" ? "opacity-100" : "opacity-0 translate-x-[3px]"}
+                  `}
+                />
+              </div>
+            </div>
+
+            {/* System Sync Toggle */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-base-content/10">
+              <span className="text-sm">デバイスのダークモードと同期</span>
+              <input
+                type="checkbox"
+                className="toggle toggle-sm toggle-primary"
+                checked={preference === "system"}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setPreference("system");
+                  } else {
+                    setPreference(theme);
+                  }
+                }}
+              />
             </div>
           </div>
         </div>
