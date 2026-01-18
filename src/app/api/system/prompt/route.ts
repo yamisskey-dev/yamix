@@ -1,115 +1,103 @@
+/**
+ * Yamii プロンプト API プロキシ
+ * Yamii API (/v1/config/prompt) へのプロキシエンドポイント
+ */
+
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { getPrismaClient } from "@/lib/prisma";
 
-const SYSTEM_PROMPT_KEY = "default_prompt";
+const YAMII_API_URL = process.env.YAMII_API_URL || "http://localhost:8000";
 
-// GET: デフォルトプロンプトを取得（認証不要）
+interface YamiiPromptResponse {
+  prompt: string;
+  updated_at: string | null;
+  source: "file" | "default";
+}
+
+/**
+ * GET /api/system/prompt
+ * Yamiiからデフォルトプロンプトを取得
+ */
 export async function GET() {
   try {
-    const prisma = getPrismaClient();
+    const res = await fetch(`${YAMII_API_URL}/v1/config/prompt`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      // サーバーサイドなのでキャッシュを無効化
+      cache: "no-store",
+    });
 
-    if (!prisma) {
+    if (!res.ok) {
+      const error = await res.text();
       return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
+        { error: `Yamii API error: ${error}` },
+        { status: res.status }
       );
     }
 
-    const config = await prisma.systemConfig.findUnique({
-      where: { key: SYSTEM_PROMPT_KEY },
-    });
+    const data: YamiiPromptResponse = await res.json();
 
-    if (config) {
-      return NextResponse.json({
-        prompt: config.value,
-        updatedAt: config.updatedAt,
-        updatedBy: config.updatedBy,
-        source: "database",
-      });
-    }
-
-    // DBにない場合（seed未実行）
+    // フロントエンド用にレスポンスを変換
     return NextResponse.json({
-      prompt: "",
-      updatedAt: null,
-      updatedBy: null,
-      source: "empty",
+      prompt: data.prompt,
+      updatedAt: data.updated_at,
+      source: data.source,
     });
   } catch (error) {
-    console.error("Failed to get system prompt:", error);
+    console.error("Failed to fetch prompt from Yamii:", error);
     return NextResponse.json(
-      { error: "Failed to get system prompt" },
-      { status: 500 }
+      { error: "Yamii APIへの接続に失敗しました" },
+      { status: 503 }
     );
   }
 }
 
-// PUT: デフォルトプロンプトを更新（ログインユーザーのみ）
-export async function PUT(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
-  const payload = await verifyJWT(token);
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
-  }
-
-  const prisma = getPrismaClient();
-
-  if (!prisma) {
-    return NextResponse.json(
-      { error: "Database not available" },
-      { status: 503 }
-    );
-  }
-
+/**
+ * PUT /api/system/prompt
+ * Yamiiのデフォルトプロンプトを更新
+ */
+export async function PUT(request: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { prompt } = body;
 
-    if (typeof prompt !== "string") {
+    if (!prompt || typeof prompt !== "string") {
       return NextResponse.json(
-        { error: "Invalid prompt format" },
+        { error: "prompt is required" },
         { status: 400 }
       );
     }
 
-    // DBにupsert
-    const config = await prisma.systemConfig.upsert({
-      where: { key: SYSTEM_PROMPT_KEY },
-      update: {
-        value: prompt,
-        updatedBy: payload.userId,
+    const res = await fetch(`${YAMII_API_URL}/v1/config/prompt`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
       },
-      create: {
-        key: SYSTEM_PROMPT_KEY,
-        value: prompt,
-        updatedBy: payload.userId,
-      },
+      body: JSON.stringify({ prompt }),
     });
 
+    if (!res.ok) {
+      const error = await res.text();
+      return NextResponse.json(
+        { error: `Yamii API error: ${error}` },
+        { status: res.status }
+      );
+    }
+
+    const data: YamiiPromptResponse = await res.json();
+
+    // フロントエンド用にレスポンスを変換
     return NextResponse.json({
-      prompt: config.value,
-      updatedAt: config.updatedAt,
-      updatedBy: config.updatedBy,
-      source: "database",
+      prompt: data.prompt,
+      updatedAt: data.updated_at,
+      source: data.source,
     });
   } catch (error) {
-    console.error("Failed to update system prompt:", error);
+    console.error("Failed to update prompt on Yamii:", error);
     return NextResponse.json(
-      { error: "Failed to update system prompt" },
-      { status: 500 }
+      { error: "Yamii APIへの接続に失敗しました" },
+      { status: 503 }
     );
   }
 }
