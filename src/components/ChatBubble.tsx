@@ -69,17 +69,15 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      <div className="flex flex-col gap-0.5">
-        {/* Responder name for human responses */}
-        {isHumanResponse && (
-          <div className="text-xs text-secondary font-medium ml-1">
-            {responder.displayName || "匿名の回答者"}
-          </div>
-        )}
-
-        <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
-          <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+      {/* Responder name for human responses */}
+      {isHumanResponse && (
+        <div className="chat-header text-xs text-secondary font-medium">
+          {responder.displayName || "匿名の回答者"}
         </div>
+      )}
+
+      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
+        <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
       </div>
 
       {/* Timestamp */}

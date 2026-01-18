@@ -71,110 +71,55 @@ body {
   @apply backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/30;
 }
 
-/* Chat bubbles - enhanced styling with tail (neo-quesdon style) */
-/* Override DaisyUI default max-width for wider bubbles */
+/* Chat bubbles with tails */
 .chat-bubble {
   max-width: 90%;
-  position: relative;
+  overflow: visible !important;
+  border: none !important;
 }
 
-/* User bubble - right aligned with tail */
+/* User bubble (right) */
 .chat-user {
   @apply bg-gradient-to-br from-primary to-secondary text-primary-content;
-  border-radius: 1rem;
-  box-shadow: 0 2px 8px rgba(163, 116, 255, 0.2);
+  border-radius: 1rem 1rem 0.25rem 1rem;
 }
-
-/* Tail for user bubble (right side) */
 .chat-end .chat-bubble.chat-user::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  right: -6px;
-  width: 12px;
-  height: 12px;
-  background: hsl(var(--s));
-  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  background-color: var(--accent-pink) !important;
 }
 
-[data-theme="light"] .chat-user {
-  box-shadow: 0 2px 8px rgba(150, 107, 255, 0.25);
-}
-
-/* Assistant bubble - left aligned with tail */
-.chat-assistant {
-  @apply bg-base-300 text-base-content;
-  border-radius: 1rem;
-  border: 1px solid rgba(163, 116, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Tail for assistant bubble (left side) */
-.chat-start .chat-bubble.chat-assistant::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: -6px;
-  width: 12px;
-  height: 12px;
-  background-color: hsl(var(--b3));
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-[data-theme="light"] .chat-assistant {
-  @apply bg-base-200;
-  border: 1px solid rgba(150, 107, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(147, 137, 255, 0.12);
-}
-
-[data-theme="light"] .chat-start .chat-bubble.chat-assistant::before {
-  background-color: hsl(var(--b2));
-}
-
-/* Loading bubble - left aligned with tail */
-.chat-assistant-loading {
-  @apply bg-base-300 text-base-content;
-  border-radius: 1rem;
-  border: 1px solid rgba(163, 116, 255, 0.15);
-}
-
-.chat-start .chat-bubble.chat-assistant-loading::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: -6px;
-  width: 12px;
-  height: 12px;
-  background-color: hsl(var(--b3));
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-/* Human response bubble - distinct from AI with tail */
+/* Assistant bubbles (left) - shared styles */
+.chat-assistant,
+.chat-assistant-loading,
 .chat-human-response {
-  @apply bg-base-200 text-base-content;
-  border-radius: 1rem;
-  border: 1px solid rgba(179, 45, 182, 0.3);
-  box-shadow: 0 2px 8px rgba(179, 45, 182, 0.15);
+  @apply text-base-content;
+  border-radius: 1rem 1rem 1rem 0.25rem;
 }
 
+/* Assistant bubble */
+.chat-assistant,
+.chat-assistant-loading {
+  background-color: rgba(163, 116, 255, 0.3) !important;
+}
+.chat-start .chat-bubble.chat-assistant::before,
+.chat-start .chat-bubble.chat-assistant-loading::before {
+  background-color: rgba(163, 116, 255, 0.3) !important;
+}
+
+/* Human response bubble (pink tint) */
+.chat-human-response {
+  background-color: rgba(179, 45, 182, 0.3) !important;
+}
 .chat-start .chat-bubble.chat-human-response::before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: -6px;
-  width: 12px;
-  height: 12px;
-  background-color: hsl(var(--b2));
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  background-color: rgba(179, 45, 182, 0.3) !important;
 }
 
-[data-theme="light"] .chat-human-response {
-  border: 1px solid rgba(255, 157, 255, 0.4);
-  box-shadow: 0 2px 8px rgba(255, 157, 255, 0.2);
+/* Light theme overrides */
+[data-theme="light"] .chat-assistant,
+[data-theme="light"] .chat-assistant-loading {
+  @apply bg-base-200;
 }
-
-[data-theme="light"] .chat-start .chat-bubble.chat-human-response::before {
-  background-color: hsl(var(--b2));
+[data-theme="light"] .chat-start .chat-bubble::before {
+  background-color: #FCF9FF !important;
 }
 
 /* Typing animation - gradient pulse (Misskey-inspired) */
