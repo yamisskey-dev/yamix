@@ -62,10 +62,11 @@ async function request<T>(
   const { body, params, ...fetchOptions } = options;
 
   const url = buildUrl(path, params);
-  const headers: HeadersInit = {
-    ...(body && { "Content-Type": "application/json" }),
-    ...fetchOptions.headers,
-  };
+  const headers: HeadersInit = Object.assign(
+    {},
+    body ? { "Content-Type": "application/json" } : {},
+    fetchOptions.headers ?? {}
+  );
 
   logger.debug(`API Request: ${method} ${path}`, { params });
 
