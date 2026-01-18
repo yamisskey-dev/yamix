@@ -1,6 +1,6 @@
 {
-  "name": "やみっくす - AI相談プラットフォーム",
-  "short_name": "Yamix",
+  "name": "やみっくす",
+  "short_name": "やみっくす",
   "description": "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
   "start_url": "/main",
   "display": "standalone",

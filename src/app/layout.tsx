@@ -25,7 +25,7 @@ const siteUrl = process.env.WEB_URL || "https://mix.yami.ski";
 
 export const metadata: Metadata = {
   title: {
-    default: "やみっくす - AI相談プラットフォーム",
+    default: "やみっくす",
     template: "%s | やみっくす",
   },
   description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
@@ -36,14 +36,14 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Yamix",
+    title: "やみっくす",
   },
   openGraph: {
     type: "website",
     locale: "ja_JP",
     url: siteUrl,
     siteName: "やみっくす",
-    title: "やみっくす - AI相談プラットフォーム",
+    title: "やみっくす",
     description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
     images: [
       {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "やみっくす - AI相談プラットフォーム",
+    title: "やみっくす",
     description: "プライバシーファーストのAI相談プラットフォーム",
     images: ["/og-image.gif"],
   },
