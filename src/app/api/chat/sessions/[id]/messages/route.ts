@@ -1,15 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
+import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
+import { logger } from "@/lib/logger";
 import { yamiiClient } from "@/lib/yamii-client";
 import type { ConversationMessage } from "@/types";
 
+// In-memory types
+interface MemoryChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface MemoryChatMessage {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
+
+// Prismaのメッセージ型
+interface PrismaMessage {
+  role: string;
+  content: string;
+}
+
 // Access memory stores from memoryDB
-const chatSessionsStore = memoryDB.chatSessions;
-const chatMessagesStore = memoryDB.chatMessages;
+const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
+const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -51,13 +74,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const userMessage = body.message.trim();
 
   try {
+    const db = getPrismaClient();
+
     // Verify session ownership
     let session;
     let existingMessages: ConversationMessage[] = [];
     let isFirstMessage = false;
 
-    if (isPrismaAvailable() && prisma) {
-      session = await prismaAny.chatSession.findUnique({
+    if (db) {
+      const sessionWithMessages = await db.chatSession.findUnique({
         where: { id: sessionId },
         include: {
           messages: {
@@ -67,16 +92,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         },
       });
 
-      if (!session) {
+      if (!sessionWithMessages) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      if (session.userId !== payload.userId) {
+      if (sessionWithMessages.userId !== payload.userId) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      isFirstMessage = session.messages.length === 0;
-      existingMessages = session.messages.map((m: { role: string; content: string }) => ({
+      session = sessionWithMessages;
+      isFirstMessage = sessionWithMessages.messages.length === 0;
+      existingMessages = sessionWithMessages.messages.map((m: PrismaMessage) => ({
         role: m.role === "USER" ? "user" : "assistant",
         content: m.content,
       })) as ConversationMessage[];
@@ -111,13 +137,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         userMessage,
         payload.userId,
         {
-          userName: payload.sub,
           sessionId: sessionId,
           conversationHistory: existingMessages,
         }
       );
     } catch (error) {
-      console.error("Yamii API error:", error);
+      logger.error("Yamii API error", { sessionId }, error);
       return NextResponse.json(
         { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
         { status: 503 }
@@ -127,9 +152,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // Save messages to database
     const now = new Date();
 
-    if (isPrismaAvailable() && prisma) {
+    if (db) {
       // Create user message
-      const userMsg = await prismaAny.chatMessage.create({
+      const userMsg = await db.chatMessage.create({
         data: {
           sessionId,
           role: "USER",
@@ -139,7 +164,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
 
       // Create assistant message
-      const assistantMsg = await prismaAny.chatMessage.create({
+      const assistantMsg = await db.chatMessage.create({
         data: {
           sessionId,
           role: "ASSISTANT",
@@ -150,7 +175,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       // Update session title if first message
       if (isFirstMessage) {
-        await prismaAny.chatSession.update({
+        await db.chatSession.update({
           where: { id: sessionId },
           data: {
             title: generateTitle(userMessage),
@@ -158,7 +183,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
       } else {
-        await prismaAny.chatSession.update({
+        await db.chatSession.update({
           where: { id: sessionId },
           data: { updatedAt: now },
         });
@@ -210,7 +235,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Send message error:", error);
+    logger.error("Send message error", { sessionId }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

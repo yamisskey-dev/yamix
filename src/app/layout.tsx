@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ToastProvider } from "@/components/Toast";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const sarasaGothic = localFont({
@@ -22,19 +25,25 @@ const siteUrl = process.env.WEB_URL || "https://mix.yami.ski";
 
 export const metadata: Metadata = {
   title: {
-    default: "やみっくす - AI相談プラットフォーム",
+    default: "やみっくす",
     template: "%s | やみっくす",
   },
   description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
   keywords: ["AI相談", "悩み相談", "メンタルヘルス", "匿名相談", "Misskey"],
   authors: [{ name: "Yamix Team" }],
   metadataBase: new URL(siteUrl),
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "やみっくす",
+  },
   openGraph: {
     type: "website",
     locale: "ja_JP",
     url: siteUrl,
     siteName: "やみっくす",
-    title: "やみっくす - AI相談プラットフォーム",
+    title: "やみっくす",
     description: "プライバシーファーストのAI相談プラットフォーム。悩みを匿名でAIや人間に相談できます。",
     images: [
       {
@@ -47,7 +56,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "やみっくす - AI相談プラットフォーム",
+    title: "やみっくす",
     description: "プライバシーファーストのAI相談プラットフォーム",
     images: ["/og-image.gif"],
   },
@@ -62,6 +71,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#A374FF",
 };
 
 export default async function RootLayout({
@@ -73,18 +83,23 @@ export default async function RootLayout({
   const lng = detectLanguage(headersList.get("accept-language"));
 
   return (
-    <html lang={lng} data-theme="dark">
-      <body className={`${sarasaGothic.variable} relative min-h-screen`}>
+    <html lang={lng} data-theme="dark" suppressHydrationWarning>
+      <body className={`${sarasaGothic.variable} relative min-h-screen`} suppressHydrationWarning>
         <ThemeProvider>
-          <Suspense
-            fallback={
-              <div className="w-full h-screen flex items-center justify-center">
-                <span className="loading loading-spinner loading-lg" />
-              </div>
-            }
-          >
-            <div className="relative z-10 min-h-screen">{children}</div>
-          </Suspense>
+          <ToastProvider>
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="w-full h-screen flex items-center justify-center">
+                    <span className="loading loading-spinner loading-lg" />
+                  </div>
+                }
+              >
+                <div className="relative z-10 min-h-screen">{children}</div>
+              </Suspense>
+            </ErrorBoundary>
+          </ToastProvider>
+          <ServiceWorkerRegister />
         </ThemeProvider>
       </body>
     </html>

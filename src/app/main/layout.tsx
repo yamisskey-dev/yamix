@@ -1,9 +1,12 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, useCallback, ReactNode } from "react";
 import { Sidebar } from "@/components/Sidebar";
+import { MobileDrawer, MobileBottomNav } from "@/components/MobileDrawer";
 import { UserContext } from "@/contexts/UserContext";
+import { authApi } from "@/lib/api-client";
+import { logger } from "@/lib/logger";
 import type { UserProfile } from "@/types";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
@@ -13,30 +16,41 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
-      if (!res.ok) {
-        router.replace("/");
-        return;
-      }
-      const userData = await res.json();
+      const userData = await authApi.getMe();
       setUser(userData);
     } catch (error) {
-      console.error("Failed to fetch user:", error);
+      logger.warn("Failed to fetch user, redirecting to login", {}, error);
       router.replace("/");
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [fetchUser]);
 
+  // パスが変わったらドロワーを閉じる
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
+
+  const handleNavigate = useCallback(
+    (path: string) => {
+      router.push(path);
+    },
+    [router]
+  );
+
+  const handleCloseDrawer = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
+  const handleOpenDrawer = useCallback(() => {
+    setSidebarOpen(true);
+  }, []);
 
   if (loading) {
     return (
@@ -49,9 +63,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <UserContext.Provider value={{ user, loading, refetch: fetchUser }}>
       {/* Desktop Layout - サイドバー + メインコンテンツ */}
-      <div className="hidden desktop:flex h-screen">
+      <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
-        <aside className="w-60 h-screen flex-shrink-0 border-r border-base-300 bg-base-100">
+        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-100">
           <Sidebar user={user} />
         </aside>
 
@@ -61,130 +75,21 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile Layout - ボトムナビ + ドロワー */}
-      <div className="desktop:hidden">
-        <div className="drawer">
-          <input
-            id="mobile-drawer"
-            type="checkbox"
-            className="drawer-toggle"
-            checked={sidebarOpen}
-            onChange={(e) => setSidebarOpen(e.target.checked)}
-          />
+      {/* Mobile/Tablet Layout - ボトムナビ + ドロワー */}
+      <div className="xl:hidden flex flex-col min-h-screen">
+        <main className="flex-1 flex flex-col pb-14">{children}</main>
 
-          <div className="drawer-content flex flex-col min-h-screen">
-            <main className="flex-1 flex flex-col pb-14">{children}</main>
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav
+          pathname={pathname}
+          onMenuClick={handleOpenDrawer}
+          onNavigate={handleNavigate}
+        />
 
-            {/* Mobile Bottom Navigation - Misskey style */}
-            <nav className="fixed bottom-0 left-0 right-0 h-14 bg-base-100/95 backdrop-blur-sm border-t border-base-300 flex items-center justify-around px-2 z-40">
-              {/* メニュー（サイドバー開く） */}
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="flex flex-col items-center justify-center w-14 h-12 rounded-full text-base-content/60 hover:bg-primary/10 hover:text-primary transition-colors duration-150"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-              {/* 相談 */}
-              <button
-                onClick={() => router.push("/main")}
-                className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 ${
-                  pathname === "/main" || pathname?.startsWith("/main/chat")
-                    ? "text-primary bg-primary/10"
-                    : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </button>
-              {/* タイムライン */}
-              <button
-                onClick={() => router.push("/main/timeline")}
-                className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 ${
-                  pathname === "/main/timeline"
-                    ? "text-primary bg-primary/10"
-                    : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                  />
-                </svg>
-              </button>
-              {/* 設定 */}
-              <button
-                onClick={() => router.push("/main/settings")}
-                className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 ${
-                  pathname === "/main/settings"
-                    ? "text-primary bg-primary/10"
-                    : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </button>
-            </nav>
-          </div>
-
-          {/* Mobile Drawer */}
-          <div className="drawer-side z-50">
-            <label htmlFor="mobile-drawer" className="drawer-overlay" />
-            <div className="w-60 h-full bg-base-100">
-              <Sidebar user={user} onClose={() => setSidebarOpen(false)} />
-            </div>
-          </div>
-        </div>
+        {/* Mobile Drawer */}
+        <MobileDrawer isOpen={sidebarOpen} onClose={handleCloseDrawer}>
+          <Sidebar user={user} onClose={handleCloseDrawer} />
+        </MobileDrawer>
       </div>
     </UserContext.Provider>
   );

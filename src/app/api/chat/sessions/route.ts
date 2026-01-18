@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
+import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
 
 // In-memory chat sessions store
 interface MemoryChatSession {
@@ -25,14 +23,13 @@ interface MemoryChatMessage {
   createdAt: Date;
 }
 
-// Initialize memory stores if not present
-if (!memoryDB.chatSessions) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (memoryDB as any).chatSessions = new Map<string, MemoryChatSession>();
-}
-if (!memoryDB.chatMessages) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (memoryDB as any).chatMessages = new Map<string, MemoryChatMessage>();
+// Prismaのセッション取得結果の型
+interface PrismaSessionResult {
+  id: string;
+  title: string | null;
+  isPublic: boolean;
+  updatedAt: Date;
+  messages: { content: string; role: string }[];
 }
 
 const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
@@ -56,8 +53,10 @@ export async function GET(req: NextRequest) {
   const cursor = searchParams.get("cursor");
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      const sessions = await prismaAny.chatSession.findMany({
+    const db = getPrismaClient();
+
+    if (db) {
+      const sessions = await db.chatSession.findMany({
         where: { userId: payload.userId },
         orderBy: { updatedAt: "desc" },
         take: limit + 1,
@@ -76,16 +75,15 @@ export async function GET(req: NextRequest) {
       });
 
       const hasMore = sessions.length > limit;
-      const items: ChatSessionListItem[] = sessions.slice(0, limit).map(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (s: any) => ({
+      const items: ChatSessionListItem[] = sessions
+        .slice(0, limit)
+        .map((s: PrismaSessionResult) => ({
           id: s.id,
           title: s.title,
           preview: s.messages[0]?.content?.slice(0, 50) || null,
           isPublic: s.isPublic,
           updatedAt: s.updatedAt,
-        })
-      );
+        }));
 
       const response: ChatSessionsResponse = {
         sessions: items,
@@ -135,7 +133,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(response);
     }
   } catch (error) {
-    console.error("Get chat sessions error:", error);
+    logger.error("Get chat sessions error", { userId: payload.userId }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -157,8 +155,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      const session = await prismaAny.chatSession.create({
+    const db = getPrismaClient();
+
+    if (db) {
+      const session = await db.chatSession.create({
         data: {
           userId: payload.userId,
         },
@@ -198,11 +198,10 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Create chat session error:", error);
+    logger.error("Create chat session error", { userId: payload.userId }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-

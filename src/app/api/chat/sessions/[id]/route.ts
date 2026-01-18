@@ -1,13 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
+// In-memory types
+interface MemoryChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface MemoryChatMessage {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
 
 // Access memory stores from memoryDB
-const chatSessionsStore = memoryDB.chatSessions;
-const chatMessagesStore = memoryDB.chatMessages;
+const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
+const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,8 +46,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      const session = await prismaAny.chatSession.findUnique({
+    const db = getPrismaClient();
+
+    if (db) {
+      const session = await db.chatSession.findUnique({
         where: { id },
         include: {
           messages: {
@@ -70,7 +89,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Get chat session error:", error);
+    logger.error("Get chat session error", { sessionId: id }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -101,8 +120,10 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      const session = await prismaAny.chatSession.findUnique({
+    const db = getPrismaClient();
+
+    if (db) {
+      const session = await db.chatSession.findUnique({
         where: { id },
       });
 
@@ -114,7 +135,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      const updated = await prismaAny.chatSession.update({
+      const updated = await db.chatSession.update({
         where: { id },
         data: {
           ...(body.title !== undefined && { title: body.title }),
@@ -144,7 +165,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json(session);
     }
   } catch (error) {
-    console.error("Update chat session error:", error);
+    logger.error("Update chat session error", { sessionId: id }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -168,8 +189,10 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      const session = await prismaAny.chatSession.findUnique({
+    const db = getPrismaClient();
+
+    if (db) {
+      const session = await db.chatSession.findUnique({
         where: { id },
       });
 
@@ -181,7 +204,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      await prismaAny.chatSession.delete({
+      await db.chatSession.delete({
         where: { id },
       });
 
@@ -209,7 +232,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: true });
     }
   } catch (error) {
-    console.error("Delete chat session error:", error);
+    logger.error("Delete chat session error", { sessionId: id }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

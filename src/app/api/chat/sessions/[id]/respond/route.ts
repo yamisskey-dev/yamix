@@ -1,13 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
+// In-memory types
+interface MemoryChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface MemoryChatMessage {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  responderId?: string;
+  createdAt: Date;
+}
 
 // Access memory stores from memoryDB
-const chatSessionsStore = memoryDB.chatSessions;
-const chatMessagesStore = memoryDB.chatMessages;
+const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
+const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -40,9 +58,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    if (isPrismaAvailable() && prisma) {
+    const db = getPrismaClient();
+
+    if (db) {
       // Get the session
-      const session = await prismaAny.chatSession.findUnique({
+      const session = await db.chatSession.findUnique({
         where: { id },
         include: { user: true },
       });
@@ -64,7 +84,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
 
       // Create the human response message
-      const message = await prismaAny.chatMessage.create({
+      const message = await db.chatMessage.create({
         data: {
           sessionId: id,
           role: "ASSISTANT",
@@ -75,7 +95,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
 
       // Update session timestamp
-      await prismaAny.chatSession.update({
+      await db.chatSession.update({
         where: { id },
         data: { updatedAt: new Date() },
       });
@@ -104,10 +124,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
 
       const messageId = crypto.randomUUID();
-      const message = {
+      const message: MemoryChatMessage = {
         id: messageId,
         sessionId: id,
-        role: "ASSISTANT" as const,
+        role: "ASSISTANT",
         content: body.content.trim(),
         responderId: payload.userId,
         isCrisis: false,
@@ -124,7 +144,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Human response error:", error);
+    logger.error("Human response error", { sessionId: id }, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

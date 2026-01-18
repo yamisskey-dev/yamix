@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import type { TimelineConsultation } from "@/types";
 
@@ -29,7 +29,7 @@ function formatDate(date: Date): string {
   });
 }
 
-export function ConsultationCard({ consultation, currentUserHandle }: Props) {
+export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
@@ -185,8 +185,8 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
               >
                 {displayName}
               </Link>
-              <span className="text-[0.85em] text-base-content/50 truncate max-w-[120px]">
-                @{consultation.user.handle.split("@")[0]}
+              <span className="text-[0.85em] text-base-content/50 truncate max-w-[180px]">
+                {consultation.user.handle}
               </span>
             </>
           )}
@@ -229,7 +229,7 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
               const isAI = !reply.responder;
               const responderName = isAI
                 ? "AI"
-                : reply.responder?.displayName || reply.responder?.handle?.split("@")[0] || "匿名";
+                : reply.responder?.displayName || reply.responder?.handle || "匿名";
 
               return (
                 <div key={reply.id}>
@@ -362,4 +362,4 @@ export function ConsultationCard({ consultation, currentUserHandle }: Props) {
     )}
     </>
   );
-}
+});

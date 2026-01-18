@@ -71,81 +71,55 @@ body {
   @apply backdrop-blur-md bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/30;
 }
 
-/* Chat bubbles - enhanced styling */
-/* Override DaisyUI default max-width for wider bubbles */
+/* Chat bubbles with tails */
 .chat-bubble {
   max-width: 90%;
+  overflow: visible !important;
+  border: none !important;
 }
 
+/* User bubble (right) */
 .chat-user {
-  @apply bg-gradient-to-br from-primary to-secondary text-primary-content rounded-2xl rounded-br-sm;
-  box-shadow: 0 2px 8px rgba(163, 116, 255, 0.2);
+  @apply bg-gradient-to-br from-primary to-secondary text-primary-content;
+  border-radius: 1rem 1rem 0.25rem 1rem;
+}
+.chat-end .chat-bubble.chat-user::before {
+  background-color: var(--accent-pink) !important;
 }
 
-/* Fix tail color for user bubble */
-.chat-end .chat-user::before {
-  background: linear-gradient(135deg, hsl(var(--s)), hsl(var(--s)));
-}
-
-[data-theme="light"] .chat-user {
-  box-shadow: 0 2px 8px rgba(150, 107, 255, 0.25);
-}
-
-.chat-assistant {
-  @apply bg-base-300 text-base-content rounded-2xl rounded-bl-sm;
-  border: 1px solid rgba(163, 116, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Fix tail color for assistant bubble */
-.chat-start .chat-assistant::before {
-  background-color: hsl(var(--b3));
-  border-color: rgba(163, 116, 255, 0.2);
-}
-
-[data-theme="light"] .chat-assistant {
-  @apply bg-base-200;
-  border: 1px solid rgba(150, 107, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(147, 137, 255, 0.12);
-}
-
-[data-theme="light"] .chat-start .chat-assistant::before {
-  background-color: hsl(var(--b2));
-  border-color: rgba(150, 107, 255, 0.2);
-}
-
-.chat-assistant-loading {
-  @apply bg-base-300 text-base-content rounded-2xl rounded-bl-sm;
-  border: 1px solid rgba(163, 116, 255, 0.15);
-}
-
-/* Fix tail color for loading bubble */
-.chat-start .chat-assistant-loading::before {
-  background-color: hsl(var(--b3));
-  border-color: rgba(163, 116, 255, 0.15);
-}
-
-/* Human response bubble - distinct from AI */
+/* Assistant bubbles (left) - shared styles */
+.chat-assistant,
+.chat-assistant-loading,
 .chat-human-response {
-  @apply bg-base-200 text-base-content;
-  border: 1px solid rgba(179, 45, 182, 0.3);
-  box-shadow: 0 2px 8px rgba(179, 45, 182, 0.15);
+  @apply text-base-content;
+  border-radius: 1rem 1rem 1rem 0.25rem;
 }
 
-/* Fix tail color for human response bubble */
-.chat-start .chat-human-response::before {
-  background-color: hsl(var(--b2));
-  border-color: rgba(179, 45, 182, 0.3);
+/* Assistant bubble */
+.chat-assistant,
+.chat-assistant-loading {
+  background-color: rgba(163, 116, 255, 0.3) !important;
+}
+.chat-start .chat-bubble.chat-assistant::before,
+.chat-start .chat-bubble.chat-assistant-loading::before {
+  background-color: rgba(163, 116, 255, 0.3) !important;
 }
 
-[data-theme="light"] .chat-human-response {
-  border: 1px solid rgba(255, 157, 255, 0.4);
-  box-shadow: 0 2px 8px rgba(255, 157, 255, 0.2);
+/* Human response bubble (pink tint) */
+.chat-human-response {
+  background-color: rgba(179, 45, 182, 0.3) !important;
+}
+.chat-start .chat-bubble.chat-human-response::before {
+  background-color: rgba(179, 45, 182, 0.3) !important;
 }
 
-[data-theme="light"] .chat-start .chat-human-response::before {
-  background-color: hsl(var(--b2));
-  border-color: rgba(255, 157, 255, 0.4);
+/* Light theme overrides */
+[data-theme="light"] .chat-assistant,
+[data-theme="light"] .chat-assistant-loading {
+  @apply bg-base-200;
+}
+[data-theme="light"] .chat-start .chat-bubble::before {
+  background-color: #FCF9FF !important;
 }
 
 /* Typing animation - gradient pulse (Misskey-inspired) */
@@ -257,6 +231,22 @@ body {
 
 .animate-scale-in {
   animation: scaleIn 0.2s ease-out;
+}
+
+/* Slide in right animation (for toasts) */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
 }
 
 /* GitHub Corner (yamisskey-down style) */

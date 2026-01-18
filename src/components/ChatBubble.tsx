@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import Image from "next/image";
 
 interface ResponderInfo {
@@ -15,7 +16,7 @@ interface ChatBubbleProps {
   responder?: ResponderInfo; // 人間回答者の情報
 }
 
-export function ChatBubble({
+export const ChatBubble = memo(function ChatBubble({
   role,
   content,
   timestamp,
@@ -68,17 +69,15 @@ export function ChatBubble({
         </div>
       )}
 
-      <div className="flex flex-col gap-0.5">
-        {/* Responder name for human responses */}
-        {isHumanResponse && (
-          <div className="text-xs text-secondary font-medium ml-1">
-            {responder.displayName || "匿名の回答者"}
-          </div>
-        )}
-
-        <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
-          <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+      {/* Responder name for human responses */}
+      {isHumanResponse && (
+        <div className="chat-header text-xs text-secondary font-medium">
+          {responder.displayName || "匿名の回答者"}
         </div>
+      )}
+
+      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
+        <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
       </div>
 
       {/* Timestamp */}
@@ -94,43 +93,37 @@ export function ChatBubble({
       )}
     </div>
   );
-}
+});
 
 interface CrisisAlertProps {
   onClose: () => void;
+  onDisable: () => void;
 }
 
-export function CrisisAlert({ onClose }: CrisisAlertProps) {
+export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: CrisisAlertProps) {
   return (
-    <div className="alert alert-warning shadow-lg animate-fade-in">
-      <div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="stroke-current shrink-0 h-6 w-6"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <div>
-          <h3 className="font-bold">つらい気持ちを感じていませんか？</h3>
-          <div className="text-sm">
-            <p>相談できる窓口があります：</p>
-            <ul className="list-disc list-inside mt-1">
-              <li>いのちの電話: 0570-783-556</li>
-              <li>よりそいホットライン: 0120-279-338</li>
-            </ul>
-          </div>
+    <div className="chat chat-start animate-slide-up">
+      <div className="chat-image avatar">
+        <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
+          <span className="text-lg">🫂</span>
         </div>
       </div>
-      <button className="btn btn-sm btn-ghost" onClick={onClose}>
-        閉じる
-      </button>
+      <div className="chat-bubble chat-assistant shadow-sm">
+        <p className="whitespace-pre-wrap break-words leading-relaxed">
+          つらい気持ちを感じていませんか？ 24時間チャット相談:{" "}
+          <a href="https://talkme.jp/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+            あなたのいばしょ
+          </a>
+        </p>
+        <div className="flex justify-end gap-2 mt-2">
+          <button className="btn btn-xs btn-ghost opacity-60" onClick={onDisable}>
+            今後表示しない
+          </button>
+          <button className="btn btn-xs btn-ghost" onClick={onClose}>
+            閉じる
+          </button>
+        </div>
+      </div>
     </div>
   );
-}
+});

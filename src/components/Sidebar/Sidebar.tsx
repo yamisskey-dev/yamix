@@ -24,12 +24,12 @@ function NavItem({
   onClick: () => void;
 }) {
   return (
-    <div className="px-3 mb-2">
+    <div className="px-4 mb-2">
       <button
         onClick={onClick}
         className={`
-          group relative w-full h-11 rounded-full
-          flex items-center justify-center gap-2
+          group relative w-full h-11 rounded-full px-4
+          flex items-center gap-3
           transition-colors duration-150
           ${isActive ? "bg-primary/10 text-primary" : "text-base-content/70 hover:bg-primary/10 hover:text-primary"}
         `}
@@ -99,10 +99,10 @@ export function Sidebar({ user, onClose }: Props) {
         />
 
         {/* Divider */}
-        <div className="mx-4 my-3 border-t border-base-content/10" />
+        <div className="mx-5 my-3 border-t border-base-content/10" />
 
         {/* Chat Session List */}
-        <div className="px-2">
+        <div className="px-3">
           <ChatSessionList onSessionSelect={onClose} />
         </div>
       </nav>
@@ -110,14 +110,14 @@ export function Sidebar({ user, onClose }: Props) {
       {/* Bottom Section */}
       <div className="mt-auto pt-3 pb-3 bg-base-100 border-t border-base-content/10">
         {/* Post Button */}
-        <div className="px-3 mb-3">
+        <div className="px-4 mb-3">
           <button
             onClick={handleNewChat}
             className="
-              w-full h-11 rounded-full
+              w-full h-11 rounded-full px-4
               bg-gradient-to-r from-primary to-secondary
               text-primary-content text-sm font-medium
-              flex items-center justify-center gap-2
+              flex items-center gap-3
               hover:brightness-110
               transition-all duration-150
             "
@@ -149,7 +149,7 @@ export function Sidebar({ user, onClose }: Props) {
             }}
             className="
               flex items-center w-full
-              py-2.5 px-3
+              py-2.5 px-4
               text-left
               hover:bg-base-content/5
               transition-colors duration-150

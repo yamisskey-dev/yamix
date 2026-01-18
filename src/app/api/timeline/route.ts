@@ -1,13 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { getPrismaClient, memoryDB } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
 
-// Access memory stores from memoryDB
-const chatSessionsStore = memoryDB.chatSessions;
-const chatMessagesStore = memoryDB.chatMessages;
+// In-memory types
+interface MemoryChatSession {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const prismaAny = prisma as any;
+interface MemoryChatMessage {
+  id: string;
+  sessionId: string;
+  role: "USER" | "ASSISTANT";
+  content: string;
+  isCrisis: boolean;
+  createdAt: Date;
+}
+
+// Prismaセッション結果の型
+interface PrismaSessionWithMessages {
+  id: string;
+  createdAt: Date;
+  user: {
+    handle: string;
+    profile: { displayName: string | null; avatarUrl: string | null } | null;
+  };
+  messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    createdAt: Date;
+    responder: {
+      id: string;
+      handle: string;
+      profile: { displayName: string | null; avatarUrl: string | null } | null;
+    } | null;
+  }>;
+}
+
+// Access memory stores from memoryDB
+const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
+const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
 // GET /api/timeline - Get public consultations for timeline
 export async function GET(req: NextRequest) {
@@ -16,9 +54,11 @@ export async function GET(req: NextRequest) {
   const cursor = searchParams.get("cursor");
 
   try {
-    if (isPrismaAvailable() && prisma) {
+    const db = getPrismaClient();
+
+    if (db) {
       // Get public sessions with all messages (for reply tree)
-      const sessions = await prismaAny.chatSession.findMany({
+      const sessions = await db.chatSession.findMany({
         where: { isPublic: true },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
@@ -43,19 +83,18 @@ export async function GET(req: NextRequest) {
       });
 
       const hasMore = sessions.length > limit;
-      const items = sessions.slice(0, limit);
+      const items = sessions.slice(0, limit) as PrismaSessionWithMessages[];
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const consultations: TimelineConsultation[] = items
-        .filter((s: any) => s.messages.length >= 2)
-        .map((s: any) => {
-          const userMsg = s.messages.find((m: any) => m.role === "USER");
-          const firstAssistantMsg = s.messages.find((m: any) => m.role === "ASSISTANT");
+        .filter((s) => s.messages.length >= 2)
+        .map((s) => {
+          const userMsg = s.messages.find((m) => m.role === "USER");
+          const firstAssistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
 
           // All assistant messages as replies
           const allReplies: TimelineReply[] = s.messages
-            .filter((m: any) => m.role === "ASSISTANT")
-            .map((m: any) => ({
+            .filter((m) => m.role === "ASSISTANT")
+            .map((m) => ({
               id: m.id,
               content: m.content,
               createdAt: m.createdAt,
@@ -155,7 +194,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(response);
     }
   } catch (error) {
-    console.error("Get timeline error:", error);
+    logger.error("Get timeline error", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

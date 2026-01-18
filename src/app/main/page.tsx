@@ -75,8 +75,11 @@ export default function NewChatPage() {
 
       const data = await msgRes.json();
 
-      if (data.isCrisis) {
-        setShowCrisisAlert(true);
+      if (data.isCrisis && typeof window !== "undefined") {
+        const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+        if (!disabled) {
+          setShowCrisisAlert(true);
+        }
       }
 
       // Navigate to the session page (this preserves the conversation)
@@ -96,17 +99,21 @@ export default function NewChatPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* Crisis Alert */}
-      {showCrisisAlert && (
-        <div className="p-4">
-          <CrisisAlert onClose={() => setShowCrisisAlert(false)} />
-        </div>
-      )}
-
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="max-w-6xl mx-auto">
-          {messages.length === 0 && !isLoading && (
+          {/* Crisis Alert - shown as first message */}
+          {showCrisisAlert && (
+            <CrisisAlert
+              onClose={() => setShowCrisisAlert(false)}
+              onDisable={() => {
+                localStorage.setItem("yamix_crisis_alert_disabled", "true");
+                setShowCrisisAlert(false);
+              }}
+            />
+          )}
+
+          {messages.length === 0 && !isLoading && !showCrisisAlert && (
             <div className="flex flex-col items-center justify-center h-full text-center py-20">
               <p className="text-base-content/50 text-lg">
                 今日はどうしましたか？
