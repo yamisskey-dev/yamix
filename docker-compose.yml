@@ -45,6 +45,7 @@ services:
       - external_network
     volumes:
       - yamii-data:/app/data
+      - ./yamii/config/YAMII.md:/app/config/YAMII.md:ro
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/health']
