@@ -33,6 +33,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
+  const [isAnonymousResponse, setIsAnonymousResponse] = useState(false); // 匿名で回答するか
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [sessionInfo, setSessionInfo] = useState<{
@@ -72,6 +73,17 @@ export default function ChatSessionPage({ params }: PageProps) {
           isOwner,
           isAnonymous: session.isAnonymous,
           currentUserId,
+        });
+
+        // Build anonymous user map (User A, B, C, etc.)
+        const anonymousUserMap = new Map<string, string>();
+        session.messages.forEach((m: ChatMessage) => {
+          if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
+            if (!anonymousUserMap.has(m.responderId)) {
+              const label = String.fromCharCode(65 + anonymousUserMap.size); // A, B, C...
+              anonymousUserMap.set(m.responderId, label);
+            }
+          }
         });
 
         setMessages(
@@ -115,10 +127,12 @@ export default function ChatSessionPage({ params }: PageProps) {
               content: m.content,
               timestamp: new Date(m.createdAt),
               responder: m.responder ? {
-                displayName: m.responder.displayName,
-                avatarUrl: m.responder.avatarUrl,
-                isAnonymous: false,
-                handle: m.responder.handle,
+                displayName: m.isAnonymous
+                  ? `User ${anonymousUserMap.get(m.responderId!)}`
+                  : m.responder.displayName,
+                avatarUrl: m.isAnonymous ? null : m.responder.avatarUrl,
+                isAnonymous: m.isAnonymous,
+                handle: m.isAnonymous ? undefined : m.responder.handle,
               } : undefined, // undefined = AI
             };
           })
@@ -217,7 +231,10 @@ export default function ChatSessionPage({ params }: PageProps) {
         const res = await fetch(`/api/chat/sessions/${sessionId}/respond`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: responseContent }),
+          body: JSON.stringify({
+            content: responseContent,
+            isAnonymous: isAnonymousResponse,
+          }),
         });
 
         if (!res.ok) {
@@ -267,10 +284,12 @@ export default function ChatSessionPage({ params }: PageProps) {
             content: responseContent,
             timestamp: new Date(),
             responder: currentUser ? {
-              displayName: currentUser.profile?.displayName || null,
-              avatarUrl: currentUser.profile?.avatarUrl || null,
-              isAnonymous: false,
-              handle: currentUser.handle,
+              displayName: isAnonymousResponse
+                ? "あなた (匿名)"  // Show as "You (anonymous)" for current user
+                : currentUser.profile?.displayName || null,
+              avatarUrl: isAnonymousResponse ? null : currentUser.profile?.avatarUrl || null,
+              isAnonymous: isAnonymousResponse,
+              handle: isAnonymousResponse ? undefined : currentUser.handle,
             } : null,
           };
 
@@ -379,6 +398,21 @@ export default function ChatSessionPage({ params }: PageProps) {
 
       {/* Input Area */}
       <div className="p-4">
+        {/* Anonymous response checkbox (for non-owners in public consultations) */}
+        {sessionInfo && !sessionInfo.isOwner && sessionInfo.consultType === "PUBLIC" && (
+          <div className="max-w-6xl mx-auto mb-2">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-sm"
+                checked={isAnonymousResponse}
+                onChange={(e) => setIsAnonymousResponse(e.target.checked)}
+              />
+              <span className="opacity-70">匿名で回答</span>
+            </label>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 max-w-6xl mx-auto"

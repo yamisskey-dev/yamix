@@ -52,10 +52,10 @@ export const ChatBubble = memo(function ChatBubble({
           {isHuman ? (
             // Human avatar (questioner or responder) - clickable if not anonymous
             responder!.isAnonymous || !responder!.handle ? (
-              <div className="w-8 h-8 rounded-full ring-2 ring-secondary/30">
+              <div className="w-8 h-8 rounded-full ring-2 ring-base-300/50">
                 {responder!.isAnonymous ? (
-                  // Anonymous user
-                  <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/70">
+                  // Anonymous user - show generic anonymous avatar
+                  <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/50">
                     <span className="text-lg">😎</span>
                   </div>
                 ) : responder!.avatarUrl ? (
@@ -106,7 +106,12 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Misskey-style: No name display, icon only */}
+      {/* Display name for anonymous users (User A, B, C, etc.) */}
+      {!isUser && isHuman && responder!.isAnonymous && (
+        <div className="chat-header opacity-50">
+          <span className="text-xs">{responder!.displayName}</span>
+        </div>
+      )}
 
       <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-sm`}>
         <p className="whitespace-pre-wrap break-words leading-relaxed">
