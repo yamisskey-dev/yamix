@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { TOKEN_ECONOMY } from "@/types";
 
 // In-memory types
 interface MemoryChatSession {
@@ -103,10 +104,75 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         data: { updatedAt: new Date() },
       });
 
-      return NextResponse.json({
-        message,
-        success: true,
+      // Calculate today's reward total for this responder
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const responderWallet = await db.wallet.findUnique({
+        where: { userId: payload.userId },
+        include: {
+          sentTransactions: {
+            where: {
+              txType: "RESPONSE_REWARD",
+              createdAt: {
+                gte: today,
+              },
+            },
+          },
+        },
       });
+
+      if (!responderWallet) {
+        return NextResponse.json({
+          message,
+          success: true,
+          reward: 0,
+          rewardCapped: false,
+        });
+      }
+
+      // Calculate today's reward total (abs value since transactions are positive)
+      const todayRewardTotal = responderWallet.sentTransactions.reduce(
+        (sum, tx) => sum + tx.amount,
+        0
+      );
+
+      // Check if daily reward cap is reached
+      const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
+      const canReceiveReward = todayRewardTotal + rewardAmount <= TOKEN_ECONOMY.DAILY_REWARD_CAP;
+
+      if (canReceiveReward) {
+        // Grant reward
+        await db.wallet.update({
+          where: { id: responderWallet.id },
+          data: { balance: { increment: rewardAmount } },
+        });
+
+        // Create transaction record
+        await db.transaction.create({
+          data: {
+            senderId: responderWallet.id,
+            amount: rewardAmount,
+            txType: "RESPONSE_REWARD",
+          },
+        });
+
+        return NextResponse.json({
+          message,
+          success: true,
+          reward: rewardAmount,
+          rewardCapped: false,
+        });
+      } else {
+        // Cap reached - response saved but no reward
+        return NextResponse.json({
+          message,
+          success: true,
+          reward: 0,
+          rewardCapped: true,
+          capRemaining: Math.max(0, TOKEN_ECONOMY.DAILY_REWARD_CAP - todayRewardTotal),
+        });
+      }
     } else {
       // In-memory fallback
       const session = chatSessionsStore.get(id);
@@ -141,9 +207,28 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       session.updatedAt = new Date();
       chatSessionsStore.set(id, session);
 
+      // Reward system for in-memory (simplified - no daily cap tracking)
+      const responderWallet = Array.from(memoryDB.wallets.values()).find(
+        (w) => w.userId === payload.userId
+      );
+
+      if (responderWallet) {
+        const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
+        responderWallet.balance += rewardAmount;
+
+        return NextResponse.json({
+          message,
+          success: true,
+          reward: rewardAmount,
+          rewardCapped: false,
+        });
+      }
+
       return NextResponse.json({
         message,
         success: true,
+        reward: 0,
+        rewardCapped: false,
       });
     }
   } catch (error) {

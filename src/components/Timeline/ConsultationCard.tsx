@@ -36,6 +36,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
   const [responseText, setResponseText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
+  const [rewardMessage, setRewardMessage] = useState<string>();
   const [localReplies, setLocalReplies] = useState(consultation.replies);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -59,6 +60,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
     e.stopPropagation();
     setShowResponseModal(true);
     setSubmitError(undefined);
+    setRewardMessage(undefined);
   };
 
   const handleSubmitResponse = async () => {
@@ -94,6 +96,17 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
         },
       };
       setLocalReplies((prev) => [...(prev || []), newReply]);
+
+      // Show reward message if applicable
+      if (data.reward && data.reward > 0) {
+        setRewardMessage(`+${data.reward} YAMI を獲得しました！`);
+      } else if (data.rewardCapped) {
+        if (data.capRemaining > 0) {
+          setRewardMessage(`本日の報酬上限に達しています（残り${data.capRemaining} YAMI）`);
+        } else {
+          setRewardMessage("本日の報酬上限に達しています");
+        }
+      }
 
       // Success - close modal, reset, and show replies
       setShowResponseModal(false);
@@ -383,6 +396,14 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             {submitError && (
               <div className="alert alert-error text-sm mt-3 py-2">
                 <span>{submitError}</span>
+              </div>
+            )}
+
+            {rewardMessage && !submitError && (
+              <div className={`alert text-sm mt-3 py-2 ${
+                rewardMessage.includes("獲得") ? "alert-success" : "alert-info"
+              }`}>
+                <span>{rewardMessage}</span>
               </div>
             )}
 
