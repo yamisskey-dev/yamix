@@ -5,6 +5,7 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ConfirmModal } from "./Modal";
+import { WalletBadge } from "./WalletBadge";
 import type { UserProfile } from "@/types";
 
 interface HeaderProps {
@@ -65,7 +66,9 @@ export function Header({ user, onMenuClick }: HeaderProps) {
 
       <div className="flex-none gap-2">
         {user && (
-          <div className="dropdown dropdown-end">
+          <>
+            <WalletBadge />
+            <div className="dropdown dropdown-end">
             <div
               tabIndex={0}
               role="button"
@@ -124,6 +127,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
               </li>
             </ul>
           </div>
+          </>
         )}
       </div>
 

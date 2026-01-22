@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
+import type { UserStats } from "@/types";
+
+interface WalletData {
+  balance: number;
+  economy?: {
+    equilibriumBalance: number;
+    todayGrant?: { granted: boolean; amount: number };
+    todayDecay?: { applied: boolean; decayAmount: number };
+  };
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -21,6 +31,9 @@ export default function SettingsPage() {
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
   const [promptError, setPromptError] = useState("");
+  const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loadingWallet, setLoadingWallet] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,6 +50,28 @@ export default function SettingsPage() {
       }
     };
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchWalletAndStats = async () => {
+      try {
+        const [walletRes, statsRes] = await Promise.all([
+          fetch("/api/wallets"),
+          fetch("/api/stats"),
+        ]);
+        if (walletRes.ok) {
+          setWallet(await walletRes.json());
+        }
+        if (statsRes.ok) {
+          setStats(await statsRes.json());
+        }
+      } catch (error) {
+        console.error("Failed to fetch wallet/stats:", error);
+      } finally {
+        setLoadingWallet(false);
+      }
+    };
+    fetchWalletAndStats();
   }, []);
 
   const handleSaveCustomPrompt = async () => {
@@ -252,6 +287,127 @@ export default function SettingsPage() {
                 }}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Token Economy Section */}
+        <div className="card bg-base-200">
+          <div className="card-body">
+            <h2 className="card-title text-lg">トークン経済</h2>
+            {loadingWallet ? (
+              <div className="flex justify-center py-4">
+                <span className="loading loading-spinner loading-md" />
+              </div>
+            ) : wallet ? (
+              <div className="space-y-4">
+                {/* Balance Display */}
+                <div className="flex items-center justify-between">
+                  <span className="text-base-content/70">現在の残高</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold font-mono">{wallet.balance}</span>
+                    <span className="text-sm text-base-content/50 ml-1">YAMI</span>
+                  </div>
+                </div>
+
+                {/* Progress to Equilibrium */}
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-base-content/60">均衡残高まで</span>
+                    <span className="text-base-content/60">
+                      {wallet.economy?.equilibriumBalance ?? 50} YAMI
+                    </span>
+                  </div>
+                  <progress
+                    className="progress progress-primary w-full"
+                    value={wallet.balance}
+                    max={wallet.economy?.equilibriumBalance ?? 50}
+                  />
+                </div>
+
+                {/* Today's Economy */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="bg-base-300 rounded-lg p-3 text-center">
+                    <div className="text-xs text-base-content/60 mb-1">今日の付与</div>
+                    <div className="font-mono text-lg">
+                      {wallet.economy?.todayGrant?.granted
+                        ? `+${wallet.economy.todayGrant.amount}`
+                        : "-"}
+                    </div>
+                  </div>
+                  <div className="bg-base-300 rounded-lg p-3 text-center">
+                    <div className="text-xs text-base-content/60 mb-1">今日の減衰</div>
+                    <div className="font-mono text-lg">
+                      {wallet.economy?.todayDecay?.applied
+                        ? `-${wallet.economy.todayDecay.decayAmount}`
+                        : "-"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dependency Level */}
+                {stats?.dependency && (
+                  <div className="pt-2 border-t border-base-content/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-base-content/70">依存度</span>
+                      <span
+                        className={`badge ${
+                          stats.dependency.level === "LOW"
+                            ? "badge-success"
+                            : stats.dependency.level === "MODERATE"
+                              ? "badge-info"
+                              : stats.dependency.level === "HIGH"
+                                ? "badge-warning"
+                                : "badge-error"
+                        }`}
+                      >
+                        {stats.dependency.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-base-content/50">
+                      {stats.dependency.description}
+                    </p>
+                    <progress
+                      className={`progress w-full mt-2 ${
+                        stats.dependency.score <= 25
+                          ? "progress-success"
+                          : stats.dependency.score <= 50
+                            ? "progress-info"
+                            : stats.dependency.score <= 75
+                              ? "progress-warning"
+                              : "progress-error"
+                      }`}
+                      value={stats.dependency.score}
+                      max={100}
+                    />
+                  </div>
+                )}
+
+                {/* Usage Stats */}
+                {stats && (
+                  <div className="pt-2 border-t border-base-content/10">
+                    <div className="text-sm text-base-content/60 mb-2">今週の利用状況</div>
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div>
+                        <div className="text-base-content/50">AI相談</div>
+                        <div className="font-mono text-lg">{stats.week.aiConsults}</div>
+                      </div>
+                      <div>
+                        <div className="text-base-content/50">消費</div>
+                        <div className="font-mono text-lg text-error">-{stats.week.tokensSpent}</div>
+                      </div>
+                      <div>
+                        <div className="text-base-content/50">獲得</div>
+                        <div className="font-mono text-lg text-success">+{stats.week.tokensEarned}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-base-content/60">
+                ウォレット情報を取得できませんでした。
+              </p>
+            )}
           </div>
         </div>
 
