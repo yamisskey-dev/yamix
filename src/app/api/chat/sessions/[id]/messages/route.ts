@@ -3,6 +3,7 @@ import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { yamiiClient } from "@/lib/yamii-client";
+import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
 
 // In-memory types
@@ -130,6 +131,41 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       })) as ConversationMessage[];
     }
 
+    // Check wallet balance
+    const consultCost = TOKEN_ECONOMY.AI_CONSULT_COST;
+
+    if (db) {
+      const wallet = await db.wallet.findUnique({
+        where: { userId: payload.userId },
+      });
+
+      if (!wallet) {
+        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+      }
+
+      if (wallet.balance < consultCost) {
+        return NextResponse.json(
+          { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
+          { status: 400 }
+        );
+      }
+    } else {
+      const wallet = Array.from(memoryDB.wallets.values()).find(
+        (w) => w.userId === payload.userId
+      );
+
+      if (!wallet) {
+        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+      }
+
+      if (wallet.balance < consultCost) {
+        return NextResponse.json(
+          { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Call Yamii API
     let yamiiResponse;
     try {
@@ -153,51 +189,91 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const now = new Date();
 
     if (db) {
-      // Create user message
-      const userMsg = await db.chatMessage.create({
-        data: {
-          sessionId,
-          role: "USER",
-          content: userMessage,
-          isCrisis: false,
-        },
-      });
+      // Execute all operations in a transaction
+      const result = await db.$transaction(async (tx) => {
+        // Get wallet and deduct cost
+        const wallet = await tx.wallet.findUnique({
+          where: { userId: payload.userId },
+        });
 
-      // Create assistant message
-      const assistantMsg = await db.chatMessage.create({
-        data: {
-          sessionId,
-          role: "ASSISTANT",
-          content: yamiiResponse.response,
-          isCrisis: yamiiResponse.is_crisis,
-        },
-      });
+        if (!wallet) {
+          throw new Error("Wallet not found");
+        }
 
-      // Update session title if first message
-      if (isFirstMessage) {
-        await db.chatSession.update({
-          where: { id: sessionId },
+        // Deduct AI consult cost
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: { decrement: consultCost } },
+        });
+
+        // Create transaction record
+        await tx.transaction.create({
           data: {
-            title: generateTitle(userMessage),
-            updatedAt: now,
+            senderId: wallet.id,
+            amount: -consultCost,
+            txType: "CONSULT_AI",
           },
         });
-      } else {
-        await db.chatSession.update({
-          where: { id: sessionId },
-          data: { updatedAt: now },
+
+        // Create user message
+        const userMsg = await tx.chatMessage.create({
+          data: {
+            sessionId,
+            role: "USER",
+            content: userMessage,
+            isCrisis: false,
+          },
         });
-      }
+
+        // Create assistant message
+        const assistantMsg = await tx.chatMessage.create({
+          data: {
+            sessionId,
+            role: "ASSISTANT",
+            content: yamiiResponse.response,
+            isCrisis: yamiiResponse.is_crisis,
+          },
+        });
+
+        // Update session title if first message
+        if (isFirstMessage) {
+          await tx.chatSession.update({
+            where: { id: sessionId },
+            data: {
+              title: generateTitle(userMessage),
+              updatedAt: now,
+            },
+          });
+        } else {
+          await tx.chatSession.update({
+            where: { id: sessionId },
+            data: { updatedAt: now },
+          });
+        }
+
+        return { userMsg, assistantMsg };
+      });
 
       return NextResponse.json({
-        userMessage: userMsg,
-        assistantMessage: assistantMsg,
+        userMessage: result.userMsg,
+        assistantMessage: result.assistantMsg,
         response: yamiiResponse.response,
         isCrisis: yamiiResponse.is_crisis,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
       });
     } else {
       // In-memory fallback
+      const wallet = Array.from(memoryDB.wallets.values()).find(
+        (w) => w.userId === payload.userId
+      );
+
+      if (!wallet) {
+        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+      }
+
+      // Deduct AI consult cost
+      wallet.balance -= consultCost;
+
       const userMsg = {
         id: generateId(),
         sessionId,
