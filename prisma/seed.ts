@@ -2,14 +2,24 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// YAMI経済パラメータ設定
-// YAMI_ECONOMY.md に基づく初期値
+// 承認経済（Validation Economy）パラメータ設定
+// 詳細: docs/VALIDATION_ECONOMY.md
 const economyDefaults = [
+  // ベーシックインカム（BI）
   {
     key: "DAILY_GRANT_AMOUNT",
-    value: 3,
-    description: "毎日の無料YAMI付与量",
+    value: 10,
+    description: "毎日のBI付与量",
   },
+
+  // 減衰（Demurrage）
+  {
+    key: "DECAY_RATE_PERCENT",
+    value: 20,
+    description: "日次減衰率（%）- 均衡残高 = BI ÷ 減衰率",
+  },
+
+  // 相談コスト
   {
     key: "AI_CONSULT_COST",
     value: 1,
@@ -20,25 +30,35 @@ const economyDefaults = [
     value: 5,
     description: "人間相談1回あたりのコスト",
   },
+
+  // 報酬
   {
     key: "RESPONSE_REWARD",
-    value: 4,
+    value: 3,
     description: "人間の回答に対する報酬",
   },
   {
+    key: "DAILY_REWARD_CAP",
+    value: 15,
+    description: "1日あたりの報酬獲得上限",
+  },
+
+  // 制約
+  {
     key: "INITIAL_BALANCE",
     value: 10,
-    description: "新規ユーザーの初期YAMI残高",
+    description: "新規ユーザーの初期残高",
   },
   {
     key: "MAX_BALANCE",
-    value: 1000,
-    description: "YAMI残高の上限（BCC参考）",
+    value: 100,
+    description: "残高の上限（均衡残高の2倍）",
   },
 ];
 
 async function main() {
-  console.log("Seeding economy config...");
+  console.log("Seeding economy config (Validation Economy)...");
+  console.log("See: docs/VALIDATION_ECONOMY.md\n");
 
   for (const config of economyDefaults) {
     await prisma.economyConfig.upsert({
@@ -49,7 +69,19 @@ async function main() {
     console.log(`  ✓ ${config.key}: ${config.value}`);
   }
 
-  console.log("Seed completed.");
+  // 均衡残高の計算を表示
+  const dailyGrant = economyDefaults.find(
+    (c) => c.key === "DAILY_GRANT_AMOUNT"
+  )?.value;
+  const decayRate = economyDefaults.find(
+    (c) => c.key === "DECAY_RATE_PERCENT"
+  )?.value;
+  if (dailyGrant && decayRate) {
+    const equilibrium = dailyGrant / (decayRate / 100);
+    console.log(`\n  → 均衡残高: ${equilibrium} (= ${dailyGrant} / ${decayRate}%)`);
+  }
+
+  console.log("\nSeed completed.");
 }
 
 main()

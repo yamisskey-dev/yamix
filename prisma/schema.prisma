@@ -35,8 +35,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Future ETH wallet linking (yamidao integration)
-  ethAddress String? @unique
+  // 将来用: YAMI DAO連携
+  ethAddress String? @unique // Optimismアドレス
 
   // Relations
   serverId      String
@@ -65,28 +65,31 @@ model Profile {
 }
 
 // ============================================
-// Wallet - ユーザーのYAMIトークン口座
+// Wallet - 承認経済（Validation Economy）のトークン口座
 // 1 User = 1 Wallet（1対1）
-// Network: Optimism (YAMI DAOと共通)
+// 詳細: docs/VALIDATION_ECONOMY.md
 // ============================================
 model Wallet {
   id               String     @id @default(cuid())
-  address          String     @unique // 0x + 40 hex chars (Optimism address)
-  balance          Int        @default(10) // YAMI トークン残高
+  balance          Int        @default(10) // トークン残高（初期値）
   walletType       WalletType @default(HUMAN) // 人格タイプ
-  lastDailyGrantAt DateTime?  // 最後に毎日のYAMI付与を受け取った日時
+  lastDailyGrantAt DateTime?  // 最後に毎日のBI付与を受け取った日時
+  lastDecayAt      DateTime?  // 最後に減衰が適用された日時
   createdAt        DateTime   @default(now())
 
   // Misskeyユーザーとの紐づけ（1:1必須）
   userId String   @unique
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // 将来のDAO連携用（任意）
+  daoAddress String? @unique // Optimismアドレス（YAMI DAO連携時に使用）
+
   // Relations
   posts            Post[]
   sentTransactions Transaction[]   @relation("sender")
   following        Follow[]        @relation("follower")
-  purchases        TokenPurchase[]
-  withdrawals      TokenWithdrawal[]
+  purchases        TokenPurchase[]   // 将来用: DAO連携
+  withdrawals      TokenWithdrawal[] // 将来用: DAO連携
 
   @@index([walletType])
   @@map("wallets")
@@ -162,8 +165,8 @@ enum ConsultTarget {
 }
 
 // ============================================
-// Transaction - YAMIトークン移動
-// 相談・回答・リアクションによるトークン移動
+// Transaction - トークン移動記録
+// 承認経済における相談・回答・BI付与・減衰の記録
 // ============================================
 model Transaction {
   id        String          @id @default(cuid())
@@ -183,22 +186,27 @@ model Transaction {
   @@map("transactions")
 }
 
-// トランザクションタイプ
+// トランザクションタイプ（承認経済）
 enum TransactionType {
+  // 承認経済の基本操作
   CONSULT_AI       // AI相談コスト
   CONSULT_HUMAN    // 人間相談コスト
   RESPONSE_REWARD  // 回答報酬
+  DAILY_GRANT      // 毎日のBI付与
+  DECAY            // 減衰（時間経過による減少）
   REACTION         // リアクション（投げ銭）
-  PURCHASE         // Optimism ETHでYAMI購入
-  WITHDRAWAL       // YAMIをOptimism ETHに換金
   SYSTEM_GRANT     // システム付与（初期配布等）
-  DAILY_GRANT      // 毎日の無料YAMI付与
+
+  // 将来用: DAO連携
+  PURCHASE         // Optimism ETHでトークン購入
+  WITHDRAWAL       // トークンをOptimism ETHに換金
   DAO_DIVIDEND     // YAMI DAO配当
 }
 
 // ============================================
-// YamiPurchase - Optimism ETHによるYAMI購入
-// YAMIトークンをOptimism ETHで購入
+// TokenPurchase - トークン購入（将来用: DAO連携）
+// Optimism ETHでトークンを購入
+// 現在は未使用、YAMI DAO連携時に有効化
 // ============================================
 model TokenPurchase {
   id            String         @id @default(cuid())
@@ -219,8 +227,9 @@ model TokenPurchase {
 }
 
 // ============================================
-// YamiWithdrawal - YAMIのOptimism ETH換金
-// YAMIトークンをOptimism ETHに換金
+// TokenWithdrawal - トークン換金（将来用: DAO連携）
+// トークンをOptimism ETHに換金
+// 現在は未使用、YAMI DAO連携時に有効化
 // ============================================
 model TokenWithdrawal {
   id            String            @id @default(cuid())
@@ -255,8 +264,9 @@ enum WithdrawalStatus {
 }
 
 // ============================================
-// EconomyConfig - YAMI経済パラメータ設定
-// YAMI DAO投票で変更可能な経済パラメータ
+// EconomyConfig - 承認経済パラメータ設定
+// BI付与量、減衰率、相談コスト等の設定
+// 将来的にYAMI DAO投票で変更可能
 // ============================================
 model EconomyConfig {
   id                    String   @id @default(cuid())
@@ -264,7 +274,7 @@ model EconomyConfig {
   value                 Int
   description           String?
   updatedAt             DateTime @updatedAt
-  updatedByDaoProposal  String?  // DAO提案ID
+  updatedByDaoProposal  String?  // 将来用: DAO提案ID
 
   @@map("economy_config")
 }
