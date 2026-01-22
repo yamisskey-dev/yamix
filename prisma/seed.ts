@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 // 承認経済（Validation Economy）パラメータ設定
-// 詳細: docs/VALIDATION_ECONOMY.md
+// 詳細: docs/TOKEN_ECONOMY.md
 const economyDefaults = [
   // ベーシックインカム（BI）
   {
@@ -58,7 +58,7 @@ const economyDefaults = [
 
 async function main() {
   console.log("Seeding economy config (Validation Economy)...");
-  console.log("See: docs/VALIDATION_ECONOMY.md\n");
+  console.log("See: docs/TOKEN_ECONOMY.md\n");
 
   for (const config of economyDefaults) {
     await prisma.economyConfig.upsert({

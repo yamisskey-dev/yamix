@@ -1,6 +1,6 @@
 /**
  * Validation Economy（承認経済）サービス
- * 詳細: docs/VALIDATION_ECONOMY.md
+ * 詳細: docs/TOKEN_ECONOMY.md
  */
 
 import { getPrismaClient, isPrismaAvailable } from "./prisma";

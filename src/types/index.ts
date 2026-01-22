@@ -1,6 +1,6 @@
 // ============================================
 // Validation Economy（承認経済）
-// 詳細: docs/VALIDATION_ECONOMY.md
+// 詳細: docs/TOKEN_ECONOMY.md
 // ============================================
 
 /**

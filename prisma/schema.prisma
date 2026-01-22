@@ -67,7 +67,7 @@ model Profile {
 // ============================================
 // Wallet - 承認経済（Validation Economy）のトークン口座
 // 1 User = 1 Wallet（1対1）
-// 詳細: docs/VALIDATION_ECONOMY.md
+// 詳細: docs/TOKEN_ECONOMY.md
 // ============================================
 model Wallet {
   id               String     @id @default(cuid())
