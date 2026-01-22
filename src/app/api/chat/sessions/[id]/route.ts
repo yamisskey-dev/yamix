@@ -55,8 +55,20 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const session = await db.chatSession.findUnique({
         where: { id },
         include: {
+          user: {
+            include: {
+              profile: true,
+            },
+          },
           messages: {
             orderBy: { createdAt: "asc" },
+            include: {
+              responder: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
           },
         },
       });
@@ -65,11 +77,33 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      if (session.userId !== payload.userId) {
+      // Check authorization: owner can access any session, others can only access PUBLIC sessions
+      const isOwner = session.userId === payload.userId;
+      const isPublic = session.consultType === "PUBLIC";
+
+      if (!isOwner && !isPublic) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      return NextResponse.json(session);
+      // Format response with user info
+      return NextResponse.json({
+        ...session,
+        user: {
+          id: session.user.id,
+          handle: session.user.handle,
+          displayName: session.user.profile?.displayName || null,
+          avatarUrl: session.user.profile?.avatarUrl || null,
+        },
+        messages: session.messages.map((m) => ({
+          ...m,
+          responder: m.responder ? {
+            id: m.responder.id,
+            handle: m.responder.handle,
+            displayName: m.responder.profile?.displayName || null,
+            avatarUrl: m.responder.profile?.avatarUrl || null,
+          } : null,
+        })),
+      });
     } else {
       // In-memory fallback
       const session = chatSessionsStore.get(id);
@@ -78,9 +112,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      if (session.userId !== payload.userId) {
+      // Check authorization: owner can access any session, others can only access PUBLIC sessions
+      const isOwner = session.userId === payload.userId;
+      const isPublic = session.consultType === "PUBLIC";
+
+      if (!isOwner && !isPublic) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
+
+      // Get user info
+      const user = Array.from(memoryDB.users.values()).find((u) => u.id === session.userId);
 
       const messages = Array.from(chatMessagesStore.values())
         .filter((m) => m.sessionId === id)
@@ -88,6 +129,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       return NextResponse.json({
         ...session,
+        user: user ? {
+          id: user.id,
+          handle: user.handle,
+          displayName: null as string | null,
+          avatarUrl: null as string | null,
+        } : null,
         messages,
       });
     }

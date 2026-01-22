@@ -12,6 +12,7 @@ interface PageProps {
 interface ResponderInfo {
   displayName: string | null;
   avatarUrl: string | null;
+  isAnonymous?: boolean;
 }
 
 interface LocalMessage {
@@ -33,11 +34,22 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [sessionInfo, setSessionInfo] = useState<{
+    consultType: "PRIVATE" | "PUBLIC";
+    userId: string;
+    isOwner: boolean;
+    isAnonymous: boolean;
+    currentUserId: string | null;
+  } | null>(null);
 
   // Fetch session data
   useEffect(() => {
     const fetchSession = async () => {
       try {
+        // Get current user
+        const meRes = await fetch("/api/auth/me");
+        const currentUser = meRes.ok ? await meRes.json() : null;
+
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) {
           if (res.status === 404) {
@@ -48,17 +60,65 @@ export default function ChatSessionPage({ params }: PageProps) {
         }
 
         const session: ChatSessionWithMessages = await res.json();
+
+        const isOwner = currentUser ? session.userId === currentUser.id : false;
+        const currentUserId = currentUser?.id || null;
+
+        // Store session info
+        setSessionInfo({
+          consultType: session.consultType,
+          userId: session.userId,
+          isOwner,
+          isAnonymous: session.isAnonymous,
+          currentUserId,
+        });
+
         setMessages(
-          session.messages.map((m: ChatMessage) => ({
-            id: m.id,
-            role: m.role === "USER" ? "user" : "assistant",
-            content: m.content,
-            timestamp: new Date(m.createdAt),
-            responder: m.responder ? {
-              displayName: m.responder.displayName,
-              avatarUrl: m.responder.avatarUrl,
-            } : undefined,
-          }))
+          session.messages.map((m: ChatMessage) => {
+            // Check if this is current user's message
+            const isMyMessage = currentUserId && (
+              (m.role === "USER" && isOwner) || // My question (if I'm the owner)
+              (m.role === "ASSISTANT" && m.responderId === currentUserId) // My response
+            );
+
+            // My messages go to the right without avatar/name
+            if (isMyMessage) {
+              return {
+                id: m.id,
+                role: "user" as const,
+                content: m.content,
+                timestamp: new Date(m.createdAt),
+              };
+            }
+
+            // If viewing someone else's chat, show their USER messages on the left with avatar
+            if (!isOwner && m.role === "USER") {
+              return {
+                id: m.id,
+                role: "assistant" as const,
+                content: m.content,
+                timestamp: new Date(m.createdAt),
+                responder: {
+                  displayName: session.user?.displayName || null,
+                  avatarUrl: session.user?.avatarUrl || null,
+                  isAnonymous: session.isAnonymous,
+                },
+              };
+            }
+
+            // Other ASSISTANT messages (AI or others' responses) on the left
+            return {
+              id: m.id,
+              role: "assistant" as const,
+              content: m.content,
+              timestamp: new Date(m.createdAt),
+              responder: m.responder ? {
+                displayName: m.responder.displayName,
+                avatarUrl: m.responder.avatarUrl,
+                isAnonymous: false,
+              } : undefined, // undefined = AI
+            };
+          })
         );
       } catch (err) {
         console.error("Error fetching session:", err);
@@ -86,52 +146,115 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+    if (!inputValue.trim() || isLoading || !sessionInfo) return;
 
-    const userMessage: LocalMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    };
+    const isOwner = sessionInfo.isOwner;
+    const isPublic = sessionInfo.consultType === "PUBLIC";
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
-    setIsLoading(true);
-    setError(undefined);
-
-    try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.content }),
-      });
-
-      if (!res.ok) {
-        throw new Error("メッセージの送信に失敗しました");
-      }
-
-      const data = await res.json();
-
-      if (data.isCrisis && typeof window !== "undefined") {
-        const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-        if (!disabled) {
-          setShowCrisisAlert(true);
-        }
-      }
-
-      const assistantMessage: LocalMessage = {
-        id: data.assistantMessage.id,
-        role: "assistant",
-        content: data.response,
+    // For owner or when responding to public consultation
+    if (isOwner) {
+      // Owner posting a message (could be question or follow-up)
+      const userMessage: LocalMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: inputValue.trim(),
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    } finally {
-      setIsLoading(false);
+      setMessages((prev) => [...prev, userMessage]);
+      setInputValue("");
+      setIsLoading(true);
+      setError(undefined);
+
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userMessage.content }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "メッセージの送信に失敗しました");
+        }
+
+        const data = await res.json();
+
+        // Only for PRIVATE consultations, we get AI response
+        if (sessionInfo.consultType === "PRIVATE" && data.assistantMessage) {
+          if (data.isCrisis && typeof window !== "undefined") {
+            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+            if (!disabled) {
+              setShowCrisisAlert(true);
+            }
+          }
+
+          const assistantMessage: LocalMessage = {
+            id: data.assistantMessage.id,
+            role: "assistant",
+            content: data.response,
+            timestamp: new Date(),
+          };
+
+          setMessages((prev) => [...prev, assistantMessage]);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (isPublic) {
+      // Non-owner responding to public consultation
+      const responseContent = inputValue.trim();
+      setInputValue("");
+      setIsLoading(true);
+      setError(undefined);
+
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/respond`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: responseContent }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "回答の送信に失敗しました");
+        }
+
+        const data = await res.json();
+
+        // Get current user info for display
+        const meRes = await fetch("/api/auth/me");
+        const currentUser = meRes.ok ? await meRes.json() : null;
+
+        // Add the response as an assistant message with responder info
+        const responseMessage: LocalMessage = {
+          id: data.message.id,
+          role: "assistant",
+          content: responseContent,
+          timestamp: new Date(),
+          responder: currentUser ? {
+            displayName: currentUser.profile?.displayName || null,
+            avatarUrl: currentUser.profile?.avatarUrl || null,
+            isAnonymous: false,
+          } : null,
+        };
+
+        setMessages((prev) => [...prev, responseMessage]);
+
+        // Show reward message if applicable
+        if (data.reward && data.reward > 0) {
+          // Could add a toast notification here
+          console.log(`+${data.reward} YAMI を獲得しました！`);
+        } else if (data.rewardCapped) {
+          console.log("本日の報酬上限に達しています");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -231,7 +354,13 @@ export default function ChatSessionPage({ params }: PageProps) {
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="相談してみましょう"
+              placeholder={
+                sessionInfo?.isOwner
+                  ? sessionInfo.consultType === "PRIVATE"
+                    ? "相談してみましょう"
+                    : "メッセージを入力..."
+                  : "回答を入力..."
+              }
               className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
               rows={1}
               onKeyDown={handleKeyDown}

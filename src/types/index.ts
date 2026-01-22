@@ -356,6 +356,12 @@ export interface ResponderInfo {
 }
 
 export interface ChatSessionWithMessages extends ChatSession {
+  user?: {
+    id: string;
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null;
   messages: ChatMessage[];
 }
 

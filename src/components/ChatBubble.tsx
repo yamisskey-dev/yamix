@@ -6,6 +6,7 @@ import Image from "next/image";
 interface ResponderInfo {
   displayName: string | null;
   avatarUrl: string | null;
+  isAnonymous?: boolean; // 匿名かどうか
 }
 
 interface ChatBubbleProps {
@@ -13,7 +14,7 @@ interface ChatBubbleProps {
   content: string;
   timestamp?: Date;
   isLoading?: boolean;
-  responder?: ResponderInfo; // 人間回答者の情報
+  responder?: ResponderInfo; // 人間の情報（相談者または回答者）
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -24,7 +25,8 @@ export const ChatBubble = memo(function ChatBubble({
   responder,
 }: ChatBubbleProps) {
   const isUser = role === "user";
-  const isHumanResponse = !isUser && responder;
+  const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
+  const isAI = !isUser && !isHuman; // 右側でなく、人間でもない場合はAI
 
   if (isLoading) {
     return (
@@ -40,23 +42,30 @@ export const ChatBubble = memo(function ChatBubble({
 
   return (
     <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-slide-up`}>
-      {/* Avatar for assistant */}
+      {/* Avatar for assistant or human */}
       {!isUser && (
         <div className="chat-image avatar">
-          {isHumanResponse ? (
-            // Human responder avatar
+          {isHuman ? (
+            // Human avatar (questioner or responder)
             <div className="w-8 h-8 rounded-full ring-2 ring-secondary/30">
-              {responder.avatarUrl ? (
+              {responder!.isAnonymous ? (
+                // Anonymous user
+                <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/70">
+                  <span className="text-lg">😎</span>
+                </div>
+              ) : responder!.avatarUrl ? (
+                // User with avatar
                 <Image
-                  src={responder.avatarUrl}
-                  alt={responder.displayName || "回答者"}
+                  src={responder!.avatarUrl}
+                  alt={responder!.displayName || "ユーザー"}
                   width={32}
                   height={32}
                   className="rounded-full"
                 />
               ) : (
+                // User without avatar - show initial
                 <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
-                  {(responder.displayName || "?").charAt(0).toUpperCase()}
+                  {(responder!.displayName || "?").charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
@@ -69,14 +78,14 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Responder name for human responses */}
-      {isHumanResponse && (
+      {/* Name for human messages */}
+      {isHuman && (
         <div className="chat-header text-xs text-secondary font-medium">
-          {responder.displayName || "匿名の回答者"}
+          {responder!.isAnonymous ? "匿名さん" : (responder!.displayName || "ユーザー")}
         </div>
       )}
 
-      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHumanResponse ? "chat-human-response" : ""} shadow-sm`}>
+      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-sm`}>
         <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
       </div>
 
