@@ -148,6 +148,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({
         ...response,
         user: {
+          id: user.id,
           handle: user.handle,
           displayName: user.profile?.displayName || null,
           avatarUrl: user.profile?.avatarUrl || null,
@@ -221,6 +222,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({
         ...response,
         user: {
+          id: targetUser.id,
           handle: decodedHandle,
           displayName: null,
           avatarUrl: null,

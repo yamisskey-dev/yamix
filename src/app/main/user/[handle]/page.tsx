@@ -10,6 +10,7 @@ interface PageProps {
 }
 
 interface UserProfile {
+  id: string;
   handle: string;
   displayName: string | null;
   avatarUrl: string | null;
@@ -41,6 +42,9 @@ export default function UserProfilePage({ params }: PageProps) {
   const [currentUserHandle, setCurrentUserHandle] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockLoading, setIsBlockLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const isOwnProfile = currentUserHandle === decodedHandle;
 
   const fetchTimeline = useCallback(async () => {
@@ -63,6 +67,11 @@ export default function UserProfilePage({ params }: PageProps) {
 
       const consultData: UserTimelineResponse = await consultRes.json();
       setUser(consultData.user);
+
+      // Get userId from user object
+      if (consultData.user?.id) {
+        setUserId(consultData.user.id);
+      }
 
       let allItems = [...consultData.consultations];
 
@@ -128,6 +137,74 @@ export default function UserProfilePage({ params }: PageProps) {
     fetchWalletAndStats();
   }, [isOwnProfile]);
 
+  // Check if user is blocked (for other profiles)
+  useEffect(() => {
+    if (isOwnProfile || !currentUserHandle || !user) return;
+
+    const checkBlockStatus = async () => {
+      try {
+        const res = await fetch("/api/users/block");
+        if (res.ok) {
+          const data = await res.json();
+          const blocked = data.blocks.some(
+            (block: any) => block.blockedUser?.id === user.id
+          );
+          setIsBlocked(blocked);
+        }
+      } catch (err) {
+        console.error("Failed to check block status:", err);
+      }
+    };
+    checkBlockStatus();
+  }, [isOwnProfile, currentUserHandle, user]);
+
+  const handleBlockToggle = async () => {
+    if (!userId && !decodedHandle) return;
+
+    setIsBlockLoading(true);
+    try {
+      if (isBlocked) {
+        // Unblock - we need userId for this
+        if (!userId) {
+          alert("ブロック解除に失敗しました");
+          return;
+        }
+        const res = await fetch(`/api/users/block/${userId}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setIsBlocked(false);
+        } else {
+          alert("ブロック解除に失敗しました");
+        }
+      } else {
+        // Block - we need userId for this too
+        // We need to get userId first from somewhere
+        // Let's try to get it from the timeline API user object
+        if (!userId) {
+          alert("ブロックに失敗しました");
+          return;
+        }
+        const res = await fetch("/api/users/block", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ blockedUserId: userId }),
+        });
+        if (res.ok) {
+          setIsBlocked(true);
+        } else {
+          const data = await res.json();
+          alert(data.error || "ブロックに失敗しました");
+        }
+      }
+    } catch (err) {
+      console.error("Block toggle error:", err);
+      alert("操作に失敗しました");
+    } finally {
+      setIsBlockLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -180,6 +257,23 @@ export default function UserProfilePage({ params }: PageProps) {
                 <h1 className="text-xl font-bold truncate">{displayName}</h1>
                 <p className="text-sm text-base-content/50 truncate">{decodedHandle}</p>
               </div>
+
+              {/* Block/Unblock button (only for other profiles) */}
+              {!isOwnProfile && currentUserHandle && (
+                <button
+                  onClick={handleBlockToggle}
+                  disabled={isBlockLoading || !userId}
+                  className={`btn btn-sm ${isBlocked ? "btn-ghost" : "btn-error btn-outline"}`}
+                >
+                  {isBlockLoading ? (
+                    <span className="loading loading-spinner loading-xs" />
+                  ) : isBlocked ? (
+                    "ブロック解除"
+                  ) : (
+                    "ブロック"
+                  )}
+                </button>
+              )}
             </div>
 
             {/* YAMI bar (own profile only) */}
