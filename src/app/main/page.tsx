@@ -20,6 +20,7 @@ export default function NewChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [allowAnonymousResponses, setAllowAnonymousResponses] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -60,6 +61,7 @@ export default function NewChatPage() {
         body: JSON.stringify({
           consultType,
           isAnonymous: consultType === "PUBLIC" ? isAnonymous : false,
+          allowAnonymousResponses: consultType === "PUBLIC" ? allowAnonymousResponses : true,
         }),
       });
 
@@ -157,82 +159,104 @@ export default function NewChatPage() {
       {/* Input Area */}
       <div className="p-4">
         <div className="max-w-6xl mx-auto">
-          {/* Consult Type Selection - シンプル版 */}
-          <div className="mb-2 flex items-center justify-between text-xs text-base-content/60">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer hover:text-base-content/80 transition-colors">
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm toggle-primary"
-                  checked={consultType === "PUBLIC"}
-                  onChange={(e) => {
-                    setConsultType(e.target.checked ? "PUBLIC" : "PRIVATE");
-                    if (!e.target.checked) setIsAnonymous(false);
+          <div className="bg-base-200/50 rounded-2xl border border-base-300/50 focus-within:border-primary/50 transition-colors">
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="相談してみましょう"
+              className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 focus:outline-none"
+              rows={1}
+              onKeyDown={handleKeyDown}
+              disabled={isLoading}
+            />
+
+            {/* Footer with options and submit button */}
+            <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
+              {/* Left side: Options */}
+              <div className="flex items-center gap-1">
+                {/* Consult Type Toggle */}
+                <button
+                  type="button"
+                  className={`btn btn-xs btn-ghost ${
+                    consultType === "PRIVATE" ? "opacity-100" : "opacity-50"
+                  }`}
+                  onClick={() => {
+                    setConsultType("PRIVATE");
+                    setIsAnonymous(false);
                   }}
                   disabled={isLoading}
-                />
-                <span>
-                  {consultType === "PRIVATE" ? (
-                    <>プライベート相談（AI専用・1 YAMI）</>
-                  ) : (
-                    <>公開相談（誰でも回答可能・3 YAMI）</>
-                  )}
-                </span>
-              </label>
+                  title="プライベート相談（AI専用）"
+                >
+                  <span className="text-base">🔒</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs btn-ghost ${
+                    consultType === "PUBLIC" ? "opacity-100" : "opacity-50"
+                  }`}
+                  onClick={() => setConsultType("PUBLIC")}
+                  disabled={isLoading}
+                  title="公開相談（誰でも回答可能）"
+                >
+                  <span className="text-base">🌐</span>
+                </button>
 
-              {consultType === "PUBLIC" && (
-                <label className="flex items-center gap-1.5 cursor-pointer hover:text-base-content/80 transition-colors">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-xs"
-                    checked={isAnonymous}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
-                    disabled={isLoading}
-                  />
-                  <span>匿名</span>
-                </label>
-              )}
+                {/* Public options */}
+                {consultType === "PUBLIC" && (
+                  <>
+                    <div className="w-px h-4 bg-base-300 mx-1" />
+                    <button
+                      type="button"
+                      className={`btn btn-xs btn-ghost ${
+                        isAnonymous ? "opacity-100" : "opacity-50"
+                      }`}
+                      onClick={() => setIsAnonymous(!isAnonymous)}
+                      disabled={isLoading}
+                      title="匿名で相談"
+                    >
+                      <span className="text-base">😎</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn btn-xs btn-ghost ${
+                        !allowAnonymousResponses ? "opacity-100 text-error" : "opacity-50"
+                      }`}
+                      onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
+                      disabled={isLoading}
+                      title={allowAnonymousResponses ? "匿名回答を許可" : "匿名回答を拒否"}
+                    >
+                      <span className="text-base">{allowAnonymousResponses ? "🙂" : "🚫"}</span>
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Right side: Submit button */}
+              <button
+                onClick={handleSubmit}
+                className={`btn btn-primary btn-circle btn-sm ${
+                  isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
+                }`}
+                disabled={isLoading || !inputValue.trim()}
+              >
+                {isLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="flex items-center gap-2"
-          >
-            <div className="flex-1 relative">
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder="相談してみましょう"
-                className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
-                rows={1}
-                onKeyDown={handleKeyDown}
-                disabled={isLoading}
-              />
-            </div>
-            <button
-              type="submit"
-              className={`btn btn-primary btn-circle flex-shrink-0 ${
-                isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
-              }`}
-              disabled={isLoading || !inputValue.trim()}
-            >
-              {isLoading ? (
-                <span className="loading loading-spinner loading-sm" />
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                </svg>
-              )}
-            </button>
-          </form>
-          <p className="text-xs text-center text-base-content/30 mt-2">
+          <p className="text-xs text-center text-base-content/40 mt-2">
             Shift + Enter で改行
           </p>
         </div>

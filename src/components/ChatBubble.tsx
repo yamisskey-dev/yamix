@@ -11,6 +11,7 @@ interface ResponderInfo {
   avatarUrl: string | null;
   isAnonymous?: boolean; // 匿名かどうか
   handle?: string; // ユーザーハンドル（プロフィールリンク用）
+  responderId?: string; // ブロック用のID
 }
 
 interface ChatBubbleProps {
@@ -19,6 +20,8 @@ interface ChatBubbleProps {
   timestamp?: Date;
   isLoading?: boolean;
   responder?: ResponderInfo; // 人間の情報（相談者または回答者）
+  isSessionOwner?: boolean; // セッション所有者かどうか
+  onBlock?: (userId: string) => void; // ブロックコールバック
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -27,10 +30,15 @@ export const ChatBubble = memo(function ChatBubble({
   timestamp,
   isLoading,
   responder,
+  isSessionOwner,
+  onBlock,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
   const isAI = !isUser && !isHuman; // 右側でなく、人間でもない場合はAI
+
+  // Show block button if: session owner, this is a human response (not owner's message), and has responderId
+  const canBlock = isSessionOwner && !isUser && isHuman && responder!.responderId && onBlock;
 
   if (isLoading) {
     return (
@@ -110,6 +118,19 @@ export const ChatBubble = memo(function ChatBubble({
       {!isUser && isHuman && responder!.isAnonymous && responder!.displayName && (
         <div className="chat-header opacity-50">
           <span className="text-xs">{responder!.displayName}</span>
+        </div>
+      )}
+
+      {/* Block button for session owner */}
+      {canBlock && (
+        <div className="chat-header flex items-center gap-1">
+          <button
+            onClick={() => onBlock!(responder!.responderId!)}
+            className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:btn-error"
+            title="このユーザーをブロック"
+          >
+            🚫
+          </button>
         </div>
       )}
 

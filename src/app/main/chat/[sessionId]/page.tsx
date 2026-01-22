@@ -14,6 +14,7 @@ interface ResponderInfo {
   avatarUrl: string | null;
   isAnonymous?: boolean;
   handle?: string;
+  responderId?: string;
 }
 
 interface LocalMessage {
@@ -133,6 +134,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 avatarUrl: m.isAnonymous ? null : m.responder.avatarUrl,
                 isAnonymous: m.isAnonymous,
                 handle: m.isAnonymous ? undefined : m.responder.handle,
+                responderId: m.responderId || undefined,
               } : undefined, // undefined = AI
             };
           })
@@ -160,6 +162,32 @@ export default function ChatSessionPage({ params }: PageProps) {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [inputValue]);
+
+  const handleBlock = async (userId: string) => {
+    if (!confirm("このユーザーをブロックしますか？\n\nブロックすると：\n• このユーザーの匿名・非匿名すべての回答がブロックされます\n• あなたの公開相談に回答できなくなります")) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/users/block", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockedUserId: userId }),
+      });
+
+      if (res.ok) {
+        alert("ユーザーをブロックしました");
+        // Reload to reflect the block
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "ブロックに失敗しました");
+      }
+    } catch (error) {
+      console.error("Block error:", error);
+      alert("ブロックに失敗しました");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -381,6 +409,8 @@ export default function ChatSessionPage({ params }: PageProps) {
               content={msg.content}
               timestamp={msg.timestamp}
               responder={msg.responder || undefined}
+              isSessionOwner={sessionInfo?.isOwner}
+              onBlock={handleBlock}
             />
           ))}
 
@@ -398,26 +428,9 @@ export default function ChatSessionPage({ params }: PageProps) {
 
       {/* Input Area */}
       <div className="p-4">
-        {/* Anonymous response checkbox (for non-owners in public consultations) */}
-        {sessionInfo && !sessionInfo.isOwner && sessionInfo.consultType === "PUBLIC" && (
-          <div className="max-w-6xl mx-auto mb-2">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
-                checked={isAnonymousResponse}
-                onChange={(e) => setIsAnonymousResponse(e.target.checked)}
-              />
-              <span className="opacity-70">匿名で回答</span>
-            </label>
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center gap-2 max-w-6xl mx-auto"
-        >
-          <div className="flex-1 relative">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-base-200/50 rounded-2xl border border-base-300/50 focus-within:border-primary/50 transition-colors">
+            {/* Textarea */}
             <textarea
               ref={textareaRef}
               value={inputValue}
@@ -429,36 +442,58 @@ export default function ChatSessionPage({ params }: PageProps) {
                     : "メッセージを入力..."
                   : "回答を入力..."
               }
-              className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
+              className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 focus:outline-none"
               rows={1}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
             />
-          </div>
-          <button
-            type="submit"
-            className={`btn btn-primary btn-circle flex-shrink-0 ${
-              isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
-            }`}
-            disabled={isLoading || !inputValue.trim()}
-          >
-            {isLoading ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5"
+
+            {/* Footer with options and submit button */}
+            <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
+              {/* Left side: Options (anonymous response for non-owners in public consultations) */}
+              <div className="flex items-center gap-1">
+                {sessionInfo && !sessionInfo.isOwner && sessionInfo.consultType === "PUBLIC" && (
+                  <button
+                    type="button"
+                    className={`btn btn-xs btn-ghost ${
+                      isAnonymousResponse ? "opacity-100" : "opacity-50"
+                    }`}
+                    onClick={() => setIsAnonymousResponse(!isAnonymousResponse)}
+                    disabled={isLoading}
+                    title="匿名で回答"
+                  >
+                    <span className="text-base">😎</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Right side: Submit button */}
+              <button
+                onClick={handleSubmit}
+                className={`btn btn-primary btn-circle btn-sm ${
+                  isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
+                }`}
+                disabled={isLoading || !inputValue.trim()}
               >
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-              </svg>
-            )}
-          </button>
-        </form>
-        <p className="text-xs text-center text-base-content/30 mt-2">
-          Shift + Enter で改行
-        </p>
+                {isLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-4 h-4"
+                  >
+                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-center text-base-content/40 mt-2">
+            Shift + Enter で改行
+          </p>
+        </div>
       </div>
     </div>
   );

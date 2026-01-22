@@ -21,6 +21,16 @@ export default function SettingsPage() {
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
   const [promptError, setPromptError] = useState("");
+  const [blockedUsers, setBlockedUsers] = useState<Array<{
+    id: string;
+    blockedUser: {
+      id: string;
+      handle: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+    } | null;
+  }>>([]);
+  const [isLoadingBlocks, setIsLoadingBlocks] = useState(true);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,6 +47,23 @@ export default function SettingsPage() {
       }
     };
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchBlockedUsers = async () => {
+      try {
+        const res = await fetch("/api/users/block");
+        if (res.ok) {
+          const data = await res.json();
+          setBlockedUsers(data.blocks);
+        }
+      } catch (error) {
+        console.error("Failed to fetch blocked users:", error);
+      } finally {
+        setIsLoadingBlocks(false);
+      }
+    };
+    fetchBlockedUsers();
   }, []);
 
   const handleSaveCustomPrompt = async () => {
@@ -94,6 +121,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleUnblock = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/users/block/${userId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setBlockedUsers(blockedUsers.filter((b) => b.blockedUser?.id !== userId));
+      }
+    } catch (error) {
+      console.error("Failed to unblock user:", error);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     localStorage.removeItem("yamix_handle");
@@ -111,7 +151,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 p-4 pb-20 window:pb-4">
+    <div className="flex-1 overflow-y-auto p-4 pb-20 window:pb-4">
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Theme Section - Misskey style */}
         <div className="card bg-base-200 overflow-hidden">
@@ -283,6 +323,60 @@ export default function SettingsPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Blocked Users Section */}
+        <div className="card bg-base-200">
+          <div className="card-body">
+            <h2 className="card-title text-lg">ブロックリスト</h2>
+            <p className="text-sm text-base-content/60 mb-2">
+              ブロックしたユーザーはあなたの公開相談に回答できません。
+            </p>
+            {isLoadingBlocks ? (
+              <div className="flex justify-center py-4">
+                <span className="loading loading-spinner loading-sm" />
+              </div>
+            ) : blockedUsers.length === 0 ? (
+              <p className="text-sm text-base-content/40 py-4 text-center">
+                ブロックしているユーザーはいません
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {blockedUsers.map((block) => (
+                  <div
+                    key={block.id}
+                    className="flex items-center justify-between p-2 bg-base-300 rounded-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="avatar">
+                        <div className="w-8 h-8 rounded-full bg-base-content/10 flex items-center justify-center">
+                          {block.blockedUser?.avatarUrl ? (
+                            <img src={block.blockedUser.avatarUrl} alt="" />
+                          ) : (
+                            <span className="text-sm">👤</span>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {block.blockedUser?.displayName || block.blockedUser?.handle || "Unknown"}
+                        </p>
+                        <p className="text-xs text-base-content/60">
+                          @{block.blockedUser?.handle || "unknown"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => block.blockedUser && handleUnblock(block.blockedUser.id)}
+                    >
+                      解除
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
