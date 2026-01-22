@@ -106,8 +106,8 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Display name for anonymous users (User A, B, C, etc.) */}
-      {!isUser && isHuman && responder!.isAnonymous && (
+      {/* Display name for anonymous users (User A, B, C, etc.) - only show if they have a label */}
+      {!isUser && isHuman && responder!.isAnonymous && responder!.displayName && (
         <div className="chat-header opacity-50">
           <span className="text-xs">{responder!.displayName}</span>
         </div>

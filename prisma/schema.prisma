@@ -45,6 +45,8 @@ model User {
   wallet        Wallet?       // 1:1 relation - one user has one wallet
   chatSessions  ChatSession[] // AI相談セッション
   chatResponses ChatMessage[] @relation("ChatResponses") // 人間として回答したメッセージ
+  blockedBy     UserBlock[]   @relation("BlockedUser") // このユーザーをブロックしている人
+  blocking      UserBlock[]   @relation("BlockingUser") // このユーザーがブロックしている人
 
   @@map("users")
 }
@@ -277,19 +279,40 @@ enum ConsultType {
 }
 
 // ============================================
+// UserBlock - ユーザーブロック機能
+// Phase 2-3: 悪用防止のためのブロック機能
+// ============================================
+model UserBlock {
+  id         String   @id @default(cuid())
+  blockerId  String   // ブロックする人（相談者）
+  blockedId  String   // ブロックされる人（回答者）
+  createdAt  DateTime @default(now())
+
+  // Relations
+  blocker User @relation("BlockingUser", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlockedUser", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
+}
+
+// ============================================
 // ChatSession - 相談セッション（二層構造）
 // PRIVATE: AI専用、非公開（1 YAMI）
 // PUBLIC: 誰でも回答可能、タイムライン表示（3 YAMI）
 // ============================================
 model ChatSession {
-  id          String      @id @default(cuid())
-  userId      String
-  title       String?     // 最初のメッセージから自動生成
-  consultType ConsultType @default(PRIVATE) // 相談タイプ
-  isAnonymous Boolean     @default(false)    // 匿名投稿
-  category    String?                        // Phase 2用: カテゴリ（恋愛/仕事/メンタル等）
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id                       String      @id @default(cuid())
+  userId                   String
+  title                    String?     // 最初のメッセージから自動生成
+  consultType              ConsultType @default(PRIVATE) // 相談タイプ
+  isAnonymous              Boolean     @default(false)    // 匿名投稿
+  allowAnonymousResponses  Boolean     @default(true)     // 匿名回答を許可するか
+  category                 String?                        // Phase 2用: カテゴリ（恋愛/仕事/メンタル等）
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
 
   // Backward compatibility
   isPublic Boolean @default(false) // DEPRECATED: consultType=PUBLIC と同義

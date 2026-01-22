@@ -86,12 +86,20 @@ interface TransactionRecord {
   createdAt: Date;
 }
 
+interface UserBlockRecord {
+  id: string;
+  blockerId: string;
+  blockedId: string;
+  createdAt: Date;
+}
+
 interface ChatSessionRecord {
   id: string;
   userId: string;
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
+  allowAnonymousResponses: boolean;
   category: string | null;
   isPublic: boolean; // DEPRECATED: consultType=PUBLIC と同義
   createdAt: Date;
@@ -118,6 +126,7 @@ interface MemoryDB {
   transactions: Map<string, TransactionRecord>;
   chatSessions: Map<string, ChatSessionRecord>;
   chatMessages: Map<string, ChatMessageRecord>;
+  userBlocks: Map<string, UserBlockRecord>;
 }
 
 // Initialize in-memory storage
@@ -132,6 +141,7 @@ if (!globalForPrisma.memoryDB) {
     transactions: new Map(),
     chatSessions: new Map(),
     chatMessages: new Map(),
+    userBlocks: new Map(),
   };
 }
 

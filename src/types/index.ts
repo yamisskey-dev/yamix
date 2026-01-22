@@ -316,6 +316,16 @@ export interface WalletLink {
 }
 
 // ============================================
+// User Block types (Phase 2-3: 悪用防止)
+// ============================================
+export interface UserBlock {
+  id: string;
+  blockerId: string;   // ブロックする人（相談者）
+  blockedId: string;   // ブロックされる人（回答者）
+  createdAt: Date;
+}
+
+// ============================================
 // Chat Session types (二層構造の相談セッション)
 // ============================================
 export type MessageRole = "USER" | "ASSISTANT";
@@ -327,6 +337,7 @@ export interface ChatSession {
   title: string | null;
   consultType: ConsultType;       // 相談タイプ
   isAnonymous: boolean;           // 匿名投稿
+  allowAnonymousResponses: boolean; // 匿名回答を許可するか
   category: string | null;        // Phase 2用: カテゴリ
   isPublic: boolean;              // DEPRECATED: consultType=PUBLIC と同義
   createdAt: Date;

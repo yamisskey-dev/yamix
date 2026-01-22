@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
 // In-memory types
@@ -11,6 +12,7 @@ interface MemoryChatMessage {
   content: string;
   isCrisis: boolean;
   responderId?: string;
+  isAnonymous: boolean;
   createdAt: Date;
 }
 
@@ -40,6 +42,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const db = getPrismaClient();
 
+    // Check if the viewer is authenticated and viewing their own profile
+    const token = getTokenFromCookie(req.headers.get("cookie"));
+    let currentUserId: string | null = null;
+    if (token) {
+      const payload = await verifyJWT(token);
+      if (payload) {
+        currentUserId = payload.userId;
+      }
+    }
+
     if (db) {
       // Find user by handle
       const user = await db.user.findUnique({
@@ -51,11 +63,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      // Check if viewing own profile
+      const isOwnProfile = currentUserId === user.id;
+
       // Get user's responses (as responderId)
       const responses = await db.chatMessage.findMany({
         where: {
           responderId: user.id,
           role: "ASSISTANT",
+          ...(isOwnProfile ? {} : { isAnonymous: false }), // 他人のプロフィールでは匿名回答を除外
           session: {
             consultType: "PUBLIC", // Only public consultations
           },
@@ -106,11 +122,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           replies: [],
           createdAt: response.createdAt,
           isUserResponse: true, // このアイテムはユーザーの回答
-          responder: {
-            handle: user.handle,
-            displayName: user.profile?.displayName || null,
-            avatarUrl: user.profile?.avatarUrl || null,
-          },
+          responder: response.isAnonymous
+            ? null
+            : {
+                handle: user.handle,
+                displayName: user.profile?.displayName || null,
+                avatarUrl: user.profile?.avatarUrl || null,
+              },
         };
       });
 
@@ -137,12 +155,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
+      const isOwnProfile = currentUserId === targetUser.id;
+
       // Get user's responses
       const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
       const chatSessionsStore = memoryDB.chatSessions as unknown as Map<string, MemoryChatSession>;
 
       const userResponses = Array.from(chatMessagesStore.values())
-        .filter((m) => m.responderId === targetUser.id && m.role === "ASSISTANT")
+        .filter((m) => m.responderId === targetUser.id && m.role === "ASSISTANT" && (isOwnProfile || !m.isAnonymous))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       let startIndex = 0;
@@ -186,11 +206,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             replies: [],
             createdAt: response.createdAt,
             isUserResponse: true,
-            responder: {
-              handle: decodedHandle,
-              displayName: null,
-              avatarUrl: null,
-            },
+            responder: response.isAnonymous
+              ? null
+              : {
+                  handle: decodedHandle,
+                  displayName: null,
+                  avatarUrl: null,
+                },
           } as TimelineConsultation;
         })
         .filter((c): c is TimelineConsultation => c !== null);

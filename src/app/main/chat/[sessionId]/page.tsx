@@ -112,10 +112,10 @@ export default function ChatSessionPage({ params }: PageProps) {
                 content: m.content,
                 timestamp: new Date(m.createdAt),
                 responder: {
-                  displayName: session.user?.displayName || null,
-                  avatarUrl: session.user?.avatarUrl || null,
+                  displayName: session.isAnonymous ? null : (session.user?.displayName || null),
+                  avatarUrl: session.isAnonymous ? null : (session.user?.avatarUrl || null),
                   isAnonymous: session.isAnonymous,
-                  handle: session.user?.handle,
+                  handle: session.isAnonymous ? undefined : session.user?.handle,
                 },
               };
             }

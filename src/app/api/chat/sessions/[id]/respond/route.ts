@@ -13,6 +13,7 @@ interface MemoryChatSession {
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
+  allowAnonymousResponses: boolean;
   category: string | null;
   isPublic: boolean; // DEPRECATED
   createdAt: Date;
@@ -111,6 +112,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json(
           { error: "自分の相談には回答できません" },
           { status: 400 }
+        );
+      }
+
+      // Check if responder is blocked by session owner
+      const isBlocked = await db.userBlock.findUnique({
+        where: {
+          blockerId_blockedId: {
+            blockerId: sessionWithMessages.userId,
+            blockedId: payload.userId,
+          },
+        },
+      });
+
+      if (isBlocked) {
+        return NextResponse.json(
+          { error: "この相談には回答できません" },
+          { status: 403 }
+        );
+      }
+
+      // Check if anonymous responses are allowed (if responding anonymously)
+      if (isAnonymous && !sessionWithMessages.allowAnonymousResponses) {
+        return NextResponse.json(
+          { error: "この相談は匿名回答を受け付けていません" },
+          { status: 403 }
         );
       }
 
@@ -318,6 +344,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json(
           { error: "自分の相談には回答できません" },
           { status: 400 }
+        );
+      }
+
+      // Check if responder is blocked by session owner
+      const blockKey = `${session.userId}_${payload.userId}`;
+      const isBlocked = Array.from(memoryDB.userBlocks.values()).some(
+        (block) => block.blockerId === session.userId && block.blockedId === payload.userId
+      );
+
+      if (isBlocked) {
+        return NextResponse.json(
+          { error: "この相談には回答できません" },
+          { status: 403 }
+        );
+      }
+
+      // Check if anonymous responses are allowed (if responding anonymously)
+      if (isAnonymous && !session.allowAnonymousResponses) {
+        return NextResponse.json(
+          { error: "この相談は匿名回答を受け付けていません" },
+          { status: 403 }
         );
       }
 

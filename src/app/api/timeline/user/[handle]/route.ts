@@ -91,7 +91,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const sessions = await db.chatSession.findMany({
         where: {
           userId: user.id,
-          ...(isOwnProfile ? {} : { consultType: "PUBLIC" }), // 公開相談のみ（自分のプロフィールでは全て表示）
+          ...(isOwnProfile ? {} : { consultType: "PUBLIC", isAnonymous: false }), // 公開相談のみ、かつ匿名でない（自分のプロフィールでは全て表示）
         },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
@@ -167,7 +167,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       // Get user's sessions (public only, or all if own profile)
       const userSessions = Array.from(chatSessionsStore.values())
-        .filter((s) => s.userId === targetUser.id && (isOwnProfile || s.consultType === "PUBLIC"))
+        .filter((s) => s.userId === targetUser.id && (isOwnProfile || (s.consultType === "PUBLIC" && !s.isAnonymous)))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       let startIndex = 0;
