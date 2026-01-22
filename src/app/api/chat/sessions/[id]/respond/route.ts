@@ -26,6 +26,7 @@ interface MemoryChatMessage {
   content: string;
   isCrisis: boolean;
   responderId?: string;
+  isAnonymous: boolean;
   createdAt: Date;
 }
 
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params;
 
-  let body: { content: string };
+  let body: { content: string; isAnonymous?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   if (!body.content || body.content.trim().length === 0) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
   }
+
+  const isAnonymous = body.isAnonymous ?? false;
 
   try {
     const db = getPrismaClient();
@@ -152,6 +155,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
               role: "USER",
               content: body.content.trim(),
               responderId: payload.userId, // Track who asked this question
+              isAnonymous,
               isCrisis: false,
             },
           });
@@ -163,6 +167,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
               role: "ASSISTANT",
               content: yamiiResponse.response,
               responderId: null, // AI response
+              isAnonymous: false, // AI is never anonymous
               isCrisis: yamiiResponse.is_crisis,
             },
           });
@@ -233,6 +238,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             role: "ASSISTANT",
             content: body.content.trim(),
             responderId: payload.userId,
+            isAnonymous,
             isCrisis: false,
           },
         });
@@ -362,6 +368,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           role: "USER",
           content: body.content.trim(),
           responderId: payload.userId, // Track who asked this question
+          isAnonymous,
           isCrisis: false,
           createdAt: now,
         };
@@ -375,6 +382,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           role: "ASSISTANT",
           content: yamiiResponse.response,
           responderId: undefined, // AI response
+          isAnonymous: false, // AI is never anonymous
           isCrisis: yamiiResponse.is_crisis,
           createdAt: new Date(now.getTime() + 1),
         };
@@ -424,6 +432,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         role: "ASSISTANT",
         content: body.content.trim(),
         responderId: payload.userId,
+        isAnonymous,
         isCrisis: false,
         createdAt: new Date(),
       };
