@@ -388,7 +388,7 @@ export interface TimelineConsultation {
   id: string;
   sessionId: string;
   question: string;
-  answer: string; // 最初のAI回答
+  answer: string | null; // 最初のAI回答（PUBLIC相談では人間の回答待ちでnullの場合あり）
   consultType: ConsultType; // 相談タイプ
   isAnonymous: boolean; // 匿名投稿
   user: {

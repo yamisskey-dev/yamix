@@ -171,23 +171,25 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Call Yamii API
-    let yamiiResponse;
-    try {
-      yamiiResponse = await yamiiClient.sendCounselingMessage(
-        userMessage,
-        payload.userId,
-        {
-          sessionId: sessionId,
-          conversationHistory: existingMessages,
-        }
-      );
-    } catch (error) {
-      logger.error("Yamii API error", { sessionId }, error);
-      return NextResponse.json(
-        { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
-        { status: 503 }
-      );
+    // Call Yamii API only for PRIVATE consultations
+    let yamiiResponse = null;
+    if (session.consultType === "PRIVATE") {
+      try {
+        yamiiResponse = await yamiiClient.sendCounselingMessage(
+          userMessage,
+          payload.userId,
+          {
+            sessionId: sessionId,
+            conversationHistory: existingMessages,
+          }
+        );
+      } catch (error) {
+        logger.error("Yamii API error", { sessionId }, error);
+        return NextResponse.json(
+          { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
+          { status: 503 }
+        );
+      }
     }
 
     // Save messages to database
@@ -205,7 +207,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           throw new Error("Wallet not found");
         }
 
-        // Deduct AI consult cost
+        // Deduct consult cost
         await tx.wallet.update({
           where: { id: wallet.id },
           data: { balance: { decrement: consultCost } },
@@ -216,7 +218,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           data: {
             senderId: wallet.id,
             amount: -consultCost,
-            txType: "CONSULT_AI",
+            txType: session.consultType === "PRIVATE" ? "CONSULT_AI" : "CONSULT_HUMAN",
           },
         });
 
@@ -230,15 +232,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
 
-        // Create assistant message
-        const assistantMsg = await tx.chatMessage.create({
-          data: {
-            sessionId,
-            role: "ASSISTANT",
-            content: yamiiResponse.response,
-            isCrisis: yamiiResponse.is_crisis,
-          },
-        });
+        // Create assistant message only for PRIVATE consultations
+        let assistantMsg = null;
+        if (session.consultType === "PRIVATE" && yamiiResponse) {
+          assistantMsg = await tx.chatMessage.create({
+            data: {
+              sessionId,
+              role: "ASSISTANT",
+              content: yamiiResponse.response,
+              isCrisis: yamiiResponse.is_crisis,
+            },
+          });
+        }
 
         // Update session title if first message
         if (isFirstMessage) {
@@ -262,8 +267,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({
         userMessage: result.userMsg,
         assistantMessage: result.assistantMsg,
-        response: yamiiResponse.response,
-        isCrisis: yamiiResponse.is_crisis,
+        response: yamiiResponse?.response || null,
+        isCrisis: yamiiResponse?.is_crisis || false,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
       });
     } else {
@@ -276,7 +281,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
       }
 
-      // Deduct AI consult cost
+      // Deduct consult cost
       wallet.balance -= consultCost;
 
       const userMsg = {
@@ -289,15 +294,19 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       };
       chatMessagesStore.set(userMsg.id, userMsg);
 
-      const assistantMsg = {
-        id: generateId(),
-        sessionId,
-        role: "ASSISTANT" as const,
-        content: yamiiResponse.response,
-        isCrisis: yamiiResponse.is_crisis,
-        createdAt: new Date(now.getTime() + 1),
-      };
-      chatMessagesStore.set(assistantMsg.id, assistantMsg);
+      // Create assistant message only for PRIVATE consultations
+      let assistantMsg = null;
+      if (session.consultType === "PRIVATE" && yamiiResponse) {
+        assistantMsg = {
+          id: generateId(),
+          sessionId,
+          role: "ASSISTANT" as const,
+          content: yamiiResponse.response,
+          isCrisis: yamiiResponse.is_crisis,
+          createdAt: new Date(now.getTime() + 1),
+        };
+        chatMessagesStore.set(assistantMsg.id, assistantMsg);
+      }
 
       // Update session
       const sessionData = chatSessionsStore.get(sessionId)!;
@@ -310,8 +319,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({
         userMessage: userMsg,
         assistantMessage: assistantMsg,
-        response: yamiiResponse.response,
-        isCrisis: yamiiResponse.is_crisis,
+        response: yamiiResponse?.response || null,
+        isCrisis: yamiiResponse?.is_crisis || false,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
       });
     }

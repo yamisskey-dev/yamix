@@ -222,17 +222,23 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           {consultation.question}
         </p>
 
-        {/* First AI answer - always visible */}
-        {consultation.answer && (
+        {/* First AI answer or waiting message */}
+        {consultation.answer ? (
           <div className="mt-2 pl-3 border-l-2 border-primary/30">
             <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5] line-clamp-3">
               {consultation.answer}
             </p>
           </div>
-        )}
+        ) : replyCount === 0 ? (
+          <div className="mt-2 pl-3 border-l-2 border-base-content/10">
+            <p className="text-[0.9em] text-base-content/40 italic">
+              まだ回答がありません
+            </p>
+          </div>
+        ) : null}
 
         {/* More replies indicator */}
-        {replyCount > 1 && (
+        {replyCount > 0 && (consultation.answer ? replyCount > 1 : true) && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -240,14 +246,20 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             }}
             className="mt-2 text-sm text-primary/80 hover:text-primary transition-colors"
           >
-            {showReplies ? "閉じる" : `他${replyCount - 1}件の回答を見る`}
+            {showReplies
+              ? "閉じる"
+              : consultation.answer
+                ? `他${replyCount - 1}件の回答を見る`
+                : `${replyCount}件の回答を見る`
+            }
           </button>
         )}
 
         {/* Additional replies (hidden by default) */}
-        {showReplies && localReplies && localReplies.length > 1 && (
+        {showReplies && localReplies && localReplies.length > 0 && (
           <div className="mt-2 space-y-2 pl-3 border-l-2 border-base-content/10">
-            {localReplies.slice(1).map((reply) => {
+            {/* answerがnullの場合は全reply、ある場合は2番目以降 */}
+            {(consultation.answer ? localReplies.slice(1) : localReplies).map((reply) => {
               const isAI = !reply.responder;
               const responderName = isAI
                 ? "AI"

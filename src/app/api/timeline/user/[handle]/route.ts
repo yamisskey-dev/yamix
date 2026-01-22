@@ -116,7 +116,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const items = sessions.slice(0, limit);
 
       const consultations: TimelineConsultation[] = items
-        .filter((s) => s.messages.length >= 2)
+        .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
         .map((s) => {
           const userMsg = s.messages.find((m) => m.role === "USER");
           const assistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             id: s.id,
             sessionId: s.id,
             question: userMsg?.content || "",
-            answer: assistantMsg?.content || "",
+            answer: assistantMsg?.content || null, // PUBLIC相談ではnullの場合あり
             consultType: s.consultType,
             isAnonymous: s.isAnonymous,
             user: s.isAnonymous ? null : { // 匿名の場合はnull

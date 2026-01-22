@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
       const items = sessions.slice(0, limit) as PrismaSessionWithMessages[];
 
       const consultations: TimelineConsultation[] = items
-        .filter((s) => s.messages.length >= 2)
+        .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
         .map((s) => {
           const userMsg = s.messages.find((m) => m.role === "USER");
           const firstAssistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
             id: s.id,
             sessionId: s.id,
             question: userMsg?.content || "",
-            answer: firstAssistantMsg?.content || "",
+            answer: firstAssistantMsg?.content || null, // PUBLIC相談ではnullの場合あり
             consultType: s.consultType,
             isAnonymous: s.isAnonymous,
             user: s.isAnonymous ? null : { // 匿名の場合はnull
