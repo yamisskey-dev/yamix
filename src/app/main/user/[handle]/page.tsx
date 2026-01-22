@@ -187,35 +187,35 @@ export default function UserProfilePage({ params }: PageProps) {
       <div className="max-w-2xl mx-auto p-4">
         {/* Profile Header - Misskey style */}
         <div className="card bg-base-100 shadow-xl overflow-hidden mb-6">
-          {/* Banner */}
-          <div className="h-24 bg-gradient-to-r from-primary/30 via-secondary/20 to-primary/30" />
-
           {/* Profile Content */}
-          <div className="px-6 pb-6">
-            {/* Avatar - overlapping banner */}
-            <div className="-mt-12 mb-4">
+          <div className="px-6 py-6">
+            {/* Avatar and Name - Horizontal Layout */}
+            <div className="flex items-center gap-4 mb-4">
+              {/* Avatar */}
               <div className="avatar">
-                <div className="w-24 h-24 rounded-full ring-4 ring-base-100 bg-base-100">
+                <div className="w-20 h-20 rounded-full">
                   {user?.avatarUrl ? (
                     <Image
                       src={user.avatarUrl}
                       alt={displayName}
-                      width={96}
-                      height={96}
+                      width={80}
+                      height={80}
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-3xl font-bold rounded-full">
+                    <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-2xl font-bold rounded-full">
                       {displayName.charAt(0).toUpperCase()}
                     </div>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Name */}
-            <h1 className="text-xl font-bold mb-1">{displayName}</h1>
-            <p className="text-sm text-base-content/50 mb-3">{decodedHandle}</p>
+              {/* Name and Handle */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold truncate">{displayName}</h1>
+                <p className="text-sm text-base-content/50 truncate">{decodedHandle}</p>
+              </div>
+            </div>
 
             {/* YAMI bar (own profile only) */}
             {isOwnProfile && wallet && (
