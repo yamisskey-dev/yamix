@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
 // In-memory types
@@ -46,7 +47,7 @@ interface RouteParams {
   params: Promise<{ handle: string }>;
 }
 
-// GET /api/timeline/user/[handle] - Get user's public consultations
+// GET /api/timeline/user/[handle] - Get user's consultations (public only, or all if viewing own profile)
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { handle } = await params;
   const decodedHandle = decodeURIComponent(handle);
@@ -57,6 +58,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   try {
     const db = getPrismaClient();
+
+    // Check if the viewer is authenticated and viewing their own profile
+    const token = getTokenFromCookie(req.headers.get("cookie"));
+    let currentUserId: string | null = null;
+    if (token) {
+      const payload = await verifyJWT(token);
+      if (payload) {
+        currentUserId = payload.userId;
+      }
+    }
 
     if (db) {
       // Find user by handle
@@ -69,11 +80,14 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
       }
 
-      // Get user's public sessions
+      // Check if viewing own profile
+      const isOwnProfile = currentUserId === user.id;
+
+      // Get user's sessions (public only, or all if own profile)
       const sessions = await db.chatSession.findMany({
         where: {
           userId: user.id,
-          isPublic: true,
+          ...(isOwnProfile ? {} : { isPublic: true }),
         },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
@@ -126,20 +140,31 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         },
       });
     } else {
-      // In-memory fallback - simplified since we don't have user data
-      const publicSessions = Array.from(chatSessionsStore.values())
-        .filter((s) => s.isPublic)
+      // In-memory fallback
+      // Find user by handle (simplified - assume handle matches)
+      const allUsers = Array.from(memoryDB.users.values());
+      const targetUser = allUsers.find(u => u.handle === decodedHandle);
+
+      if (!targetUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+
+      const isOwnProfile = currentUserId === targetUser.id;
+
+      // Get user's sessions (public only, or all if own profile)
+      const userSessions = Array.from(chatSessionsStore.values())
+        .filter((s) => s.userId === targetUser.id && (isOwnProfile || s.isPublic))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       let startIndex = 0;
       if (cursor) {
-        const cursorIndex = publicSessions.findIndex((s) => s.id === cursor);
+        const cursorIndex = userSessions.findIndex((s) => s.id === cursor);
         if (cursorIndex !== -1) {
           startIndex = cursorIndex + 1;
         }
       }
 
-      const sessions = publicSessions.slice(startIndex, startIndex + limit + 1);
+      const sessions = userSessions.slice(startIndex, startIndex + limit + 1);
       const hasMore = sessions.length > limit;
       const items = sessions.slice(0, limit);
 

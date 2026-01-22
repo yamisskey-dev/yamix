@@ -245,7 +245,7 @@ export default function UserProfilePage({ params }: PageProps) {
             <div className="flex border-t border-base-content/10 -mx-6 mt-4">
               <button className="flex-1 py-3 hover:bg-base-content/5 transition-colors text-center">
                 <div className="font-bold">{consultations.length}</div>
-                <div className="text-xs text-base-content/50">公開相談</div>
+                <div className="text-xs text-base-content/50">{isOwnProfile ? "相談" : "公開相談"}</div>
               </button>
             </div>
           </div>
@@ -261,7 +261,7 @@ export default function UserProfilePage({ params }: PageProps) {
               draggable={false}
             />
             <h3 className="text-lg font-medium text-base-content/70 mb-2">
-              公開相談がありません
+              {isOwnProfile ? "相談がありません" : "公開相談がありません"}
             </h3>
           </div>
         ) : (
