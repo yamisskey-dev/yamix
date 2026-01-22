@@ -239,8 +239,6 @@ export async function POST(req: NextRequest) {
 
     response.headers.set("Set-Cookie", createTokenCookie(jwt));
 
-    console.log(`User logged in: ${handle}`);
-
     return response;
   } catch (error) {
     console.error("Callback error:", error);
