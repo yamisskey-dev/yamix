@@ -49,6 +49,16 @@ function generateTitle(message: string): string {
   return title.slice(0, 50) + (title.length > 50 ? "..." : "");
 }
 
+// Check if message starts with @yamii mention
+function hasMentionYamii(message: string): boolean {
+  return /^@yamii(\s|$)/i.test(message.trim());
+}
+
+// Remove @yamii mention from message
+function removeMentionYamii(message: string): string {
+  return message.trim().replace(/^@yamii\s*/i, "");
+}
+
 // POST /api/chat/sessions/[id]/messages - Send message and get AI response
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
@@ -171,12 +181,24 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Call Yamii API only for PRIVATE consultations
+    // Determine if we should call Yamii API
+    // - PRIVATE consultations: Always call
+    // - PUBLIC consultations: Only if message starts with @yamii
+    const hasYamiiMention = hasMentionYamii(userMessage);
+    const shouldCallYamii =
+      session.consultType === "PRIVATE" ||
+      (session.consultType === "PUBLIC" && hasYamiiMention);
+
     let yamiiResponse = null;
-    if (session.consultType === "PRIVATE") {
+    if (shouldCallYamii) {
       try {
+        // Remove @yamii mention before sending to Yamii (keep it in stored message)
+        const messageForYamii = hasMentionYamii(userMessage)
+          ? removeMentionYamii(userMessage)
+          : userMessage;
+
         yamiiResponse = await yamiiClient.sendCounselingMessage(
-          userMessage,
+          messageForYamii,
           payload.userId,
           {
             sessionId: sessionId,
@@ -218,7 +240,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           data: {
             senderId: wallet.id,
             amount: -consultCost,
-            txType: session.consultType === "PRIVATE" ? "CONSULT_AI" : "CONSULT_HUMAN",
+            txType: shouldCallYamii ? "CONSULT_AI" : "CONSULT_HUMAN",
           },
         });
 
@@ -232,9 +254,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
 
-        // Create assistant message only for PRIVATE consultations
+        // Create assistant message if we got a response from Yamii
         let assistantMsg = null;
-        if (session.consultType === "PRIVATE" && yamiiResponse) {
+        if (shouldCallYamii && yamiiResponse) {
           assistantMsg = await tx.chatMessage.create({
             data: {
               sessionId,
@@ -294,9 +316,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       };
       chatMessagesStore.set(userMsg.id, userMsg);
 
-      // Create assistant message only for PRIVATE consultations
+      // Create assistant message if we got a response from Yamii
       let assistantMsg = null;
-      if (session.consultType === "PRIVATE" && yamiiResponse) {
+      if (shouldCallYamii && yamiiResponse) {
         assistantMsg = {
           id: generateId(),
           sessionId,

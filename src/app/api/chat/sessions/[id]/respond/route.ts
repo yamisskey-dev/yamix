@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient, memoryDB } from "@/lib/prisma";
+import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
+import type { ConversationMessage } from "@/types";
 
 // In-memory types
 interface MemoryChatSession {
@@ -35,6 +37,22 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// Prismaのメッセージ型
+interface PrismaMessage {
+  role: string;
+  content: string;
+}
+
+// Check if message starts with @yamii mention
+function hasMentionYamii(message: string): boolean {
+  return /^@yamii(\s|$)/i.test(message.trim());
+}
+
+// Remove @yamii mention from message
+function removeMentionYamii(message: string): string {
+  return message.trim().replace(/^@yamii\s*/i, "");
+}
+
 // POST /api/chat/sessions/[id]/respond - Submit a human response to a public consultation
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
@@ -65,14 +83,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const db = getPrismaClient();
 
     if (db) {
-      // Get the session
-      const session = await db.chatSession.findUnique({
+      // Get the session with messages for conversation history
+      const sessionWithMessages = await db.chatSession.findUnique({
         where: { id },
-        include: { user: true },
+        include: {
+          user: true,
+          messages: {
+            orderBy: { createdAt: "asc" },
+            take: 10,
+          },
+        },
       });
 
       // Check session exists AND is public (combined check prevents enumeration)
-      if (!session || session.consultType !== "PUBLIC") {
+      if (!sessionWithMessages || sessionWithMessages.consultType !== "PUBLIC") {
         return NextResponse.json(
           { error: "Session not found or not public" },
           { status: 404 }
@@ -80,11 +104,85 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
 
       // Cannot respond to own session
-      if (session.userId === payload.userId) {
+      if (sessionWithMessages.userId === payload.userId) {
         return NextResponse.json(
           { error: "自分の相談には回答できません" },
           { status: 400 }
         );
+      }
+
+      // Check if user is mentioning @yamii to call AI
+      const hasYamiiMention = hasMentionYamii(body.content);
+
+      // If @yamii is mentioned, call AI instead of saving human response
+      if (hasYamiiMention) {
+        // Prepare conversation history
+        const existingMessages: ConversationMessage[] = sessionWithMessages.messages.map((m: PrismaMessage) => ({
+          role: m.role === "USER" ? "user" : "assistant",
+          content: m.content,
+        })) as ConversationMessage[];
+
+        // Remove @yamii mention before sending to Yamii
+        const messageForYamii = removeMentionYamii(body.content);
+
+        let yamiiResponse;
+        try {
+          yamiiResponse = await yamiiClient.sendCounselingMessage(
+            messageForYamii,
+            payload.userId,
+            {
+              sessionId: id,
+              conversationHistory: existingMessages,
+            }
+          );
+        } catch (error) {
+          logger.error("Yamii API error in respond", { sessionId: id }, error);
+          return NextResponse.json(
+            { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
+            { status: 503 }
+          );
+        }
+
+        // Save both user's message and AI response in a transaction
+        const result = await db.$transaction(async (tx) => {
+          // Save user's message with @yamii mention (with responderId to track who asked)
+          const userMessage = await tx.chatMessage.create({
+            data: {
+              sessionId: id,
+              role: "USER",
+              content: body.content.trim(),
+              responderId: payload.userId, // Track who asked this question
+              isCrisis: false,
+            },
+          });
+
+          // Save AI response (no responderId = AI response)
+          const aiMessage = await tx.chatMessage.create({
+            data: {
+              sessionId: id,
+              role: "ASSISTANT",
+              content: yamiiResponse.response,
+              responderId: null, // AI response
+              isCrisis: yamiiResponse.is_crisis,
+            },
+          });
+
+          // Update session timestamp
+          await tx.chatSession.update({
+            where: { id },
+            data: { updatedAt: new Date() },
+          });
+
+          return { userMessage, aiMessage };
+        });
+
+        return NextResponse.json({
+          userMessage: result.userMessage,
+          message: result.aiMessage,
+          success: true,
+          isAIResponse: true,
+          isCrisis: yamiiResponse.is_crisis,
+        });
       }
 
       // Create the human response message
@@ -192,7 +290,84 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
 
-      const messageId = crypto.randomUUID();
+      // Check if user is mentioning @yamii to call AI
+      const hasYamiiMention = hasMentionYamii(body.content);
+
+      // If @yamii is mentioned, call AI instead of saving human response
+      if (hasYamiiMention) {
+        // Prepare conversation history
+        const messages = Array.from(chatMessagesStore.values())
+          .filter((m) => m.sessionId === id)
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+          .slice(-10);
+
+        const existingMessages: ConversationMessage[] = messages.map((m) => ({
+          role: m.role === "USER" ? "user" : "assistant",
+          content: m.content,
+        })) as ConversationMessage[];
+
+        // Remove @yamii mention before sending to Yamii
+        const messageForYamii = removeMentionYamii(body.content);
+
+        let yamiiResponse;
+        try {
+          yamiiResponse = await yamiiClient.sendCounselingMessage(
+            messageForYamii,
+            payload.userId,
+            {
+              sessionId: id,
+              conversationHistory: existingMessages,
+            }
+          );
+        } catch (error) {
+          logger.error("Yamii API error in respond (in-memory)", { sessionId: id }, error);
+          return NextResponse.json(
+            { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
+            { status: 503 }
+          );
+        }
+
+        const now = new Date();
+
+        // Save user's message with @yamii mention (with responderId to track who asked)
+        const userMessageId = generateId();
+        const userMessage: MemoryChatMessage = {
+          id: userMessageId,
+          sessionId: id,
+          role: "USER",
+          content: body.content.trim(),
+          responderId: payload.userId, // Track who asked this question
+          isCrisis: false,
+          createdAt: now,
+        };
+        chatMessagesStore.set(userMessageId, userMessage);
+
+        // Save AI response (no responderId = AI response)
+        const aiMessageId = generateId();
+        const aiMessage: MemoryChatMessage = {
+          id: aiMessageId,
+          sessionId: id,
+          role: "ASSISTANT",
+          content: yamiiResponse.response,
+          responderId: undefined, // AI response
+          isCrisis: yamiiResponse.is_crisis,
+          createdAt: new Date(now.getTime() + 1),
+        };
+        chatMessagesStore.set(aiMessageId, aiMessage);
+
+        session.updatedAt = new Date();
+        chatSessionsStore.set(id, session);
+
+        return NextResponse.json({
+          userMessage,
+          message: aiMessage,
+          success: true,
+          isAIResponse: true,
+          isCrisis: yamiiResponse.is_crisis,
+        });
+      }
+
+      const messageId = generateId();
       const message: MemoryChatMessage = {
         id: messageId,
         sessionId: id,

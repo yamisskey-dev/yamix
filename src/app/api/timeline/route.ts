@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
+import type { TimelineConsultation, TimelineResponse } from "@/types";
+
+// Disable caching for this route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // In-memory types
 interface MemoryChatSession {
@@ -10,10 +14,7 @@ interface MemoryChatSession {
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
-  category: string | null;
-  isPublic: boolean; // DEPRECATED
   createdAt: Date;
-  updatedAt: Date;
 }
 
 interface MemoryChatMessage {
@@ -21,38 +22,15 @@ interface MemoryChatMessage {
   sessionId: string;
   role: "USER" | "ASSISTANT";
   content: string;
-  isCrisis: boolean;
+  responderId?: string;
   createdAt: Date;
-}
-
-// Prismaセッション結果の型
-interface PrismaSessionWithMessages {
-  id: string;
-  consultType: "PRIVATE" | "PUBLIC";
-  isAnonymous: boolean;
-  createdAt: Date;
-  user: {
-    handle: string;
-    profile: { displayName: string | null; avatarUrl: string | null } | null;
-  };
-  messages: Array<{
-    id: string;
-    role: string;
-    content: string;
-    createdAt: Date;
-    responder: {
-      id: string;
-      handle: string;
-      profile: { displayName: string | null; avatarUrl: string | null } | null;
-    } | null;
-  }>;
 }
 
 // Access memory stores from memoryDB
 const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
 const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage>;
 
-// GET /api/timeline - Get public consultations for timeline
+// GET /api/timeline - Get individual posts (questions + answers) chronologically
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const limit = parseInt(searchParams.get("limit") || "20");
@@ -62,76 +40,129 @@ export async function GET(req: NextRequest) {
     const db = getPrismaClient();
 
     if (db) {
-      // Get public sessions with all messages (for reply tree)
-      const sessions = await db.chatSession.findMany({
-        where: { consultType: "PUBLIC" }, // 公開相談のみ
+      // Get all messages from public sessions, ordered by creation time
+      const messages = await db.chatMessage.findMany({
+        where: {
+          session: {
+            consultType: "PUBLIC",
+          },
+        },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
         ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-        select: {
-          id: true,
-          consultType: true,
-          isAnonymous: true,
-          createdAt: true,
-          user: {
+        include: {
+          session: {
             include: {
-              profile: true,
-            },
-          },
-          messages: {
-            orderBy: { createdAt: "asc" },
-            include: {
-              responder: {
+              user: {
                 include: {
                   profile: true,
                 },
               },
+              messages: {
+                orderBy: { createdAt: "asc" },
+                include: {
+                  responder: {
+                    include: {
+                      profile: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responder: {
+            include: {
+              profile: true,
             },
           },
         },
       });
 
-      const hasMore = sessions.length > limit;
-      const items = sessions.slice(0, limit) as PrismaSessionWithMessages[];
+      const hasMore = messages.length > limit;
+      const items = messages.slice(0, limit);
 
-      const consultations: TimelineConsultation[] = items
-        .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
-        .map((s) => {
-          const userMsg = s.messages.find((m) => m.role === "USER");
-          const firstAssistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
+      const consultations: TimelineConsultation[] = items.map((msg) => {
+        const session = msg.session;
 
-          // All assistant messages as replies
-          const allReplies: TimelineReply[] = s.messages
-            .filter((m) => m.role === "ASSISTANT")
-            .map((m) => ({
-              id: m.id,
-              content: m.content,
-              createdAt: m.createdAt,
-              responder: m.responder ? {
-                id: m.responder.id,
-                handle: m.responder.handle,
-                displayName: m.responder.profile?.displayName || null,
-                avatarUrl: m.responder.profile?.avatarUrl || null,
-              } : null,
-            }));
+        // Find the previous USER message for this message
+        let question = "";
+        let questionMessage = null; // Store the actual message object
+        if (msg.role === "USER") {
+          question = msg.content;
+          questionMessage = msg;
+        } else {
+          // For ASSISTANT messages, find the most recent USER message before this one
+          const allUserMessages = session.messages.filter((m: any) => m.role === "USER");
+          const previousUserMessages = allUserMessages.filter(
+            (m: any) => new Date(m.createdAt) < new Date(msg.createdAt)
+          );
+
+          if (previousUserMessages.length > 0) {
+            questionMessage = previousUserMessages[previousUserMessages.length - 1];
+            question = questionMessage.content;
+          }
+        }
+
+        if (msg.role === "USER") {
+          // User question post
+          // Check if this USER message has a responder (someone other than owner asked)
+          const questionAuthor = msg.responder || session.user;
+          return {
+            id: msg.id,
+            sessionId: session.id,
+            question: msg.content,
+            answer: null,
+            consultType: session.consultType,
+            isAnonymous: session.isAnonymous,
+            user: session.isAnonymous
+              ? null
+              : {
+                  handle: questionAuthor.handle,
+                  displayName: questionAuthor.profile?.displayName || null,
+                  avatarUrl: questionAuthor.profile?.avatarUrl || null,
+                },
+            replyCount: 0,
+            replies: [],
+            createdAt: msg.createdAt,
+            isUserResponse: false,
+          };
+        } else {
+          // Assistant response post
+          // Determine who asked the question (from questionMessage)
+          let questionAuthor = session.user; // Default to session owner
+          if (questionMessage && questionMessage.responder) {
+            // Someone else asked this question
+            questionAuthor = questionMessage.responder;
+          }
 
           return {
-            id: s.id,
-            sessionId: s.id,
-            question: userMsg?.content || "",
-            answer: firstAssistantMsg?.content || null, // PUBLIC相談ではnullの場合あり
-            consultType: s.consultType,
-            isAnonymous: s.isAnonymous,
-            user: s.isAnonymous ? null : { // 匿名の場合はnull
-              handle: s.user.handle,
-              displayName: s.user.profile?.displayName || null,
-              avatarUrl: s.user.profile?.avatarUrl || null,
-            },
-            replyCount: allReplies.length,
-            replies: allReplies,
-            createdAt: s.createdAt,
+            id: msg.id,
+            sessionId: session.id,
+            question, // Previous USER message
+            answer: msg.content,
+            consultType: session.consultType,
+            isAnonymous: session.isAnonymous,
+            user: session.isAnonymous
+              ? null
+              : {
+                  handle: questionAuthor.handle,
+                  displayName: questionAuthor.profile?.displayName || null,
+                  avatarUrl: questionAuthor.profile?.avatarUrl || null,
+                },
+            replyCount: 0,
+            replies: [],
+            createdAt: msg.createdAt,
+            isUserResponse: true,
+            responder: msg.responder
+              ? {
+                  handle: msg.responder.handle,
+                  displayName: msg.responder.profile?.displayName || null,
+                  avatarUrl: msg.responder.profile?.avatarUrl || null,
+                }
+              : null, // null means AI response
           };
-        });
+        }
+      });
 
       const response: TimelineResponse = {
         consultations,
@@ -142,61 +173,88 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(response);
     } else {
       // In-memory fallback
-      const publicSessions = Array.from(chatSessionsStore.values())
-        .filter((s) => s.consultType === "PUBLIC") // 公開相談のみ
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const allMessages = Array.from(chatMessagesStore.values())
+        .map((msg) => {
+          const session = chatSessionsStore.get(msg.sessionId);
+          if (!session || session.consultType !== "PUBLIC") return null;
+          return { msg, session };
+        })
+        .filter((item): item is { msg: MemoryChatMessage; session: MemoryChatSession } => item !== null)
+        .sort((a, b) => b.msg.createdAt.getTime() - a.msg.createdAt.getTime());
 
       let startIndex = 0;
       if (cursor) {
-        const cursorIndex = publicSessions.findIndex((s) => s.id === cursor);
+        const cursorIndex = allMessages.findIndex((item) => item.msg.id === cursor);
         if (cursorIndex !== -1) {
           startIndex = cursorIndex + 1;
         }
       }
 
-      const sessions = publicSessions.slice(startIndex, startIndex + limit + 1);
-      const hasMore = sessions.length > limit;
-      const items = sessions.slice(0, limit);
+      const messages = allMessages.slice(startIndex, startIndex + limit + 1);
+      const hasMore = messages.length > limit;
+      const items = messages.slice(0, limit);
 
-      const consultations: TimelineConsultation[] = items
-        .map((s) => {
-          const messages = Array.from(chatMessagesStore.values())
-            .filter((m) => m.sessionId === s.id)
+      const consultations: TimelineConsultation[] = items.map(({ msg, session }) => {
+        // Find the previous USER message for this message
+        let question = "";
+        let questionMessage: MemoryChatMessage | null = null;
+        if (msg.role === "USER") {
+          question = msg.content;
+          questionMessage = msg;
+        } else {
+          // For ASSISTANT messages, find the most recent USER message before this one
+          const sessionMessages = Array.from(chatMessagesStore.values())
+            .filter((m) => m.sessionId === session.id && m.role === "USER" && m.createdAt < msg.createdAt)
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+          if (sessionMessages.length > 0) {
+            questionMessage = sessionMessages[sessionMessages.length - 1];
+            question = questionMessage.content;
+          }
+        }
 
-          const userMsg = messages.find((m) => m.role === "USER");
-          const firstAssistantMsg = messages.find((m) => m.role === "ASSISTANT");
-
-          if (!userMsg || !firstAssistantMsg) return null;
-
-          // All assistant messages as replies
-          const allReplies: TimelineReply[] = messages
-            .filter((m) => m.role === "ASSISTANT")
-            .map((m) => ({
-              id: m.id,
-              content: m.content,
-              createdAt: m.createdAt,
-              responder: null, // In-memory doesn't have responder info
-            }));
-
+        if (msg.role === "USER") {
           return {
-            id: s.id,
-            sessionId: s.id,
-            question: userMsg.content,
-            answer: firstAssistantMsg.content,
-            consultType: s.consultType,
-            isAnonymous: s.isAnonymous,
-            user: s.isAnonymous ? null : { // 匿名の場合はnull
-              handle: "anonymous", // In-memory doesn't have real user info
-              displayName: null as string | null,
-              avatarUrl: null as string | null,
-            },
-            replyCount: allReplies.length,
-            replies: allReplies,
-            createdAt: s.createdAt,
+            id: msg.id,
+            sessionId: session.id,
+            question: msg.content,
+            answer: null,
+            consultType: session.consultType,
+            isAnonymous: session.isAnonymous,
+            user: session.isAnonymous
+              ? null
+              : {
+                  handle: "anonymous",
+                  displayName: null as string | null,
+                  avatarUrl: null as string | null,
+                },
+            replyCount: 0,
+            replies: [],
+            createdAt: msg.createdAt,
+            isUserResponse: false,
           } as TimelineConsultation;
-        })
-        .filter((c): c is TimelineConsultation => c !== null);
+        } else {
+          return {
+            id: msg.id,
+            sessionId: session.id,
+            question, // Previous USER message
+            answer: msg.content,
+            consultType: session.consultType,
+            isAnonymous: session.isAnonymous,
+            user: session.isAnonymous
+              ? null
+              : {
+                  handle: "anonymous",
+                  displayName: null as string | null,
+                  avatarUrl: null as string | null,
+                },
+            replyCount: 0,
+            replies: [],
+            createdAt: msg.createdAt,
+            isUserResponse: true,
+            responder: null, // In-memory doesn't have responder info
+          } as TimelineConsultation;
+        }
+      });
 
       const response: TimelineResponse = {
         consultations,

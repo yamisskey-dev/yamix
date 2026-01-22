@@ -5,6 +5,8 @@ import Link from "next/link";
 import { memo } from "react";
 import { useRouter } from "next/navigation";
 import type { TimelineConsultation } from "@/types";
+import { parseMentions } from "@/lib/mention-parser";
+import { encodeHandle } from "@/lib/encode-handle";
 
 interface Props {
   consultation: TimelineConsultation;
@@ -32,15 +34,22 @@ function formatDate(date: Date): string {
 export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const router = useRouter();
 
-  // 回答モードかどうか
-  const isResponseMode = consultation.isUserResponse && consultation.answer && consultation.responder;
+  // 回答モードかどうか（responderがnullの場合はAI回答）
+  const isResponseMode = consultation.isUserResponse && consultation.answer;
 
-  // 表示するユーザー情報（回答モードでは回答者、通常モードでは相談者）
+  // 表示するユーザー情報（回答モードでは回答者またはAI、通常モードでは相談者）
   const displayUser = isResponseMode ? consultation.responder : consultation.user;
   const isAnonymous = isResponseMode ? false : (consultation.isAnonymous || !consultation.user);
-  const displayName = isAnonymous
+
+  // AI応答の場合は「やみぃ@yamii」を表示
+  const isAIResponse = isResponseMode && !consultation.responder;
+  const displayName = isAIResponse
+    ? "やみぃ"
+    : isAnonymous
     ? "匿名さん"
-    : (displayUser?.displayName || displayUser?.handle.split("@")[1] || "匿名");
+    : (displayUser?.displayName || displayUser?.handle?.split("@")[1] || "匿名");
+
+  const displayHandle = isAIResponse ? "@yamii" : displayUser?.handle;
   const replyCount = consultation.replies?.length || 0;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -61,7 +70,11 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
       {/* Avatar */}
       <div className="flex-shrink-0 mr-3.5 sm:mr-4">
         <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full overflow-hidden">
-          {isAnonymous ? (
+          {isAIResponse ? (
+            <div className="bg-base-200 flex items-center justify-center w-full h-full text-2xl">
+              🤖
+            </div>
+          ) : isAnonymous ? (
             <div className="bg-base-300 flex items-center justify-center w-full h-full text-2xl">
               😎
             </div>
@@ -86,14 +99,23 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
       <div className="flex-1 min-w-0">
         {/* Header - Misskey style: name · @username · visibility · time */}
         <header className="flex items-center flex-wrap gap-x-1.5 mb-1">
-          {isAnonymous ? (
+          {isAIResponse ? (
+            <>
+              <span className="font-bold text-[0.95em] shrink-0">
+                {displayName}
+              </span>
+              <span className="text-[0.85em] text-base-content/50">
+                {displayHandle}
+              </span>
+            </>
+          ) : isAnonymous ? (
             <span className="font-bold text-[0.95em] text-base-content/70 shrink-0">
               {displayName}
             </span>
           ) : displayUser ? (
             <>
               <Link
-                href={`/main/user/${encodeURIComponent(displayUser.handle)}`}
+                href={`/main/user/${encodeHandle(displayUser.handle)}`}
                 className="font-bold text-[0.95em] hover:underline truncate max-w-[180px]"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -166,20 +188,20 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                     への回答
                   </span>
                   <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] line-clamp-2 mt-0.5">
-                    {consultation.question}
+                    {parseMentions(consultation.question)}
                   </p>
                 </div>
               </div>
             </div>
             {/* 回答内容 */}
             <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
-              {consultation.answer}
+              {consultation.answer ? parseMentions(consultation.answer) : ""}
             </p>
           </>
         ) : (
           /* 通常モード: 質問を表示 */
           <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
-            {consultation.question}
+            {parseMentions(consultation.question)}
           </p>
         )}
 

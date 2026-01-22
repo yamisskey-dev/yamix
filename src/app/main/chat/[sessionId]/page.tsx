@@ -13,6 +13,7 @@ interface ResponderInfo {
   displayName: string | null;
   avatarUrl: string | null;
   isAnonymous?: boolean;
+  handle?: string;
 }
 
 interface LocalMessage {
@@ -102,6 +103,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                   displayName: session.user?.displayName || null,
                   avatarUrl: session.user?.avatarUrl || null,
                   isAnonymous: session.isAnonymous,
+                  handle: session.user?.handle,
                 },
               };
             }
@@ -116,6 +118,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 displayName: m.responder.displayName,
                 avatarUrl: m.responder.avatarUrl,
                 isAnonymous: false,
+                handle: m.responder.handle,
               } : undefined, // undefined = AI
             };
           })
@@ -180,8 +183,8 @@ export default function ChatSessionPage({ params }: PageProps) {
 
         const data = await res.json();
 
-        // Only for PRIVATE consultations, we get AI response
-        if (sessionInfo.consultType === "PRIVATE" && data.assistantMessage) {
+        // If we got an AI response (PRIVATE always, PUBLIC with @yamii mention)
+        if (data.assistantMessage) {
           if (data.isCrisis && typeof window !== "undefined") {
             const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
             if (!disabled) {
@@ -224,31 +227,62 @@ export default function ChatSessionPage({ params }: PageProps) {
 
         const data = await res.json();
 
-        // Get current user info for display
-        const meRes = await fetch("/api/auth/me");
-        const currentUser = meRes.ok ? await meRes.json() : null;
+        // Check if this is an AI response (when @yamii was mentioned)
+        if (data.isAIResponse) {
+          // AI response - display crisis alert if needed
+          if (data.isCrisis && typeof window !== "undefined") {
+            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+            if (!disabled) {
+              setShowCrisisAlert(true);
+            }
+          }
 
-        // Add the response as an assistant message with responder info
-        const responseMessage: LocalMessage = {
-          id: data.message.id,
-          role: "assistant",
-          content: responseContent,
-          timestamp: new Date(),
-          responder: currentUser ? {
-            displayName: currentUser.profile?.displayName || null,
-            avatarUrl: currentUser.profile?.avatarUrl || null,
-            isAnonymous: false,
-          } : null,
-        };
+          // Add user's message first (the message with @yamii)
+          const userMsg: LocalMessage = {
+            id: data.userMessage.id,
+            role: "user",
+            content: responseContent,
+            timestamp: new Date(),
+          };
 
-        setMessages((prev) => [...prev, responseMessage]);
+          // Add AI response as assistant message (no responder = AI)
+          const aiMessage: LocalMessage = {
+            id: data.message.id,
+            role: "assistant",
+            content: data.message.content,
+            timestamp: new Date(),
+            responder: null, // AI response
+          };
 
-        // Show reward message if applicable
-        if (data.reward && data.reward > 0) {
-          // Could add a toast notification here
-          console.log(`+${data.reward} YAMI を獲得しました！`);
-        } else if (data.rewardCapped) {
-          console.log("本日の報酬上限に達しています");
+          setMessages((prev) => [...prev, userMsg, aiMessage]);
+        } else {
+          // Human response - get current user info for display
+          const meRes = await fetch("/api/auth/me");
+          const currentUser = meRes.ok ? await meRes.json() : null;
+
+          // Add the response as an assistant message with responder info
+          const responseMessage: LocalMessage = {
+            id: data.message.id,
+            role: "assistant",
+            content: responseContent,
+            timestamp: new Date(),
+            responder: currentUser ? {
+              displayName: currentUser.profile?.displayName || null,
+              avatarUrl: currentUser.profile?.avatarUrl || null,
+              isAnonymous: false,
+              handle: currentUser.handle,
+            } : null,
+          };
+
+          setMessages((prev) => [...prev, responseMessage]);
+
+          // Show reward message if applicable
+          if (data.reward && data.reward > 0) {
+            // Could add a toast notification here
+            console.log(`+${data.reward} YAMI を獲得しました！`);
+          } else if (data.rewardCapped) {
+            console.log("本日の報酬上限に達しています");
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");

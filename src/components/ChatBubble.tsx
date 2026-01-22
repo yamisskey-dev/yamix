@@ -2,11 +2,15 @@
 
 import { memo, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { parseMentions } from "@/lib/mention-parser";
+import { encodeHandle } from "@/lib/encode-handle";
 
 interface ResponderInfo {
   displayName: string | null;
   avatarUrl: string | null;
   isAnonymous?: boolean; // 匿名かどうか
+  handle?: string; // ユーザーハンドル（プロフィールリンク用）
 }
 
 interface ChatBubbleProps {
@@ -46,31 +50,55 @@ export const ChatBubble = memo(function ChatBubble({
       {!isUser && (
         <div className="chat-image avatar">
           {isHuman ? (
-            // Human avatar (questioner or responder)
-            <div className="w-8 h-8 rounded-full ring-2 ring-secondary/30">
-              {responder!.isAnonymous ? (
-                // Anonymous user
-                <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/70">
-                  <span className="text-lg">😎</span>
-                </div>
-              ) : responder!.avatarUrl ? (
-                // User with avatar
-                <Image
-                  src={responder!.avatarUrl}
-                  alt={responder!.displayName || "ユーザー"}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              ) : (
-                // User without avatar - show initial
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
-                  {(responder!.displayName || "?").charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
+            // Human avatar (questioner or responder) - clickable if not anonymous
+            responder!.isAnonymous || !responder!.handle ? (
+              <div className="w-8 h-8 rounded-full ring-2 ring-secondary/30">
+                {responder!.isAnonymous ? (
+                  // Anonymous user
+                  <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/70">
+                    <span className="text-lg">😎</span>
+                  </div>
+                ) : responder!.avatarUrl ? (
+                  // User with avatar (no handle)
+                  <Image
+                    src={responder!.avatarUrl}
+                    alt={responder!.displayName || "ユーザー"}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  // User without avatar - show initial
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
+                    {(responder!.displayName || "?").charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+            ) : (
+              // Clickable user avatar
+              <Link
+                href={`/main/user/${encodeHandle(responder!.handle)}`}
+                className="w-8 h-8 rounded-full ring-2 ring-secondary/30 block hover:ring-4 hover:ring-secondary/40 transition-all"
+              >
+                {responder!.avatarUrl ? (
+                  // User with avatar
+                  <Image
+                    src={responder!.avatarUrl}
+                    alt={responder!.displayName || "ユーザー"}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  // User without avatar - show initial
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
+                    {(responder!.displayName || "?").charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </Link>
+            )
           ) : (
-            // AI avatar
+            // AI avatar - not clickable
             <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
               <span className="text-lg">🤖</span>
             </div>
@@ -78,15 +106,12 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Name for human messages */}
-      {isHuman && (
-        <div className="chat-header text-xs text-secondary font-medium">
-          {responder!.isAnonymous ? "匿名さん" : (responder!.displayName || "ユーザー")}
-        </div>
-      )}
+      {/* Misskey-style: No name display, icon only */}
 
       <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-sm`}>
-        <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+        <p className="whitespace-pre-wrap break-words leading-relaxed">
+          {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
+        </p>
       </div>
 
       {/* Timestamp */}
