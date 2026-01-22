@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { MENTAL_RESOURCE_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // POST /api/transactions - Send tokens to a post (reaction)
 export async function POST(req: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   const { postId } = body;
   const senderId = payload.walletId; // Use walletId from JWT (1:1 user-wallet)
-  const amount = body.amount || MENTAL_RESOURCE_ECONOMY.REACTION_DEFAULT;
+  const amount = body.amount || TOKEN_ECONOMY.REACTION_DEFAULT;
 
   if (!postId) {
     return NextResponse.json(
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         // Increase receiver balance (with cap)
         const newBalance = Math.min(
           post.wallet.balance + amount,
-          MENTAL_RESOURCE_ECONOMY.MAX_BALANCE
+          TOKEN_ECONOMY.MAX_BALANCE
         );
         await tx.wallet.update({
           where: { id: post.walletId },
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
       if (receiver) {
         receiver.balance = Math.min(
           receiver.balance + amount,
-          MENTAL_RESOURCE_ECONOMY.MAX_BALANCE
+          TOKEN_ECONOMY.MAX_BALANCE
         );
       }
 

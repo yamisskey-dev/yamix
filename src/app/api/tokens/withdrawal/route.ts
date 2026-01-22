@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { YAMI_TOKEN_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // POST /api/tokens/withdrawal - Initiate YAMI withdrawal to Optimism ETH
 export async function POST(req: NextRequest) {
@@ -40,17 +40,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (amount < YAMI_TOKEN_ECONOMY.MIN_WITHDRAWAL) {
+  if (amount < TOKEN_ECONOMY.MIN_WITHDRAWAL) {
     return NextResponse.json(
-      { error: `Minimum withdrawal is ${YAMI_TOKEN_ECONOMY.MIN_WITHDRAWAL} YAMI` },
+      { error: `Minimum withdrawal is ${TOKEN_ECONOMY.MIN_WITHDRAWAL} YAMI` },
       { status: 400 }
     );
   }
 
   // Calculate Optimism ETH amount after fee
-  const feeAmount = Math.floor(amount * YAMI_TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT / 100);
+  const feeAmount = Math.floor(amount * TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT / 100);
   const netAmount = amount - feeAmount;
-  const ethAmount = (parseFloat(YAMI_TOKEN_ECONOMY.ETH_PER_YAMI) * netAmount).toFixed(6);
+  const ethAmount = (parseFloat(TOKEN_ECONOMY.ETH_PER_YAMI) * netAmount).toFixed(6);
 
   try {
     if (isPrismaAvailable() && prisma) {
@@ -94,11 +94,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         withdrawal,
         details: {
-          network: YAMI_TOKEN_ECONOMY.NETWORK,
-          chainId: YAMI_TOKEN_ECONOMY.CHAIN_ID,
+          network: TOKEN_ECONOMY.NETWORK,
+          chainId: TOKEN_ECONOMY.CHAIN_ID,
           grossAmount: amount,
           feeAmount,
-          feePercent: YAMI_TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT,
+          feePercent: TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT,
           netAmount,
           ethAmount,
           ethAddress,
@@ -117,11 +117,11 @@ export async function POST(req: NextRequest) {
           createdAt: new Date(),
         },
         details: {
-          network: YAMI_TOKEN_ECONOMY.NETWORK,
-          chainId: YAMI_TOKEN_ECONOMY.CHAIN_ID,
+          network: TOKEN_ECONOMY.NETWORK,
+          chainId: TOKEN_ECONOMY.CHAIN_ID,
           grossAmount: amount,
           feeAmount,
-          feePercent: YAMI_TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT,
+          feePercent: TOKEN_ECONOMY.WITHDRAWAL_FEE_PERCENT,
           netAmount,
           ethAmount,
           ethAddress,

@@ -1,14 +1,14 @@
 // ============================================
-// Validation Economy（承認経済）
+// Token Economy（トークン経済）
 // 詳細: docs/TOKEN_ECONOMY.md
 // ============================================
 
 /**
- * 承認経済のデフォルトパラメータ
+ * トークン経済のデフォルトパラメータ
  * EconomyConfigテーブルで上書き可能
  * 将来的にYAMI DAO投票で変更可能
  */
-export const VALIDATION_ECONOMY = {
+export const TOKEN_ECONOMY = {
   // ベーシックインカム（BI）
   DAILY_GRANT_AMOUNT: 10,        // 毎日のBI付与量
 
@@ -55,10 +55,6 @@ export const VALIDATION_ECONOMY = {
   TOKEN_SYMBOL: "YAMI",          // UI表示用
 } as const;
 
-// 後方互換性のためのエイリアス
-export const YAMI_TOKEN_ECONOMY = VALIDATION_ECONOMY;
-export const MENTAL_RESOURCE_ECONOMY = VALIDATION_ECONOMY;
-export const TOKEN_ECONOMY = VALIDATION_ECONOMY;
 
 // ============================================
 // Instance types supported

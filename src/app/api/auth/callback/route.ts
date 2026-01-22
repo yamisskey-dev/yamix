@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "crypto";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { RedisService } from "@/lib/redis";
 import { createJWT, createTokenCookie } from "@/lib/jwt";
-import { MENTAL_RESOURCE_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // Generate an ETH-style address (0x + 40 hex chars)
 function generateAddress(): string {
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
           wallet = await tx.wallet.create({
             data: {
               address: generateAddress(),
-              balance: MENTAL_RESOURCE_ECONOMY.INITIAL_BALANCE,
+              balance: TOKEN_ECONOMY.INITIAL_BALANCE,
               walletType: "HUMAN",
               userId: user.id,
             },
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
         memoryDB.wallets.set(walletId, {
           id: walletId,
           address: generateAddress(),
-          balance: MENTAL_RESOURCE_ECONOMY.INITIAL_BALANCE,
+          balance: TOKEN_ECONOMY.INITIAL_BALANCE,
           walletType: "HUMAN",
           userId,
           createdAt: now,

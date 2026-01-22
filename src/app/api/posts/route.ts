@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { MENTAL_RESOURCE_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // GET /api/posts - Get all posts (with pagination)
 export async function GET(req: NextRequest) {
@@ -150,9 +150,9 @@ export async function POST(req: NextRequest) {
         ? 0
         : isReply
           ? targetIsAI
-            ? MENTAL_RESOURCE_ECONOMY.COST_CONSULT_AI
-            : MENTAL_RESOURCE_ECONOMY.COST_CONSULT_HUMAN
-          : MENTAL_RESOURCE_ECONOMY.COST_DISCUSSION;
+            ? TOKEN_ECONOMY.COST_CONSULT_AI
+            : TOKEN_ECONOMY.COST_CONSULT_HUMAN
+          : TOKEN_ECONOMY.COST_DISCUSSION;
 
       // Check balance
       if (wallet.balance < postCost) {
@@ -166,8 +166,8 @@ export async function POST(req: NextRequest) {
       const replyReward =
         parentPost && parentPost.walletId !== walletId
           ? parentPost.wallet.walletType === "AI_SYSTEM"
-            ? MENTAL_RESOURCE_ECONOMY.REWARD_RESPONSE_AI
-            : MENTAL_RESOURCE_ECONOMY.REWARD_RESPONSE_HUMAN
+            ? TOKEN_ECONOMY.REWARD_RESPONSE_AI
+            : TOKEN_ECONOMY.REWARD_RESPONSE_HUMAN
           : 0;
 
       // Create post and handle token economy atomically
@@ -186,10 +186,10 @@ export async function POST(req: NextRequest) {
             where: { id: parentPost.walletId },
           });
 
-          if (parentWallet && parentWallet.balance < MENTAL_RESOURCE_ECONOMY.MAX_BALANCE) {
+          if (parentWallet && parentWallet.balance < TOKEN_ECONOMY.MAX_BALANCE) {
             const newBalance = Math.min(
               parentWallet.balance + replyReward,
-              MENTAL_RESOURCE_ECONOMY.MAX_BALANCE
+              TOKEN_ECONOMY.MAX_BALANCE
             );
             await tx.wallet.update({
               where: { id: parentPost.walletId },
@@ -252,9 +252,9 @@ export async function POST(req: NextRequest) {
         ? 0
         : isReply
           ? targetIsAI
-            ? MENTAL_RESOURCE_ECONOMY.COST_CONSULT_AI
-            : MENTAL_RESOURCE_ECONOMY.COST_CONSULT_HUMAN
-          : MENTAL_RESOURCE_ECONOMY.COST_DISCUSSION;
+            ? TOKEN_ECONOMY.COST_CONSULT_AI
+            : TOKEN_ECONOMY.COST_CONSULT_HUMAN
+          : TOKEN_ECONOMY.COST_DISCUSSION;
 
       if (wallet.balance < postCost) {
         return NextResponse.json(
@@ -266,8 +266,8 @@ export async function POST(req: NextRequest) {
       const replyReward =
         parentPost && parentPost.walletId !== walletId
           ? targetIsAI
-            ? MENTAL_RESOURCE_ECONOMY.REWARD_RESPONSE_AI
-            : MENTAL_RESOURCE_ECONOMY.REWARD_RESPONSE_HUMAN
+            ? TOKEN_ECONOMY.REWARD_RESPONSE_AI
+            : TOKEN_ECONOMY.REWARD_RESPONSE_HUMAN
           : 0;
 
       // Deduct cost
@@ -277,10 +277,10 @@ export async function POST(req: NextRequest) {
 
       // Reward parent post owner
       if (replyReward > 0 && parentWalletMem) {
-        if (parentWalletMem.balance < MENTAL_RESOURCE_ECONOMY.MAX_BALANCE) {
+        if (parentWalletMem.balance < TOKEN_ECONOMY.MAX_BALANCE) {
           parentWalletMem.balance = Math.min(
             parentWalletMem.balance + replyReward,
-            MENTAL_RESOURCE_ECONOMY.MAX_BALANCE
+            TOKEN_ECONOMY.MAX_BALANCE
           );
         }
       }

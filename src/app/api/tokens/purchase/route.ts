@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { YAMI_TOKEN_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // POST /api/tokens/purchase - Initiate YAMI purchase with Optimism ETH
 export async function POST(req: NextRequest) {
@@ -32,15 +32,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (amount < YAMI_TOKEN_ECONOMY.MIN_PURCHASE) {
+  if (amount < TOKEN_ECONOMY.MIN_PURCHASE) {
     return NextResponse.json(
-      { error: `Minimum purchase is ${YAMI_TOKEN_ECONOMY.MIN_PURCHASE} YAMI` },
+      { error: `Minimum purchase is ${TOKEN_ECONOMY.MIN_PURCHASE} YAMI` },
       { status: 400 }
     );
   }
 
   // Calculate Optimism ETH amount
-  const ethAmount = (parseFloat(YAMI_TOKEN_ECONOMY.ETH_PER_YAMI) * amount).toFixed(6);
+  const ethAmount = (parseFloat(TOKEN_ECONOMY.ETH_PER_YAMI) * amount).toFixed(6);
 
   try {
     if (isPrismaAvailable() && prisma) {
@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
       }
 
       // Check max balance
-      if (wallet.balance + amount > YAMI_TOKEN_ECONOMY.MAX_BALANCE) {
+      if (wallet.balance + amount > TOKEN_ECONOMY.MAX_BALANCE) {
         return NextResponse.json(
-          { error: `Purchase would exceed max balance of ${YAMI_TOKEN_ECONOMY.MAX_BALANCE} YAMI` },
+          { error: `Purchase would exceed max balance of ${TOKEN_ECONOMY.MAX_BALANCE} YAMI` },
           { status: 400 }
         );
       }
@@ -78,8 +78,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         purchase,
         paymentInfo: {
-          network: YAMI_TOKEN_ECONOMY.NETWORK,
-          chainId: YAMI_TOKEN_ECONOMY.CHAIN_ID,
+          network: TOKEN_ECONOMY.NETWORK,
+          chainId: TOKEN_ECONOMY.CHAIN_ID,
           ethAmount,
           // In production, this would be the YAMI DAO treasury address on Optimism
           recipientAddress: process.env.YAMI_DAO_TREASURY_ADDRESS || "0x...",
@@ -98,8 +98,8 @@ export async function POST(req: NextRequest) {
           createdAt: new Date(),
         },
         paymentInfo: {
-          network: YAMI_TOKEN_ECONOMY.NETWORK,
-          chainId: YAMI_TOKEN_ECONOMY.CHAIN_ID,
+          network: TOKEN_ECONOMY.NETWORK,
+          chainId: TOKEN_ECONOMY.CHAIN_ID,
           ethAmount,
           recipientAddress: "0x...",
           memo: `Purchase ${amount} YAMI for wallet ${walletId}`,

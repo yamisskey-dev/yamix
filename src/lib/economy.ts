@@ -1,10 +1,10 @@
 /**
- * Validation Economy（承認経済）サービス
+ * Token Economy（トークン経済）サービス
  * 詳細: docs/TOKEN_ECONOMY.md
  */
 
 import { getPrismaClient, isPrismaAvailable } from "./prisma";
-import { VALIDATION_ECONOMY } from "@/types";
+import { TOKEN_ECONOMY } from "@/types";
 
 // ============================================
 // 経済パラメータの取得
@@ -36,34 +36,34 @@ export async function getEconomyConfig(): Promise<EconomyConfig> {
 
   return {
     dailyGrantAmount:
-      configMap.get("DAILY_GRANT_AMOUNT") ?? VALIDATION_ECONOMY.DAILY_GRANT_AMOUNT,
+      configMap.get("DAILY_GRANT_AMOUNT") ?? TOKEN_ECONOMY.DAILY_GRANT_AMOUNT,
     decayRatePercent:
-      configMap.get("DECAY_RATE_PERCENT") ?? VALIDATION_ECONOMY.DECAY_RATE_PERCENT,
+      configMap.get("DECAY_RATE_PERCENT") ?? TOKEN_ECONOMY.DECAY_RATE_PERCENT,
     aiConsultCost:
-      configMap.get("AI_CONSULT_COST") ?? VALIDATION_ECONOMY.AI_CONSULT_COST,
+      configMap.get("AI_CONSULT_COST") ?? TOKEN_ECONOMY.AI_CONSULT_COST,
     humanConsultCost:
-      configMap.get("HUMAN_CONSULT_COST") ?? VALIDATION_ECONOMY.HUMAN_CONSULT_COST,
+      configMap.get("HUMAN_CONSULT_COST") ?? TOKEN_ECONOMY.HUMAN_CONSULT_COST,
     responseReward:
-      configMap.get("RESPONSE_REWARD") ?? VALIDATION_ECONOMY.RESPONSE_REWARD,
+      configMap.get("RESPONSE_REWARD") ?? TOKEN_ECONOMY.RESPONSE_REWARD,
     dailyRewardCap:
-      configMap.get("DAILY_REWARD_CAP") ?? VALIDATION_ECONOMY.DAILY_REWARD_CAP,
+      configMap.get("DAILY_REWARD_CAP") ?? TOKEN_ECONOMY.DAILY_REWARD_CAP,
     initialBalance:
-      configMap.get("INITIAL_BALANCE") ?? VALIDATION_ECONOMY.INITIAL_BALANCE,
+      configMap.get("INITIAL_BALANCE") ?? TOKEN_ECONOMY.INITIAL_BALANCE,
     maxBalance:
-      configMap.get("MAX_BALANCE") ?? VALIDATION_ECONOMY.MAX_BALANCE,
+      configMap.get("MAX_BALANCE") ?? TOKEN_ECONOMY.MAX_BALANCE,
   };
 }
 
 function getDefaultConfig(): EconomyConfig {
   return {
-    dailyGrantAmount: VALIDATION_ECONOMY.DAILY_GRANT_AMOUNT,
-    decayRatePercent: VALIDATION_ECONOMY.DECAY_RATE_PERCENT,
-    aiConsultCost: VALIDATION_ECONOMY.AI_CONSULT_COST,
-    humanConsultCost: VALIDATION_ECONOMY.HUMAN_CONSULT_COST,
-    responseReward: VALIDATION_ECONOMY.RESPONSE_REWARD,
-    dailyRewardCap: VALIDATION_ECONOMY.DAILY_REWARD_CAP,
-    initialBalance: VALIDATION_ECONOMY.INITIAL_BALANCE,
-    maxBalance: VALIDATION_ECONOMY.MAX_BALANCE,
+    dailyGrantAmount: TOKEN_ECONOMY.DAILY_GRANT_AMOUNT,
+    decayRatePercent: TOKEN_ECONOMY.DECAY_RATE_PERCENT,
+    aiConsultCost: TOKEN_ECONOMY.AI_CONSULT_COST,
+    humanConsultCost: TOKEN_ECONOMY.HUMAN_CONSULT_COST,
+    responseReward: TOKEN_ECONOMY.RESPONSE_REWARD,
+    dailyRewardCap: TOKEN_ECONOMY.DAILY_REWARD_CAP,
+    initialBalance: TOKEN_ECONOMY.INITIAL_BALANCE,
+    maxBalance: TOKEN_ECONOMY.MAX_BALANCE,
   };
 }
 
