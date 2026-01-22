@@ -305,7 +305,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                     <div className="bg-base-300 flex items-center justify-center w-full h-full text-sm">
                       😎
                     </div>
-                  ) : consultation.user.avatarUrl ? (
+                  ) : consultation.user?.avatarUrl ? (
                     <Image
                       src={consultation.user.avatarUrl}
                       alt={displayName}

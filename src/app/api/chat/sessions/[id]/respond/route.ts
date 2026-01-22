@@ -8,7 +8,10 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -68,7 +71,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       });
 
       // Check session exists AND is public (combined check prevents enumeration)
-      if (!session || !session.isPublic) {
+      if (!session || session.consultType !== "PUBLIC") {
         return NextResponse.json(
           { error: "Session not found or not public" },
           { status: 404 }
@@ -109,7 +112,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       const session = chatSessionsStore.get(id);
 
       // Check session exists AND is public (combined check prevents enumeration)
-      if (!session || !session.isPublic) {
+      if (!session || session.consultType !== "PUBLIC") {
         return NextResponse.json(
           { error: "Session not found or not public" },
           { status: 404 }

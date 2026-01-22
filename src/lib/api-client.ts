@@ -193,7 +193,7 @@ export const chatApi = {
 
   async updateSession(
     sessionId: string,
-    data: { title?: string; isPublic?: boolean }
+    data: { title?: string }
   ): Promise<ChatSession> {
     return api.patch(`/api/chat/sessions/${sessionId}`, data);
   },

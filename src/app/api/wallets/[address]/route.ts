@@ -27,7 +27,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           _count: {
             select: {
               posts: true,
-              following: true,
             },
           },
         },
