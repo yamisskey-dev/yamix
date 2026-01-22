@@ -32,7 +32,7 @@ function formatDate(date: Date): string {
 export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const [showResponseModal, setShowResponseModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [showReplies, setShowReplies] = useState(false);
+  const [showReplies, setShowReplies] = useState(true); // Misskeyのように最初から展開
   const [responseText, setResponseText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>();
@@ -235,27 +235,29 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           {consultation.question}
         </p>
 
-        {/* First AI answer or waiting message */}
-        {consultation.answer ? (
-          <div className="mt-2 pl-3 border-l-2 border-primary/30">
-            {/* AI responder info */}
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-base flex-shrink-0">🤖</span>
-              <span className="text-xs font-medium text-purple-500">
-                やみい
-              </span>
-            </div>
-            <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5] line-clamp-3">
-              {consultation.answer}
-            </p>
-          </div>
-        ) : replyCount === 0 ? (
+        {/* First AI answer */}
+        {consultation.answer && (
           <div className="mt-2 pl-3 border-l-2 border-base-content/10">
-            <p className="text-[0.9em] text-base-content/40 italic">
-              まだ回答がありません
-            </p>
+            <div className="flex gap-2">
+              {/* Avatar */}
+              <div className="flex-shrink-0">
+                <span className="text-sm">🤖</span>
+              </div>
+
+              {/* Reply content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-xs font-medium text-purple-500/80">
+                    やみい
+                  </span>
+                </div>
+                <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
+                  {consultation.answer}
+                </p>
+              </div>
+            </div>
           </div>
-        ) : null}
+        )}
 
         {/* More replies indicator */}
         {replyCount > 0 && (consultation.answer ? replyCount > 1 : true) && (
@@ -264,7 +266,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
               e.stopPropagation();
               setShowReplies(!showReplies);
             }}
-            className="mt-2 text-sm text-primary/80 hover:text-primary transition-colors"
+            className="mt-2 text-xs text-base-content/50 hover:text-primary transition-colors"
           >
             {showReplies
               ? "閉じる"
@@ -275,9 +277,9 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           </button>
         )}
 
-        {/* Additional replies (hidden by default) */}
+        {/* Additional replies */}
         {showReplies && localReplies && localReplies.length > 0 && (
-          <div className="mt-2 space-y-3 pl-3 border-l-2 border-base-content/10">
+          <div className="mt-2 space-y-2 pl-3 border-l-2 border-base-content/10">
             {/* answerがnullの場合は全reply、ある場合は2番目以降 */}
             {(consultation.answer ? localReplies.slice(1) : localReplies).map((reply) => {
               const isAI = !reply.responder;
@@ -292,19 +294,19 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                   {/* Avatar */}
                   <div className="flex-shrink-0">
                     {isAI ? (
-                      <span className="text-lg">🤖</span>
+                      <span className="text-sm">🤖</span>
                     ) : (
-                      <div className="w-7 h-7 rounded-full overflow-hidden">
+                      <div className="w-6 h-6 rounded-full overflow-hidden">
                         {responderAvatar ? (
                           <Image
                             src={responderAvatar}
                             alt={responderDisplayName}
-                            width={28}
-                            height={28}
+                            width={24}
+                            height={24}
                             className="rounded-full object-cover"
                           />
                         ) : (
-                          <div className="bg-base-300 flex items-center justify-center w-full h-full text-sm">
+                          <div className="bg-base-300/60 flex items-center justify-center w-full h-full text-xs">
                             👤
                           </div>
                         )}
@@ -315,16 +317,16 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                   {/* Reply content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5">
-                      <span className={`text-xs font-medium ${isAI ? "text-purple-500" : "text-secondary"}`}>
+                      <span className={`text-xs font-medium ${isAI ? "text-purple-500/80" : "text-base-content/70"}`}>
                         {responderDisplayName}
                       </span>
                       {!isAI && (
-                        <span className="text-[0.7em] text-base-content/50">
+                        <span className="text-[0.65em] text-base-content/40">
                           {responderHandle}
                         </span>
                       )}
                     </div>
-                    <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
+                    <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
                       {reply.content}
                     </p>
                   </div>
