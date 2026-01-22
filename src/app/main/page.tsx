@@ -69,6 +69,11 @@ export default function NewChatPage() {
 
       const session = await createRes.json();
 
+      // Notify sidebar about new session
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+      }
+
       // Send message
       const msgRes = await fetch(`/api/chat/sessions/${session.id}/messages`, {
         method: "POST",

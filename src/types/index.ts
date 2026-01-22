@@ -405,6 +405,12 @@ export interface TimelineConsultation {
   replyCount: number; // 回答数（AI含む）
   replies: TimelineReply[]; // 回答一覧
   createdAt: Date;
+  isUserResponse?: boolean; // このアイテムがユーザーの回答である場合true
+  responder?: { // 回答者の情報（isUserResponse=trueの場合に使用）
+    handle: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  } | null;
 }
 
 // セッション一覧APIレスポンス

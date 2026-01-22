@@ -32,8 +32,15 @@ function formatDate(date: Date): string {
 export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const router = useRouter();
 
-  const isAnonymous = consultation.isAnonymous || !consultation.user;
-  const displayName = isAnonymous ? "匿名さん" : (consultation.user?.displayName || consultation.user?.handle.split("@")[1] || "匿名");
+  // 回答モードかどうか
+  const isResponseMode = consultation.isUserResponse && consultation.answer && consultation.responder;
+
+  // 表示するユーザー情報（回答モードでは回答者、通常モードでは相談者）
+  const displayUser = isResponseMode ? consultation.responder : consultation.user;
+  const isAnonymous = isResponseMode ? false : (consultation.isAnonymous || !consultation.user);
+  const displayName = isAnonymous
+    ? "匿名さん"
+    : (displayUser?.displayName || displayUser?.handle.split("@")[1] || "匿名");
   const replyCount = consultation.replies?.length || 0;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -58,9 +65,9 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             <div className="bg-base-300 flex items-center justify-center w-full h-full text-2xl">
               😎
             </div>
-          ) : consultation.user?.avatarUrl ? (
+          ) : displayUser?.avatarUrl ? (
             <Image
-              src={consultation.user.avatarUrl}
+              src={displayUser.avatarUrl}
               alt={displayName}
               width={50}
               height={50}
@@ -83,17 +90,17 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             <span className="font-bold text-[0.95em] text-base-content/70 shrink-0">
               {displayName}
             </span>
-          ) : consultation.user ? (
+          ) : displayUser ? (
             <>
               <Link
-                href={`/main/user/${encodeURIComponent(consultation.user.handle)}`}
+                href={`/main/user/${encodeURIComponent(displayUser.handle)}`}
                 className="font-bold text-[0.95em] hover:underline truncate max-w-[180px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {displayName}
               </Link>
               <span className="text-[0.85em] text-base-content/50 truncate max-w-[180px]">
-                {consultation.user?.handle}
+                {displayUser.handle}
               </span>
             </>
           ) : null}
@@ -124,10 +131,57 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           </div>
         </header>
 
-        {/* Body - Question */}
-        <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
-          {consultation.question}
-        </p>
+        {/* Body */}
+        {isResponseMode ? (
+          <>
+            {/* 回答モード: 質問を引用として表示 */}
+            <div className="mb-2 pl-3 border-l-2 border-base-content/10">
+              <div className="flex items-start gap-2">
+                <div className="flex-shrink-0 mt-0.5">
+                  {consultation.user ? (
+                    consultation.user.avatarUrl ? (
+                      <Image
+                        src={consultation.user.avatarUrl}
+                        alt={consultation.user.displayName || "相談者"}
+                        width={20}
+                        height={20}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-base-300/60 flex items-center justify-center text-[0.6em]">
+                        {(consultation.user.displayName || "?").charAt(0).toUpperCase()}
+                      </div>
+                    )
+                  ) : (
+                    <div className="w-5 h-5 rounded-full bg-base-300 flex items-center justify-center">
+                      <span className="text-xs">😎</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[0.75em] text-base-content/50">
+                    {consultation.isAnonymous
+                      ? "匿名さん"
+                      : consultation.user?.displayName || consultation.user?.handle.split("@")[1] || "ユーザー"}
+                    への回答
+                  </span>
+                  <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] line-clamp-2 mt-0.5">
+                    {consultation.question}
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* 回答内容 */}
+            <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
+              {consultation.answer}
+            </p>
+          </>
+        ) : (
+          /* 通常モード: 質問を表示 */
+          <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
+            {consultation.question}
+          </p>
+        )}
 
         {/* Reply count metadata */}
         {replyCount > 0 && (

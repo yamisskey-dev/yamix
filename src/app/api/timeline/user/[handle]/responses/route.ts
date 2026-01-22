@@ -105,6 +105,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           replyCount: 0,
           replies: [],
           createdAt: response.createdAt,
+          isUserResponse: true, // このアイテムはユーザーの回答
+          responder: {
+            handle: user.handle,
+            displayName: user.profile?.displayName || null,
+            avatarUrl: user.profile?.avatarUrl || null,
+          },
         };
       });
 
@@ -179,6 +185,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             replyCount: 0,
             replies: [],
             createdAt: response.createdAt,
+            isUserResponse: true,
+            responder: {
+              handle: decodedHandle,
+              displayName: null,
+              avatarUrl: null,
+            },
           } as TimelineConsultation;
         })
         .filter((c): c is TimelineConsultation => c !== null);

@@ -93,6 +93,17 @@ export function ChatSessionList({ onSessionSelect }: Props) {
 
   useEffect(() => {
     fetchSessions();
+
+    // Listen for new session created event
+    const handleNewSession = () => {
+      fetchSessions();
+    };
+
+    window.addEventListener("newChatSessionCreated", handleNewSession);
+
+    return () => {
+      window.removeEventListener("newChatSessionCreated", handleNewSession);
+    };
   }, [fetchSessions]);
 
   const handleSessionClick = (sessionId: string) => {
