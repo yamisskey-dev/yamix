@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
 
 // Misskey風のFormLinkコンポーネント
 function FormLink({
@@ -74,24 +73,6 @@ function MkKeyValue({
 }
 
 export default function AboutPage() {
-  const [prompt, setPrompt] = useState("");
-
-  // デフォルトプロンプトを取得
-  useEffect(() => {
-    async function fetchPrompt() {
-      try {
-        const res = await fetch("/api/system/prompt");
-        if (res.ok) {
-          const data = await res.json();
-          setPrompt(data.prompt);
-        }
-      } catch (err) {
-        console.error("Failed to fetch prompt:", err);
-      }
-    }
-    fetchPrompt();
-  }, []);
-
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
       <div className="max-w-xl mx-auto space-y-4 my-8">
@@ -124,26 +105,6 @@ export default function AboutPage() {
           <p className="text-sm text-base-content/80">
             AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
           </p>
-        </FormSection>
-
-        {/* デフォルトプロンプト（閲覧のみ） */}
-        <FormSection label="デフォルトプロンプト">
-          <textarea
-            readOnly
-            value={prompt || "読み込み中..."}
-            className="textarea textarea-bordered w-full h-48 text-xs bg-base-300 resize-none"
-          />
-          <div className="flex justify-between items-center mt-2">
-            <span className="text-xs text-base-content/40">
-              YAMI DAO連携後に編集機能を開放予定
-            </span>
-            <button
-              className="btn btn-primary btn-sm btn-disabled"
-              disabled
-            >
-              Coming Soon
-            </button>
-          </div>
         </FormSection>
 
         {/* ソースコード */}
