@@ -18,6 +18,8 @@ export default function NewChatPage() {
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
+  const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -51,9 +53,14 @@ export default function NewChatPage() {
     setError(undefined);
 
     try {
-      // Create new session
+      // Create new session with consultType and isAnonymous
       const createRes = await fetch("/api/chat/sessions", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultType,
+          isAnonymous: consultType === "PUBLIC" ? isAnonymous : false,
+        }),
       });
 
       if (!createRes.ok) {
@@ -144,46 +151,86 @@ export default function NewChatPage() {
 
       {/* Input Area */}
       <div className="p-4">
-        <form
-          onSubmit={handleSubmit}
-          className="flex items-center gap-2 max-w-6xl mx-auto"
-        >
-          <div className="flex-1 relative">
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="相談してみましょう"
-              className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
-              rows={1}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-            />
+        <div className="max-w-6xl mx-auto">
+          {/* Consult Type Selection - シンプル版 */}
+          <div className="mb-2 flex items-center justify-between text-xs text-base-content/60">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer hover:text-base-content/80 transition-colors">
+                <input
+                  type="checkbox"
+                  className="toggle toggle-sm toggle-primary"
+                  checked={consultType === "PUBLIC"}
+                  onChange={(e) => {
+                    setConsultType(e.target.checked ? "PUBLIC" : "PRIVATE");
+                    if (!e.target.checked) setIsAnonymous(false);
+                  }}
+                  disabled={isLoading}
+                />
+                <span>
+                  {consultType === "PRIVATE" ? (
+                    <>プライベート相談（AI専用・1 YAMI）</>
+                  ) : (
+                    <>公開相談（誰でも回答可能・3 YAMI）</>
+                  )}
+                </span>
+              </label>
+
+              {consultType === "PUBLIC" && (
+                <label className="flex items-center gap-1.5 cursor-pointer hover:text-base-content/80 transition-colors">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-xs"
+                    checked={isAnonymous}
+                    onChange={(e) => setIsAnonymous(e.target.checked)}
+                    disabled={isLoading}
+                  />
+                  <span>匿名</span>
+                </label>
+              )}
+            </div>
           </div>
-          <button
-            type="submit"
-            className={`btn btn-primary btn-circle flex-shrink-0 ${
-              isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
-            }`}
-            disabled={isLoading || !inputValue.trim()}
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex items-center gap-2"
           >
-            {isLoading ? (
-              <span className="loading loading-spinner loading-sm" />
-            ) : (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5"
-              >
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-              </svg>
-            )}
-          </button>
-        </form>
-        <p className="text-xs text-center text-base-content/30 mt-2">
-          Shift + Enter で改行
-        </p>
+            <div className="flex-1 relative">
+              <textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="相談してみましょう"
+                className="textarea bg-base-200/50 border-base-300/50 focus:border-primary/50 w-full resize-none min-h-[2.5rem] max-h-[7.5rem] py-2 pr-4 rounded-2xl"
+                rows={1}
+                onKeyDown={handleKeyDown}
+                disabled={isLoading}
+              />
+            </div>
+            <button
+              type="submit"
+              className={`btn btn-primary btn-circle flex-shrink-0 ${
+                isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
+              }`}
+              disabled={isLoading || !inputValue.trim()}
+            >
+              {isLoading ? (
+                <span className="loading loading-spinner loading-sm" />
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+              )}
+            </button>
+          </form>
+          <p className="text-xs text-center text-base-content/30 mt-2">
+            Shift + Enter で改行
+          </p>
+        </div>
       </div>
     </div>
   );

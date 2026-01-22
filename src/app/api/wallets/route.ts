@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
           _count: {
             select: {
               posts: true,
-              following: true,
             },
           },
         },
@@ -47,7 +46,6 @@ export async function GET(req: NextRequest) {
             _count: {
               select: {
                 posts: true,
-                following: true,
               },
             },
           },

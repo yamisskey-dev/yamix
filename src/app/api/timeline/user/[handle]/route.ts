@@ -9,7 +9,9 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,8 @@ interface PrismaUser {
 
 interface PrismaSessionWithMessages {
   id: string;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
   createdAt: Date;
   messages: Array<{
     role: string;
@@ -87,15 +91,23 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const sessions = await db.chatSession.findMany({
         where: {
           userId: user.id,
-          ...(isOwnProfile ? {} : { isPublic: true }),
+          ...(isOwnProfile ? {} : { consultType: "PUBLIC" }), // 公開相談のみ（自分のプロフィールでは全て表示）
         },
         orderBy: { createdAt: "desc" },
         take: limit + 1,
         ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-        include: {
+        select: {
+          id: true,
+          consultType: true,
+          isAnonymous: true,
+          createdAt: true,
           messages: {
             orderBy: { createdAt: "asc" },
             take: 2,
+            select: {
+              role: true,
+              content: true,
+            },
           },
         },
       }) as PrismaSessionWithMessages[];
@@ -114,7 +126,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             sessionId: s.id,
             question: userMsg?.content || "",
             answer: assistantMsg?.content || "",
-            user: {
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            user: s.isAnonymous ? null : { // 匿名の場合はnull
               handle: user.handle,
               displayName: user.profile?.displayName || null,
               avatarUrl: user.profile?.avatarUrl || null,
@@ -153,7 +167,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       // Get user's sessions (public only, or all if own profile)
       const userSessions = Array.from(chatSessionsStore.values())
-        .filter((s) => s.userId === targetUser.id && (isOwnProfile || s.isPublic))
+        .filter((s) => s.userId === targetUser.id && (isOwnProfile || s.consultType === "PUBLIC"))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       let startIndex = 0;
@@ -184,7 +198,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             sessionId: s.id,
             question: userMsg.content,
             answer: assistantMsg.content,
-            user: {
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            user: s.isAnonymous ? null : { // 匿名の場合はnull
               handle: decodedHandle,
               displayName: null as string | null,
               avatarUrl: null as string | null,

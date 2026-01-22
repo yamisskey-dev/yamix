@@ -39,9 +39,9 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
   const [localReplies, setLocalReplies] = useState(consultation.replies);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isAnonymous = !consultation.user.displayName && !consultation.user.avatarUrl;
-  const displayName = isAnonymous ? "匿名" : (consultation.user.displayName || consultation.user.handle.split("@")[1] || "匿名");
-  const isOwnConsultation = currentUserHandle === consultation.user.handle;
+  const isAnonymous = consultation.isAnonymous || !consultation.user;
+  const displayName = isAnonymous ? "匿名さん" : (consultation.user?.displayName || consultation.user?.handle.split("@")[1] || "匿名");
+  const isOwnConsultation = consultation.user && currentUserHandle === consultation.user.handle;
   const replyCount = localReplies?.length || 0;
 
   const handleClick = (e: React.MouseEvent) => {
@@ -139,7 +139,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             <div className="bg-base-300 flex items-center justify-center w-full h-full text-2xl">
               😎
             </div>
-          ) : consultation.user.avatarUrl ? (
+          ) : consultation.user?.avatarUrl ? (
             <Image
               src={consultation.user.avatarUrl}
               alt={displayName}
@@ -170,13 +170,13 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        {/* Header - Misskey style: name · @username · time */}
+        {/* Header - Misskey style: name · @username · visibility · time */}
         <header className="flex items-center flex-wrap gap-x-1.5 mb-1">
           {isAnonymous ? (
             <span className="font-bold text-[0.95em] text-base-content/70 shrink-0">
               {displayName}
             </span>
-          ) : (
+          ) : consultation.user ? (
             <>
               <Link
                 href={`/main/user/${encodeURIComponent(consultation.user.handle)}`}
@@ -186,13 +186,35 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                 {displayName}
               </Link>
               <span className="text-[0.85em] text-base-content/50 truncate max-w-[180px]">
-                {consultation.user.handle}
+                {consultation.user?.handle}
               </span>
             </>
-          )}
-          <span className="text-[0.85em] text-base-content/50 ml-auto shrink-0">
-            {formatDate(new Date(consultation.createdAt))}
-          </span>
+          ) : null}
+          {/* Right side: visibility icon and time */}
+          <div className="flex items-center gap-x-1.5 ml-auto shrink-0">
+            {/* Consult type indicator - only show for PRIVATE */}
+            {consultation.consultType === "PRIVATE" && (
+              <span className="text-base-content/40" title="プライベート相談">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-3.5 w-3.5 inline-block"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </span>
+            )}
+            <span className="text-[0.85em] text-base-content/50">
+              {formatDate(new Date(consultation.createdAt))}
+            </span>
+          </div>
         </header>
 
         {/* Body - Question */}

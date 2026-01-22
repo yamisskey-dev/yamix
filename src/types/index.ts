@@ -16,9 +16,11 @@ export const TOKEN_ECONOMY = {
   DECAY_RATE_PERCENT: 20,        // 日次減衰率（%）- 均衡残高 = BI ÷ 減衰率 = 50
 
   // 相談コスト（相談者が支払う）
-  AI_CONSULT_COST: 1,            // AI相談コスト（安い）
-  HUMAN_CONSULT_COST: 5,         // 人間相談コスト（高い）
-  ANY_CONSULT_COST: 3,           // どちらでも可（中間）
+  PRIVATE_CONSULT_COST: 1,       // プライベート相談（AI専用、非公開）
+  PUBLIC_CONSULT_COST: 3,        // 公開相談（誰でも回答可能、タイムライン表示）
+  AI_CONSULT_COST: 1,            // AI相談コスト（安い）- 後方互換
+  HUMAN_CONSULT_COST: 5,         // 人間相談コスト（高い）- 後方互換
+  ANY_CONSULT_COST: 3,           // どちらでも可（中間）- 後方互換
   DISCUSSION_COST: 0,            // 一般投稿（無料）
 
   // 報酬（回答者が受け取る）
@@ -118,7 +120,6 @@ export interface WalletWithRelations extends Wallet {
   avatarUrl?: string | null;
   _count?: {
     posts: number;
-    following: number;
   };
 }
 
@@ -214,14 +215,12 @@ export type TokenPurchase = YamiPurchase;
 export type TokenWithdrawal = YamiWithdrawal;
 
 // ============================================
-// Follow types (silent watching)
+// Follow types - DEPRECATED
+// フォロー機能は廃止され、ブラキャニ風の発見型タイムラインに移行
 // ============================================
-export interface Follow {
-  id: string;
-  followerId: string;
-  targetId: string;
-  createdAt: Date;
-}
+// export interface Follow {
+//   削除済み
+// }
 
 // ============================================
 // Paginated response types
@@ -313,15 +312,19 @@ export interface WalletLink {
 }
 
 // ============================================
-// Chat Session types (ChatGPT-style history)
+// Chat Session types (二層構造の相談セッション)
 // ============================================
 export type MessageRole = "USER" | "ASSISTANT";
+export type ConsultType = "PRIVATE" | "PUBLIC";
 
 export interface ChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: ConsultType;       // 相談タイプ
+  isAnonymous: boolean;           // 匿名投稿
+  category: string | null;        // Phase 2用: カテゴリ
+  isPublic: boolean;              // DEPRECATED: consultType=PUBLIC と同義
   createdAt: Date;
   updatedAt: Date;
 }
@@ -333,6 +336,7 @@ export interface ChatMessage {
   content: string;
   isCrisis: boolean;
   responderId?: string | null; // 人間回答者のID
+  isAnonymous: boolean;        // 匿名回答
   responder?: ResponderInfo | null; // 人間回答者の情報（includeで取得時）
   createdAt: Date;
 }
@@ -360,7 +364,9 @@ export interface ChatSessionListItem {
   id: string;
   title: string | null;
   preview: string | null; // 最後のメッセージのプレビュー
-  isPublic: boolean;
+  consultType: ConsultType; // 相談タイプ
+  isAnonymous: boolean;     // 匿名投稿
+  isPublic: boolean;        // DEPRECATED
   updatedAt: Date;
 }
 
@@ -383,11 +389,13 @@ export interface TimelineConsultation {
   sessionId: string;
   question: string;
   answer: string; // 最初のAI回答
+  consultType: ConsultType; // 相談タイプ
+  isAnonymous: boolean; // 匿名投稿
   user: {
     handle: string;
     displayName: string | null;
     avatarUrl: string | null;
-  };
+  } | null; // 匿名の場合はnull
   replyCount: number; // 回答数（AI含む）
   replies: TimelineReply[]; // 回答一覧
   createdAt: Date;

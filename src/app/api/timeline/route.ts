@@ -8,7 +8,10 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +28,8 @@ interface MemoryChatMessage {
 // Prismaセッション結果の型
 interface PrismaSessionWithMessages {
   id: string;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
   createdAt: Date;
   user: {
     handle: string;
@@ -59,11 +64,15 @@ export async function GET(req: NextRequest) {
     if (db) {
       // Get public sessions with all messages (for reply tree)
       const sessions = await db.chatSession.findMany({
-        where: { isPublic: true },
+        where: { consultType: "PUBLIC" }, // 公開相談のみ
         orderBy: { createdAt: "desc" },
         take: limit + 1,
         ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-        include: {
+        select: {
+          id: true,
+          consultType: true,
+          isAnonymous: true,
+          createdAt: true,
           user: {
             include: {
               profile: true,
@@ -111,7 +120,9 @@ export async function GET(req: NextRequest) {
             sessionId: s.id,
             question: userMsg?.content || "",
             answer: firstAssistantMsg?.content || "",
-            user: {
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            user: s.isAnonymous ? null : { // 匿名の場合はnull
               handle: s.user.handle,
               displayName: s.user.profile?.displayName || null,
               avatarUrl: s.user.profile?.avatarUrl || null,
@@ -132,7 +143,7 @@ export async function GET(req: NextRequest) {
     } else {
       // In-memory fallback
       const publicSessions = Array.from(chatSessionsStore.values())
-        .filter((s) => s.isPublic)
+        .filter((s) => s.consultType === "PUBLIC") // 公開相談のみ
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       let startIndex = 0;
@@ -173,8 +184,10 @@ export async function GET(req: NextRequest) {
             sessionId: s.id,
             question: userMsg.content,
             answer: firstAssistantMsg.content,
-            user: {
-              handle: "anonymous",
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            user: s.isAnonymous ? null : { // 匿名の場合はnull
+              handle: "anonymous", // In-memory doesn't have real user info
               displayName: null as string | null,
               avatarUrl: null as string | null,
             },

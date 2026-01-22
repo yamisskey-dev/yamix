@@ -88,7 +88,6 @@ model Wallet {
   // Relations
   posts            Post[]
   sentTransactions Transaction[]   @relation("sender")
-  following        Follow[]        @relation("follower")
   purchases        TokenPurchase[]   // 将来用: DAO連携
   withdrawals      TokenWithdrawal[] // 将来用: DAO連携
 
@@ -105,23 +104,12 @@ enum WalletType {
 }
 
 // ============================================
-// Follow - サイレントウォッチ
-// 注目された側には見えない設計
+// Follow - DEPRECATED: フォロー機能は廃止予定
+// ブラキャニ風の発見型タイムラインに移行
 // ============================================
-model Follow {
-  id         String   @id @default(cuid())
-  followerId String
-  targetId   String
-  createdAt  DateTime @default(now())
-
-  // Relations
-  follower Wallet @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
-
-  @@unique([followerId, targetId])
-  @@index([followerId])
-  @@index([targetId])
-  @@map("follows")
-}
+// model Follow {
+//   削除: 相談の二層構造実装に伴い、フォロー機能を廃止
+// }
 
 // ============================================
 // Post - 相談（反応も相談として扱う）
@@ -280,30 +268,43 @@ model EconomyConfig {
   @@map("economy_config")
 }
 
+// 相談タイプ（二層構造）
+enum ConsultType {
+  PRIVATE  // プライベート相談（AI専用、非公開、1 YAMI）
+  PUBLIC   // 公開相談（誰でも回答可能、タイムライン表示、3 YAMI）
+}
+
 // ============================================
-// ChatSession - AI相談セッション
-// ChatGPTスタイルのチャット履歴管理
+// ChatSession - 相談セッション（二層構造）
+// PRIVATE: AI専用、非公開（1 YAMI）
+// PUBLIC: 誰でも回答可能、タイムライン表示（3 YAMI）
 // ============================================
 model ChatSession {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String?  // 最初のメッセージから自動生成
-  isPublic  Boolean  @default(false) // タイムラインに公開
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String      @id @default(cuid())
+  userId      String
+  title       String?     // 最初のメッセージから自動生成
+  consultType ConsultType @default(PRIVATE) // 相談タイプ
+  isAnonymous Boolean     @default(false)    // 匿名投稿
+  category    String?                        // Phase 2用: カテゴリ（恋愛/仕事/メンタル等）
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Backward compatibility
+  isPublic Boolean @default(false) // DEPRECATED: consultType=PUBLIC と同義
 
   // Relations
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 
   @@index([userId, updatedAt])
-  @@index([isPublic, createdAt])
+  @@index([consultType, createdAt])
+  @@index([category])
   @@map("chat_sessions")
 }
 
 // ============================================
 // ChatMessage - チャットメッセージ
-// セッション内の個別メッセージ
+// セッション内の個別メッセージ（質問・AI回答・人間回答）
 // ============================================
 model ChatMessage {
   id          String      @id @default(cuid())
@@ -312,6 +313,7 @@ model ChatMessage {
   content     String      @db.Text
   isCrisis    Boolean     @default(false) // 危機検出フラグ
   responderId String?     // 人間が回答した場合の回答者ID
+  isAnonymous Boolean     @default(false) // 匿名回答
   createdAt   DateTime    @default(now())
 
   // Relations

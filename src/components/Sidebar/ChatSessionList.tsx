@@ -49,7 +49,6 @@ export function ChatSessionList({ onSessionSelect }: Props) {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [updatingPublic, setUpdatingPublic] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const currentSessionId = pathname?.match(/\/main\/chat\/([^/]+)/)?.[1];
@@ -122,30 +121,6 @@ export function ChatSessionList({ onSessionSelect }: Props) {
     }
   };
 
-  const handleTogglePublic = async (e: React.MouseEvent, session: ChatSessionListItem) => {
-    e.stopPropagation();
-    if (updatingPublic === session.id) return;
-
-    setUpdatingPublic(session.id);
-    try {
-      const res = await fetch(`/api/chat/sessions/${session.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPublic: !session.isPublic }),
-      });
-      if (!res.ok) throw new Error("Failed to update public status");
-
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === session.id ? { ...s, isPublic: !s.isPublic } : s
-        )
-      );
-    } catch (error) {
-      console.error("Error updating public status:", error);
-    } finally {
-      setUpdatingPublic(null);
-    }
-  };
 
   const groupedSessions = groupSessionsByDate(filteredSessions);
 
@@ -266,24 +241,6 @@ export function ChatSessionList({ onSessionSelect }: Props) {
                   : "hover:bg-base-200/70 border border-transparent"
               }`}
             >
-              {/* Chat icon */}
-              <div className={`mt-0.5 ${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </div>
-
               {/* Title and preview */}
               <div className="flex-1 min-w-0">
                 <span className={`text-sm font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
@@ -298,29 +255,25 @@ export function ChatSessionList({ onSessionSelect }: Props) {
 
               {/* Action buttons */}
               <div className="flex items-center gap-0.5 shrink-0">
-                {/* Public toggle button */}
-                <button
-                  onClick={(e) => handleTogglePublic(e, session)}
-                  className={`btn btn-ghost btn-xs btn-circle ${
-                    session.isPublic
-                      ? "text-primary"
-                      : "opacity-0 group-hover:opacity-100 text-base-content/50"
-                  }`}
-                  title={session.isPublic ? "公開中（クリックで非公開に）" : "非公開（クリックで公開に）"}
-                  disabled={updatingPublic === session.id}
-                >
-                  {updatingPublic === session.id ? (
-                    <span className="loading loading-spinner loading-xs" />
-                  ) : session.isPublic ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                {/* Consult type indicator - only show for PRIVATE */}
+                {session.consultType === "PRIVATE" && (
+                  <div className={`${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title="プライベート相談">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      />
                     </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  )}
-                </button>
+                  </div>
+                )}
 
                 {/* Delete button */}
                 <button

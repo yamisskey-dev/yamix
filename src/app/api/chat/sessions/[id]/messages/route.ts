@@ -11,7 +11,10 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -131,8 +134,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       })) as ConversationMessage[];
     }
 
-    // Check wallet balance
-    const consultCost = TOKEN_ECONOMY.AI_CONSULT_COST;
+    // Determine consult cost based on consultType
+    const consultCost = session.consultType === "PUBLIC"
+      ? TOKEN_ECONOMY.PUBLIC_CONSULT_COST
+      : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
 
     if (db) {
       const wallet = await db.wallet.findUnique({

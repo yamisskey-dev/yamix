@@ -9,7 +9,10 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,7 +30,9 @@ interface MemoryChatMessage {
 interface PrismaSessionResult {
   id: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  isPublic: boolean; // DEPRECATED
   updatedAt: Date;
   messages: { content: string; role: string }[];
 }
@@ -64,7 +69,9 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           title: true,
-          isPublic: true,
+          consultType: true,
+          isAnonymous: true,
+          isPublic: true, // DEPRECATED
           updatedAt: true,
           messages: {
             orderBy: { createdAt: "desc" },
@@ -81,7 +88,9 @@ export async function GET(req: NextRequest) {
           id: s.id,
           title: s.title,
           preview: s.messages[0]?.content?.slice(0, 50) || null,
-          isPublic: s.isPublic,
+          consultType: s.consultType,
+          isAnonymous: s.isAnonymous,
+          isPublic: s.isPublic, // DEPRECATED
           updatedAt: s.updatedAt,
         }));
 
@@ -119,7 +128,9 @@ export async function GET(req: NextRequest) {
           id: s.id,
           title: s.title,
           preview: lastMessage?.content?.slice(0, 50) || null,
-          isPublic: s.isPublic,
+          consultType: s.consultType,
+          isAnonymous: s.isAnonymous,
+          isPublic: s.isPublic, // DEPRECATED
           updatedAt: s.updatedAt,
         };
       });
@@ -155,16 +166,35 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // リクエストボディをパース（空の場合はデフォルト値を使用）
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+
+    const consultType = body.consultType || "PRIVATE"; // デフォルトはプライベート相談
+    const isAnonymous = body.isAnonymous || false;
+    const category = body.category || null;
+
     const db = getPrismaClient();
 
     if (db) {
       const session = await db.chatSession.create({
         data: {
           userId: payload.userId,
+          consultType,
+          isAnonymous,
+          category,
+          isPublic: consultType === "PUBLIC", // 後方互換性
         },
         select: {
           id: true,
           title: true,
+          consultType: true,
+          isAnonymous: true,
+          category: true,
           isPublic: true,
           createdAt: true,
           updatedAt: true,
@@ -179,7 +209,10 @@ export async function POST(req: NextRequest) {
         id: generateId(),
         userId: payload.userId,
         title: null,
-        isPublic: false,
+        consultType,
+        isAnonymous,
+        category,
+        isPublic: consultType === "PUBLIC", // DEPRECATED
         createdAt: now,
         updatedAt: now,
       };
@@ -190,6 +223,9 @@ export async function POST(req: NextRequest) {
         {
           id: session.id,
           title: session.title,
+          consultType: session.consultType,
+          isAnonymous: session.isAnonymous,
+          category: session.category,
           isPublic: session.isPublic,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,

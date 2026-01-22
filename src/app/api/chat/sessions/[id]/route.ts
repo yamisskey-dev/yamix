@@ -8,7 +8,10 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,7 +100,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/chat/sessions/[id] - Update session (title, isPublic)
+// PATCH /api/chat/sessions/[id] - Update session (title only)
+// consultType と isAnonymous は作成時に決まり、変更不可
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
 
@@ -112,11 +116,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params;
 
-  let body: { title?: string; isPublic?: boolean };
+  let body: { title?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  // タイトルのみ更新可能
+  if (body.title === undefined) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
   try {
@@ -137,10 +146,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
       const updated = await db.chatSession.update({
         where: { id },
-        data: {
-          ...(body.title !== undefined && { title: body.title }),
-          ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
-        },
+        data: { title: body.title },
       });
 
       return NextResponse.json(updated);
@@ -156,8 +162,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      if (body.title !== undefined) session.title = body.title;
-      if (body.isPublic !== undefined) session.isPublic = body.isPublic;
+      session.title = body.title;
       session.updatedAt = new Date();
 
       chatSessionsStore.set(id, session);
