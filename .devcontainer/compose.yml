@@ -31,6 +31,7 @@ services:
       YAMII_DATA_DIR: /app/data
     volumes:
       - yamii-data:/app/data
+      - ../yamii/config:/app/config:ro
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/health']
       interval: 30s
