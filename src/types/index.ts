@@ -406,3 +406,43 @@ export interface TimelineResponse {
   hasMore: boolean;
   nextCursor: string | null;
 }
+
+// ============================================
+// User Stats（ユーザー統計）
+// 依存度レベルと使用状況
+// ============================================
+
+export type DependencyLevel = "LOW" | "MODERATE" | "HIGH" | "VERY_HIGH";
+
+export interface DependencyInfo {
+  level: DependencyLevel;
+  score: number; // 0-100
+  label: string;
+  description: string;
+}
+
+export interface PeriodStats {
+  aiConsults: number;
+  humanConsults: number;
+  totalConsults: number;
+  tokensSpent: number;
+  tokensEarned: number;
+  netTokens: number;
+}
+
+export interface UsageTrend {
+  direction: "INCREASING" | "STABLE" | "DECREASING";
+  weekOverWeekChange: number; // percentage
+}
+
+export interface UserStats {
+  walletId: string;
+  currentBalance: number;
+  equilibriumBalance: number;
+  balanceRatio: number;
+  dependency: DependencyInfo;
+  today: PeriodStats;
+  week: PeriodStats;
+  month: PeriodStats;
+  trend: UsageTrend;
+}
