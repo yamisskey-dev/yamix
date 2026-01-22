@@ -253,9 +253,16 @@ export default function UserProfilePage({ params }: PageProps) {
 
         {/* Consultations */}
         {consultations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-base-content/50">
-            <div className="text-6xl mb-4">📭</div>
-            <p className="text-sm">公開相談がありません</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <img
+              src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yui/yui-256x256.webp"
+              alt="Yui"
+              className="w-32 h-32 mb-6"
+              draggable={false}
+            />
+            <h3 className="text-lg font-medium text-base-content/70 mb-2">
+              公開相談がありません
+            </h3>
           </div>
         ) : (
           <div className="space-y-4">

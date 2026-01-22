@@ -120,11 +120,6 @@ export function TimelineFeed() {
         <h3 className="text-lg font-medium text-base-content/70 mb-2">
           公開相談がありません
         </h3>
-        <p className="text-sm text-base-content/50 max-w-xs leading-relaxed">
-          相談を公開するとここに表示されます。
-          <br />
-          みんなの悩みを共有してみましょう。
-        </p>
       </div>
     );
   }
