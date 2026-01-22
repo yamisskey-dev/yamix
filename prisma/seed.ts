@@ -46,8 +46,8 @@ const economyDefaults = [
   // 制約
   {
     key: "INITIAL_BALANCE",
-    value: 10,
-    description: "新規ユーザーの初期残高",
+    value: 50,
+    description: "新規ユーザーの初期残高（均衡残高と同じ）",
   },
   {
     key: "MAX_BALANCE",

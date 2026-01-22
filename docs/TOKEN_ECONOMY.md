@@ -114,6 +114,7 @@ interface ValidationEconomyParams {
   dailyRewardCap: number;    // 1日の報酬上限
 
   // 制約
+  initialBalance: number;    // 新規ユーザーの初期残高
   maxBalance: number;        // 残高上限
 }
 ```
@@ -147,6 +148,7 @@ interface ValidationEconomyParams {
 |------------|-----|------|
 | dailyGrant | 10 | 人間相談2回分/日 |
 | decayRate | 0.2 (20%) | 均衡50、5日で67%減 |
+| initialBalance | 50 | 均衡残高と同じ（100%スタート） |
 | maxBalance | 100 | 均衡の2倍 |
 | aiConsultCost | 1 | 最小単位 |
 | humanConsultCost | 5 | AI×5（時間の価値） |
@@ -156,14 +158,14 @@ interface ValidationEconomyParams {
 **シミュレーション（何もしない場合）**：
 
 ```
-Day 0:  10.0 V（初期）
-Day 1:  10 × 0.8 + 10 = 18.0 V
-Day 2:  18 × 0.8 + 10 = 24.4 V
-Day 3:  24.4 × 0.8 + 10 = 29.5 V
-Day 4:  29.5 × 0.8 + 10 = 33.6 V
-Day 5:  33.6 × 0.8 + 10 = 36.9 V
+Day 0:  50.0 V（初期 = 均衡残高）
+Day 1:  50 × 0.8 + 10 = 50.0 V
+Day 2:  50 × 0.8 + 10 = 50.0 V
 ...
 収束:   50.0 V（= 10 / 0.2）
+
+※ 初期残高を均衡残高と同じ50に設定することで、
+   新規ユーザーが初回から100%の状態でスタートできる
 ```
 
 ---
@@ -304,3 +306,4 @@ A: 実装上は「Validation」という概念名を使用する。UIでの表�
 ## 変更履歴
 
 - 2026-01-22: 初版作成（YAMI_ECONOMY.md から移行・再設計）
+- 2026-01-22: 初期残高を10→50に変更（新規ユーザーが100%からスタート）

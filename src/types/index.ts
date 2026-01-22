@@ -26,7 +26,7 @@ export const TOKEN_ECONOMY = {
   DAILY_REWARD_CAP: 15,          // 1日あたりの報酬獲得上限
 
   // 残高制約
-  INITIAL_BALANCE: 10,           // 新規ユーザーの初期残高
+  INITIAL_BALANCE: 50,           // 新規ユーザーの初期残高（均衡残高と同じ）
   MAX_BALANCE: 100,              // 残高の上限（均衡残高の2倍）
 
   // リアクション（投げ銭）
