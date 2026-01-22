@@ -1,53 +1,64 @@
 // ============================================
-// YAMI Token Economy - 精神資源経済
+// Validation Economy（承認経済）
+// 詳細: docs/VALIDATION_ECONOMY.md
 // ============================================
 
 /**
- * YAMI トークン経済の定数
- * DAOガバナンスで変更可能（EconomyConfigテーブル）
- * ネットワーク: Optimism (YAMI DAOと共通)
+ * 承認経済のデフォルトパラメータ
+ * EconomyConfigテーブルで上書き可能
+ * 将来的にYAMI DAO投票で変更可能
  */
-export const YAMI_TOKEN_ECONOMY = {
-  // トークン情報
-  TOKEN_NAME: "YAMI",            // トークン名
-  TOKEN_SYMBOL: "YAMI",          // トークンシンボル
-  NETWORK: "optimism",           // ネットワーク（YAMI DAOと共通）
-  CHAIN_ID: 10,                  // Optimism Mainnet Chain ID
+export const VALIDATION_ECONOMY = {
+  // ベーシックインカム（BI）
+  DAILY_GRANT_AMOUNT: 10,        // 毎日のBI付与量
 
-  // 初期配布
-  INITIAL_BALANCE: 10,           // 新規ウォレット初期YAMI
-  DAILY_FREE_GRANT: 3,           // 毎日の無料付与（予定）
-
-  // 上限
-  MAX_BALANCE: 1000,             // 最大保有YAMI
+  // 減衰（Demurrage）
+  DECAY_RATE_PERCENT: 20,        // 日次減衰率（%）- 均衡残高 = BI ÷ 減衰率 = 50
 
   // 相談コスト（相談者が支払う）
-  COST_CONSULT_AI: 1,            // AI相談コスト（安い）
-  COST_CONSULT_HUMAN: 5,         // 人間相談コスト（高い）
-  COST_CONSULT_ANY: 3,           // どちらでも可（中間）
-  COST_DISCUSSION: 0,            // 一般投稿（無料）
+  AI_CONSULT_COST: 1,            // AI相談コスト（安い）
+  HUMAN_CONSULT_COST: 5,         // 人間相談コスト（高い）
+  ANY_CONSULT_COST: 3,           // どちらでも可（中間）
+  DISCUSSION_COST: 0,            // 一般投稿（無料）
 
-  // 回答報酬（回答者が受け取る）
-  REWARD_RESPONSE_AI: 0,         // AI回答報酬（なし、運営コスト）
-  REWARD_RESPONSE_HUMAN: 4,      // 人間回答報酬（相談コストの80%）
-  REWARD_RESPONSE_SELF: 0,       // 自己返信報酬（なし）
+  // 報酬（回答者が受け取る）
+  RESPONSE_REWARD: 3,            // 人間回答報酬
+  DAILY_REWARD_CAP: 15,          // 1日あたりの報酬獲得上限
+
+  // 残高制約
+  INITIAL_BALANCE: 10,           // 新規ユーザーの初期残高
+  MAX_BALANCE: 100,              // 残高の上限（均衡残高の2倍）
 
   // リアクション（投げ銭）
   REACTION_MIN: 1,               // 最小リアクション
   REACTION_DEFAULT: 1,           // デフォルトリアクション
 
-  // Optimism ETH換算レート（予定）
-  ETH_PER_YAMI: "0.0001",        // 1 YAMI = 0.0001 ETH (Optimism)
-  MIN_PURCHASE: 10,              // 最小購入YAMI数
-  MIN_WITHDRAWAL: 50,            // 最小換金YAMI数
+  // 将来用: YAMI DAO連携（Optimism）
+  ETH_PER_TOKEN: "0.0001",       // 1 Token = 0.0001 ETH (Optimism)
+  MIN_PURCHASE: 10,              // 最小購入数
+  MIN_WITHDRAWAL: 50,            // 最小換金数
   WITHDRAWAL_FEE_PERCENT: 10,    // 換金手数料（DAO運営資金）
+  NETWORK: "optimism",           // ネットワーク
+  CHAIN_ID: 10,                  // Optimism Mainnet Chain ID
+
+  // 後方互換性エイリアス
+  COST_CONSULT_AI: 1,            // → AI_CONSULT_COST
+  COST_CONSULT_HUMAN: 5,         // → HUMAN_CONSULT_COST
+  COST_CONSULT_ANY: 3,           // → ANY_CONSULT_COST
+  COST_DISCUSSION: 0,            // → DISCUSSION_COST
+  REWARD_RESPONSE_AI: 0,         // AIは報酬なし
+  REWARD_RESPONSE_HUMAN: 3,      // → RESPONSE_REWARD
+  REWARD_RESPONSE_SELF: 0,       // 自己返信報酬なし
+  DAILY_FREE_GRANT: 10,          // → DAILY_GRANT_AMOUNT
+  ETH_PER_YAMI: "0.0001",        // → ETH_PER_TOKEN
+  TOKEN_NAME: "YAMI",            // UI表示用
+  TOKEN_SYMBOL: "YAMI",          // UI表示用
 } as const;
 
 // 後方互換性のためのエイリアス
-export const MENTAL_RESOURCE_ECONOMY = YAMI_TOKEN_ECONOMY;
-
-// 後方互換性のためのエイリアス
-export const TOKEN_ECONOMY = YAMI_TOKEN_ECONOMY;
+export const YAMI_TOKEN_ECONOMY = VALIDATION_ECONOMY;
+export const MENTAL_RESOURCE_ECONOMY = VALIDATION_ECONOMY;
+export const TOKEN_ECONOMY = VALIDATION_ECONOMY;
 
 // ============================================
 // Instance types supported
@@ -96,10 +107,13 @@ export type WalletType = "HUMAN" | "AI_SYSTEM" | "AI_AGENT" | "DAO";
 
 export interface Wallet {
   id: string;
-  address: string;
+  address: string;                // 公開用ウォレットアドレス（0x形式）
   balance: number;
   walletType: WalletType;
-  userId: string; // Required (1:1 relation)
+  lastDailyGrantAt: Date | null;  // 最後にBI付与を受けた日時
+  lastDecayAt: Date | null;       // 最後に減衰が適用された日時
+  userId: string;                 // Required (1:1 relation)
+  daoAddress: string | null;      // 将来用: Optimismアドレス
   createdAt: Date;
 }
 
@@ -149,14 +163,17 @@ export interface PostWithRelations extends Post {
 // Transaction types (token transfer/reaction)
 // ============================================
 export type TransactionType =
-  | "CONSULT_AI"
-  | "CONSULT_HUMAN"
-  | "RESPONSE_REWARD"
-  | "REACTION"
-  | "PURCHASE"
-  | "WITHDRAWAL"
-  | "SYSTEM_GRANT"
-  | "DAO_DIVIDEND";
+  | "CONSULT_AI"       // AI相談コスト
+  | "CONSULT_HUMAN"    // 人間相談コスト
+  | "RESPONSE_REWARD"  // 回答報酬
+  | "DAILY_GRANT"      // 毎日のBI付与
+  | "DECAY"            // 減衰（時間経過による減少）
+  | "REACTION"         // リアクション（投げ銭）
+  | "SYSTEM_GRANT"     // システム付与（初期配布等）
+  // 将来用: DAO連携
+  | "PURCHASE"         // トークン購入
+  | "WITHDRAWAL"       // トークン換金
+  | "DAO_DIVIDEND";    // DAO配当
 
 export interface Transaction {
   id: string;

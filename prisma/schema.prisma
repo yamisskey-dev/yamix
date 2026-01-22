@@ -71,6 +71,7 @@ model Profile {
 // ============================================
 model Wallet {
   id               String     @id @default(cuid())
+  address          String     @unique // 公開用ウォレットアドレス（0x形式）
   balance          Int        @default(10) // トークン残高（初期値）
   walletType       WalletType @default(HUMAN) // 人格タイプ
   lastDailyGrantAt DateTime?  // 最後に毎日のBI付与を受け取った日時
