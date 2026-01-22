@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useRef, useEffect, memo, useMemo, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { memo } from "react";
+import { useRouter } from "next/navigation";
 import type { TimelineConsultation } from "@/types";
 
 interface Props {
@@ -30,117 +30,23 @@ function formatDate(date: Date): string {
 }
 
 export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
-  const [showResponseModal, setShowResponseModal] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [showReplies, setShowReplies] = useState(true); // Misskeyのように最初から展開
-  const [responseText, setResponseText] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string>();
-  const [rewardMessage, setRewardMessage] = useState<string>();
-  const [localReplies, setLocalReplies] = useState(consultation.replies);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const router = useRouter();
 
   const isAnonymous = consultation.isAnonymous || !consultation.user;
   const displayName = isAnonymous ? "匿名さん" : (consultation.user?.displayName || consultation.user?.handle.split("@")[1] || "匿名");
-  const isOwnConsultation = consultation.user && currentUserHandle === consultation.user.handle;
-  const replyCount = localReplies?.length || 0;
+  const replyCount = consultation.replies?.length || 0;
 
   const handleClick = (e: React.MouseEvent) => {
     // Don't navigate if clicking on interactive elements
     if ((e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) {
       return;
     }
-    // Toggle replies instead of navigating
-    if (replyCount > 0) {
-      setShowReplies(!showReplies);
-    }
+    // Navigate to chat room
+    router.push(`/main/chat/${consultation.sessionId}`);
   };
 
-  const handleResponseClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowResponseModal(true);
-    setSubmitError(undefined);
-    setRewardMessage(undefined);
-  };
-
-  const handleSubmitResponse = async () => {
-    if (!responseText.trim() || isSubmitting) return;
-
-    setIsSubmitting(true);
-    setSubmitError(undefined);
-
-    try {
-      const res = await fetch(`/api/chat/sessions/${consultation.sessionId}/respond`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: responseText.trim() }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "回答の送信に失敗しました");
-      }
-
-      const data = await res.json();
-
-      // Add the new reply to local state
-      const newReply = {
-        id: data.message.id,
-        content: data.message.content,
-        createdAt: new Date(data.message.createdAt),
-        responder: {
-          id: data.message.responderId,
-          handle: currentUserHandle || "",
-          displayName: localStorage.getItem("yamix_displayName") || null,
-          avatarUrl: localStorage.getItem("yamix_avatarUrl") || null,
-        },
-      };
-      setLocalReplies((prev) => [...(prev || []), newReply]);
-
-      // Show reward message if applicable
-      if (data.reward && data.reward > 0) {
-        setRewardMessage(`+${data.reward} YAMI を獲得しました！`);
-      } else if (data.rewardCapped) {
-        if (data.capRemaining > 0) {
-          setRewardMessage(`本日の報酬上限に達しています（残り${data.capRemaining} YAMI）`);
-        } else {
-          setRewardMessage("本日の報酬上限に達しています");
-        }
-      }
-
-      // Success - close modal, reset, and show replies
-      setShowResponseModal(false);
-      setResponseText("");
-      setShowReplies(true);
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "エラーが発生しました");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current && showResponseModal) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [responseText, showResponseModal]);
-
-  // Focus textarea when modal opens
-  useEffect(() => {
-    if (showResponseModal && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [showResponseModal]);
-
-  // For portal mounting
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
-    <>
     <article
       onClick={handleClick}
       className="note-article group flex py-6 px-8 sm:py-7 sm:px-8 border-b border-base-content/10 hover:bg-base-content/[0.02] transition-colors cursor-pointer relative"
@@ -168,18 +74,6 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
         </div>
       </div>
 
-      {/* Reply button - show on hover, aligned with body text */}
-      {!isOwnConsultation && (
-        <button
-          onClick={handleResponseClick}
-          className="absolute right-4 bottom-6 sm:bottom-7 text-base-content/40 hover:text-primary transition-all p-2 rounded-full hover:bg-primary/10 opacity-0 group-hover:opacity-100 active:opacity-100"
-          title="回答する"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M7.793 2.232a.75.75 0 01-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 010 10.75H10.75a.75.75 0 010-1.5h2.875a3.875 3.875 0 000-7.75H3.622l4.146 3.957a.75.75 0 01-1.036 1.085l-5.5-5.25a.75.75 0 010-1.085l5.5-5.25a.75.75 0 011.06.025z" clipRule="evenodd" />
-          </svg>
-        </button>
-      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
@@ -235,230 +129,27 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           {consultation.question}
         </p>
 
-        {/* First AI answer */}
-        {consultation.answer && (
-          <div className="mt-2 pl-3 border-l-2 border-base-content/10">
-            <div className="flex gap-2">
-              {/* Avatar */}
-              <div className="flex-shrink-0">
-                <span className="text-sm">🤖</span>
-              </div>
-
-              {/* Reply content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xs font-medium text-purple-500/80">
-                    やみい
-                  </span>
-                </div>
-                <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
-                  {consultation.answer}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* More replies indicator */}
-        {replyCount > 0 && (consultation.answer ? replyCount > 1 : true) && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowReplies(!showReplies);
-            }}
-            className="mt-2 text-xs text-base-content/50 hover:text-primary transition-colors"
-          >
-            {showReplies
-              ? "閉じる"
-              : consultation.answer
-                ? `他${replyCount - 1}件の回答を見る`
-                : `${replyCount}件の回答を見る`
-            }
-          </button>
-        )}
-
-        {/* Additional replies */}
-        {showReplies && localReplies && localReplies.length > 0 && (
-          <div className="mt-2 space-y-2 pl-3 border-l-2 border-base-content/10">
-            {/* answerがnullの場合は全reply、ある場合は2番目以降 */}
-            {(consultation.answer ? localReplies.slice(1) : localReplies).map((reply) => {
-              const isAI = !reply.responder;
-              const responderHandle = isAI ? "yamii" : reply.responder?.handle || "匿名";
-              const responderDisplayName = isAI
-                ? "やみい"
-                : reply.responder?.displayName || responderHandle.split("@")[1] || "匿名";
-              const responderAvatar = isAI ? null : reply.responder?.avatarUrl;
-
-              return (
-                <div key={reply.id} className="flex gap-2">
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    {isAI ? (
-                      <span className="text-sm">🤖</span>
-                    ) : (
-                      <div className="w-6 h-6 rounded-full overflow-hidden">
-                        {responderAvatar ? (
-                          <Image
-                            src={responderAvatar}
-                            alt={responderDisplayName}
-                            width={24}
-                            height={24}
-                            className="rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="bg-base-300/60 flex items-center justify-center w-full h-full text-xs">
-                            👤
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Reply content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className={`text-xs font-medium ${isAI ? "text-purple-500/80" : "text-base-content/70"}`}>
-                        {responderDisplayName}
-                      </span>
-                      {!isAI && (
-                        <span className="text-[0.65em] text-base-content/40">
-                          {responderHandle}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
-                      {reply.content}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+        {/* Reply count metadata */}
+        {replyCount > 0 && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-base-content/50">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
+            </svg>
+            <span>{replyCount}件の返信</span>
           </div>
         )}
       </div>
     </article>
-
-    {/* Response Modal - Portal to body for proper overlay */}
-    {mounted && showResponseModal && createPortal(
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            setShowResponseModal(false);
-          }
-        }}
-      >
-        <div className="bg-base-100 rounded-2xl w-full max-w-lg animate-scale-in overflow-hidden shadow-2xl">
-          {/* Header */}
-          <header className="flex items-center justify-between px-4 py-3 border-b border-base-content/10">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm btn-circle"
-              onClick={() => setShowResponseModal(false)}
-              disabled={isSubmitting}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
-            <span className="text-sm font-medium text-base-content/70">回答する</span>
-            <div className="w-8" />
-          </header>
-
-          {/* Original question preview */}
-          <div className="px-4 py-3 bg-base-200/50">
-            <div className="flex gap-3">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 rounded-full overflow-hidden">
-                  {isAnonymous ? (
-                    <div className="bg-base-300 flex items-center justify-center w-full h-full text-sm">
-                      😎
-                    </div>
-                  ) : consultation.user?.avatarUrl ? (
-                    <Image
-                      src={consultation.user.avatarUrl}
-                      alt={displayName}
-                      width={32}
-                      height={32}
-                      className="rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-xs font-bold">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-base-content/60 font-medium">{displayName}</span>
-                <p className="text-sm text-base-content/80 mt-0.5 line-clamp-2">
-                  {consultation.question}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Input area */}
-          <div className="p-4">
-            <div className="flex items-end gap-2">
-              <div className="flex-1 bg-base-200/60 rounded-2xl px-4 py-3">
-                <textarea
-                  ref={textareaRef}
-                  value={responseText}
-                  onChange={(e) => setResponseText(e.target.value)}
-                  placeholder="回答を入力..."
-                  className="w-full bg-transparent border-none outline-none resize-none text-base leading-relaxed placeholder:text-base-content/40 min-h-[60px] max-h-[200px]"
-                  disabled={isSubmitting}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      handleSubmitResponse();
-                    }
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleSubmitResponse}
-                disabled={isSubmitting || !responseText.trim()}
-                className={`flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                  responseText.trim()
-                    ? "bg-primary text-primary-content hover:bg-primary/90"
-                    : "bg-base-300 text-base-content/30 cursor-not-allowed"
-                }`}
-              >
-                {isSubmitting ? (
-                  <span className="loading loading-spinner loading-sm" />
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-
-            {submitError && (
-              <div className="alert alert-error text-sm mt-3 py-2">
-                <span>{submitError}</span>
-              </div>
-            )}
-
-            {rewardMessage && !submitError && (
-              <div className={`alert text-sm mt-3 py-2 ${
-                rewardMessage.includes("獲得") ? "alert-success" : "alert-info"
-              }`}>
-                <span>{rewardMessage}</span>
-              </div>
-            )}
-
-            <p className="text-xs text-base-content/40 mt-2 text-center">
-              Ctrl + Enter で送信
-            </p>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )}
-    </>
   );
 });
