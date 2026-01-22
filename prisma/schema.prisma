@@ -70,11 +70,12 @@ model Profile {
 // Network: Optimism (YAMI DAOと共通)
 // ============================================
 model Wallet {
-  id              String     @id @default(cuid())
-  address         String     @unique // 0x + 40 hex chars (Optimism address)
-  balance         Int        @default(10) // YAMI トークン残高
-  walletType      WalletType @default(HUMAN) // 人格タイプ
-  createdAt       DateTime   @default(now())
+  id               String     @id @default(cuid())
+  address          String     @unique // 0x + 40 hex chars (Optimism address)
+  balance          Int        @default(10) // YAMI トークン残高
+  walletType       WalletType @default(HUMAN) // 人格タイプ
+  lastDailyGrantAt DateTime?  // 最後に毎日のYAMI付与を受け取った日時
+  createdAt        DateTime   @default(now())
 
   // Misskeyユーザーとの紐づけ（1:1必須）
   userId String   @unique
@@ -191,6 +192,7 @@ enum TransactionType {
   PURCHASE         // Optimism ETHでYAMI購入
   WITHDRAWAL       // YAMIをOptimism ETHに換金
   SYSTEM_GRANT     // システム付与（初期配布等）
+  DAILY_GRANT      // 毎日の無料YAMI付与
   DAO_DIVIDEND     // YAMI DAO配当
 }
 
