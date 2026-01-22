@@ -238,6 +238,13 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
         {/* First AI answer or waiting message */}
         {consultation.answer ? (
           <div className="mt-2 pl-3 border-l-2 border-primary/30">
+            {/* AI responder info */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-base flex-shrink-0">🤖</span>
+              <span className="text-xs font-medium text-purple-500">
+                やみい
+              </span>
+            </div>
             <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5] line-clamp-3">
               {consultation.answer}
             </p>
@@ -270,22 +277,57 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
 
         {/* Additional replies (hidden by default) */}
         {showReplies && localReplies && localReplies.length > 0 && (
-          <div className="mt-2 space-y-2 pl-3 border-l-2 border-base-content/10">
+          <div className="mt-2 space-y-3 pl-3 border-l-2 border-base-content/10">
             {/* answerがnullの場合は全reply、ある場合は2番目以降 */}
             {(consultation.answer ? localReplies.slice(1) : localReplies).map((reply) => {
               const isAI = !reply.responder;
-              const responderName = isAI
-                ? "AI"
-                : reply.responder?.displayName || reply.responder?.handle || "匿名";
+              const responderHandle = isAI ? "yamii" : reply.responder?.handle || "匿名";
+              const responderDisplayName = isAI
+                ? "やみい"
+                : reply.responder?.displayName || responderHandle.split("@")[1] || "匿名";
+              const responderAvatar = isAI ? null : reply.responder?.avatarUrl;
 
               return (
-                <div key={reply.id}>
-                  <span className={`text-xs font-medium ${isAI ? "text-base-content/50" : "text-secondary"}`}>
-                    {responderName}
-                  </span>
-                  <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5]">
-                    {reply.content}
-                  </p>
+                <div key={reply.id} className="flex gap-2">
+                  {/* Avatar */}
+                  <div className="flex-shrink-0">
+                    {isAI ? (
+                      <span className="text-lg">🤖</span>
+                    ) : (
+                      <div className="w-7 h-7 rounded-full overflow-hidden">
+                        {responderAvatar ? (
+                          <Image
+                            src={responderAvatar}
+                            alt={responderDisplayName}
+                            width={28}
+                            height={28}
+                            className="rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="bg-base-300 flex items-center justify-center w-full h-full text-sm">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reply content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className={`text-xs font-medium ${isAI ? "text-purple-500" : "text-secondary"}`}>
+                        {responderDisplayName}
+                      </span>
+                      {!isAI && (
+                        <span className="text-[0.7em] text-base-content/50">
+                          {responderHandle}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[0.9em] text-base-content/80 whitespace-pre-wrap break-words leading-[1.5] mt-0.5">
+                      {reply.content}
+                    </p>
+                  </div>
                 </div>
               );
             })}
