@@ -23,9 +23,11 @@ export const TOKEN_ECONOMY = {
   ANY_CONSULT_COST: 3,           // どちらでも可（中間）- 後方互換
   DISCUSSION_COST: 0,            // 一般投稿（無料）
 
-  // 報酬（回答者が受け取る）
-  RESPONSE_REWARD: 3,            // 人間回答報酬
-  DAILY_REWARD_CAP: 15,          // 1日あたりの報酬獲得上限
+  // 回答コストと報酬（アンチスパム + ハイブリッド設計）
+  RESPONSE_COST: 2,              // 他人の公開チャットに回答する際のコスト（スパム防止）
+  RESPONSE_REWARD: 5,            // 人間回答報酬（ネット +3 YAMI = 適度なインセンティブ）
+  BOOST_BONUS: 3,                // チャット所有者によるブースト追加ボーナス（合計 +6 YAMI）
+  DAILY_REWARD_CAP: 20,          // 1日あたりの報酬獲得上限（ブーストは別枠）
 
   // 残高制約
   INITIAL_BALANCE: 50,           // 新規ユーザーの初期残高（均衡残高と同じ）
@@ -162,7 +164,9 @@ export interface PostWithRelations extends Post {
 export type TransactionType =
   | "CONSULT_AI"       // AI相談コスト
   | "CONSULT_HUMAN"    // 人間相談コスト
+  | "RESPONSE_COST"    // 回答コスト（スパム防止）
   | "RESPONSE_REWARD"  // 回答報酬
+  | "BOOST_BONUS"      // ブーストボーナス
   | "DAILY_GRANT"      // 毎日のBI付与
   | "DECAY"            // 減衰（時間経過による減少）
   | "REACTION"         // リアクション（投げ銭）

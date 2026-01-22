@@ -90,7 +90,10 @@ interface ChatSessionRecord {
   id: string;
   userId: string;
   title: string | null;
-  isPublic: boolean;
+  consultType: "PRIVATE" | "PUBLIC";
+  isAnonymous: boolean;
+  category: string | null;
+  isPublic: boolean; // DEPRECATED: consultType=PUBLIC と同義
   createdAt: Date;
   updatedAt: Date;
 }
@@ -101,6 +104,7 @@ interface ChatMessageRecord {
   role: "USER" | "ASSISTANT";
   content: string;
   isCrisis: boolean;
+  responderId?: string;
   createdAt: Date;
 }
 

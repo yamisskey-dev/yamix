@@ -185,92 +185,117 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         });
       }
 
-      // Create the human response message
-      const message = await db.chatMessage.create({
-        data: {
-          sessionId: id,
-          role: "ASSISTANT",
-          content: body.content.trim(),
-          responderId: payload.userId,
-          isCrisis: false,
-        },
-      });
-
-      // Update session timestamp
-      await db.chatSession.update({
-        where: { id },
-        data: { updatedAt: new Date() },
-      });
-
-      // Calculate today's reward total for this responder
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
+      // Get responder wallet and check balance for response cost
       const responderWallet = await db.wallet.findUnique({
         where: { userId: payload.userId },
-        include: {
-          sentTransactions: {
-            where: {
-              txType: "RESPONSE_REWARD",
-              createdAt: {
-                gte: today,
-              },
-            },
-          },
-        },
       });
 
       if (!responderWallet) {
-        return NextResponse.json({
-          message,
-          success: true,
-          reward: 0,
-          rewardCapped: false,
-        });
+        return NextResponse.json(
+          { error: "ウォレットが見つかりません" },
+          { status: 400 }
+        );
       }
 
-      // Calculate today's reward total (abs value since transactions are positive)
-      const todayRewardTotal = responderWallet.sentTransactions.reduce(
-        (sum, tx) => sum + tx.amount,
-        0
-      );
+      // Check if responder has enough balance to pay response cost
+      const responseCost = TOKEN_ECONOMY.RESPONSE_COST;
+      if (responderWallet.balance < responseCost) {
+        return NextResponse.json(
+          { error: `回答するには ${responseCost} YAMI 必要です。現在の残高: ${responderWallet.balance} YAMI` },
+          { status: 400 }
+        );
+      }
 
-      // Check if daily reward cap is reached
-      const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
-      const canReceiveReward = todayRewardTotal + rewardAmount <= TOKEN_ECONOMY.DAILY_REWARD_CAP;
+      // Execute all operations in a transaction
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      if (canReceiveReward) {
-        // Grant reward
-        await db.wallet.update({
+      const result = await db.$transaction(async (tx) => {
+        // 1. Deduct response cost
+        await tx.wallet.update({
           where: { id: responderWallet.id },
-          data: { balance: { increment: rewardAmount } },
+          data: { balance: { decrement: responseCost } },
         });
 
-        // Create transaction record
-        await db.transaction.create({
+        // 2. Create cost transaction record
+        await tx.transaction.create({
           data: {
             senderId: responderWallet.id,
-            amount: rewardAmount,
-            txType: "RESPONSE_REWARD",
+            amount: -responseCost,
+            txType: "RESPONSE_COST",
           },
         });
 
-        return NextResponse.json({
-          message,
-          success: true,
-          reward: rewardAmount,
-          rewardCapped: false,
+        // 3. Create the human response message
+        const message = await tx.chatMessage.create({
+          data: {
+            sessionId: id,
+            role: "ASSISTANT",
+            content: body.content.trim(),
+            responderId: payload.userId,
+            isCrisis: false,
+          },
         });
-      } else {
-        // Cap reached - response saved but no reward
-        return NextResponse.json({
+
+        // 4. Update session timestamp
+        await tx.chatSession.update({
+          where: { id },
+          data: { updatedAt: new Date() },
+        });
+
+        // 5. Calculate today's reward total
+        const todayRewards = await tx.transaction.findMany({
+          where: {
+            senderId: responderWallet.id,
+            txType: "RESPONSE_REWARD",
+            createdAt: { gte: today },
+          },
+        });
+
+        const todayRewardTotal = todayRewards.reduce((sum, tx) => sum + tx.amount, 0);
+
+        // 6. Check if daily reward cap is reached
+        const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
+        const canReceiveReward = todayRewardTotal + rewardAmount <= TOKEN_ECONOMY.DAILY_REWARD_CAP;
+
+        let actualReward = 0;
+        if (canReceiveReward) {
+          // Grant reward
+          await tx.wallet.update({
+            where: { id: responderWallet.id },
+            data: { balance: { increment: rewardAmount } },
+          });
+
+          // Create reward transaction record
+          await tx.transaction.create({
+            data: {
+              senderId: responderWallet.id,
+              amount: rewardAmount,
+              txType: "RESPONSE_REWARD",
+            },
+          });
+
+          actualReward = rewardAmount;
+        }
+
+        return {
           message,
-          success: true,
-          reward: 0,
-          rewardCapped: true,
+          actualReward,
+          rewardCapped: !canReceiveReward,
           capRemaining: Math.max(0, TOKEN_ECONOMY.DAILY_REWARD_CAP - todayRewardTotal),
-        });
-      }
+          netGain: actualReward - responseCost,
+        };
+      });
+
+      return NextResponse.json({
+        message: result.message,
+        success: true,
+        cost: responseCost,
+        reward: result.actualReward,
+        netGain: result.netGain,
+        rewardCapped: result.rewardCapped,
+        capRemaining: result.capRemaining,
+      });
     } else {
       // In-memory fallback
       const session = chatSessionsStore.get(id);
@@ -367,6 +392,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         });
       }
 
+      // Get responder wallet and check balance for response cost
+      const responderWallet = Array.from(memoryDB.wallets.values()).find(
+        (w) => w.userId === payload.userId
+      );
+
+      if (!responderWallet) {
+        return NextResponse.json(
+          { error: "ウォレットが見つかりません" },
+          { status: 400 }
+        );
+      }
+
+      // Check if responder has enough balance to pay response cost
+      const responseCost = TOKEN_ECONOMY.RESPONSE_COST;
+      if (responderWallet.balance < responseCost) {
+        return NextResponse.json(
+          { error: `回答するには ${responseCost} YAMI 必要です。現在の残高: ${responderWallet.balance} YAMI` },
+          { status: 400 }
+        );
+      }
+
+      // Deduct response cost
+      responderWallet.balance -= responseCost;
+
+      // Create the human response message
       const messageId = generateId();
       const message: MemoryChatMessage = {
         id: messageId,
@@ -382,27 +432,18 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       session.updatedAt = new Date();
       chatSessionsStore.set(id, session);
 
-      // Reward system for in-memory (simplified - no daily cap tracking)
-      const responderWallet = Array.from(memoryDB.wallets.values()).find(
-        (w) => w.userId === payload.userId
-      );
+      // Grant reward (simplified - no daily cap tracking in memory mode)
+      const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
+      responderWallet.balance += rewardAmount;
 
-      if (responderWallet) {
-        const rewardAmount = TOKEN_ECONOMY.RESPONSE_REWARD;
-        responderWallet.balance += rewardAmount;
-
-        return NextResponse.json({
-          message,
-          success: true,
-          reward: rewardAmount,
-          rewardCapped: false,
-        });
-      }
+      const netGain = rewardAmount - responseCost;
 
       return NextResponse.json({
         message,
         success: true,
-        reward: 0,
+        cost: responseCost,
+        reward: rewardAmount,
+        netGain,
         rewardCapped: false,
       });
     }

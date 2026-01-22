@@ -180,7 +180,9 @@ enum TransactionType {
   // 承認経済の基本操作
   CONSULT_AI       // AI相談コスト
   CONSULT_HUMAN    // 人間相談コスト
+  RESPONSE_COST    // 回答コスト（スパム防止）
   RESPONSE_REWARD  // 回答報酬
+  BOOST_BONUS      // ブーストボーナス
   DAILY_GRANT      // 毎日のBI付与
   DECAY            // 減衰（時間経過による減少）
   REACTION         // リアクション（投げ銭）

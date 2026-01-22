@@ -259,7 +259,7 @@ export async function GET(req: NextRequest) {
       const response: TimelineResponse = {
         consultations,
         hasMore,
-        nextCursor: hasMore ? items[items.length - 1].id : null,
+        nextCursor: hasMore ? items[items.length - 1].msg.id : null,
       };
 
       return NextResponse.json(response);
