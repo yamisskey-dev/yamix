@@ -163,7 +163,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-1 w-56 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 py-1"
+          className="absolute right-0 mt-1 w-48 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 py-1"
           onClick={(e) => e.stopPropagation()}
         >
           {isRenaming ? (
@@ -239,7 +239,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
                 }
-                label={isBookmarked ? "ブックマークから削除" : "ブックマークする"}
+                label={isBookmarked ? "ブックマーク解除" : "ブックマークする"}
                 onClick={handleBookmarkToggle}
                 disabled={loading}
               />
