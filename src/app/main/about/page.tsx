@@ -100,9 +100,49 @@ export default function AboutPage() {
 
         {/* 説明 */}
         <FormSection>
-          <p className="text-sm text-base-content/80">
+          <p className="text-sm text-base-content/80 leading-relaxed">
             AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
           </p>
+        </FormSection>
+
+        {/* サービス理念 */}
+        <FormSection label="サービスの理念">
+          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
+            <p>
+              Yamixは、<strong className="text-base-content/90">不健全な依存関係を解消する</strong>ために設計されたプラットフォームです。
+            </p>
+            <p>
+              従来の人生相談では、回答者への過度な依存や、精神的資源の一方的な消費が問題でした。
+              Yamixは、<strong className="text-base-content/90">YAMIトークン経済</strong>を通じて、
+              この問題に以下の方法で取り組みます：
+            </p>
+            <ul className="ml-4 space-y-1.5 list-disc list-outside">
+              <li>
+                <strong>AIによる依存の吸収</strong> -
+                人間への不健全な依存をAIが代わりに受け止め、人間同士の関係を健全化
+              </li>
+              <li>
+                <strong>相談へのコスト</strong> -
+                無制限の依存を防ぎ、本当に必要な時だけ相談する仕組み
+              </li>
+              <li>
+                <strong>回答者への報酬</strong> -
+                精神的労働には正当な対価が支払われる経済設計
+              </li>
+              <li>
+                <strong>灯（ともしび）システム</strong> -
+                役立った回答には追加の感謝を送り、質の高い支援を促進
+              </li>
+              <li>
+                <strong>ベーシックインカムと減衰</strong> -
+                毎日の無料YAMIで誰でも参加でき、過度な蓄積は減衰で抑制
+              </li>
+            </ul>
+            <p>
+              トークン経済は、注意力と精神的資源を適切に分配するための仕組みです。
+              これにより、支え合いながらも依存しすぎない、健全なコミュニティを目指します。
+            </p>
+          </div>
         </FormSection>
 
         {/* ソースコード */}

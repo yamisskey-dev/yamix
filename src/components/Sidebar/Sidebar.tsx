@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ChatSessionList } from "./ChatSessionList";
+import { NotificationBell } from "@/components/NotificationBell";
 import type { UserProfile } from "@/types";
 import { encodeHandle } from "@/lib/encode-handle";
 
@@ -57,8 +58,9 @@ export function Sidebar({ user, onClose }: Props) {
 
   return (
     <div className="h-full flex flex-col bg-base-100">
-      {/* Header - Instance icon */}
-      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center">
+      {/* Header - Instance icon + Notification */}
+      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-between px-2">
+        <div className="flex-1" />
         <Link
           href="/main/about"
           onClick={onClose}
@@ -72,6 +74,9 @@ export function Sidebar({ user, onClose }: Props) {
             className="rounded-lg"
           />
         </Link>
+        <div className="flex-1 flex justify-end">
+          <NotificationBell />
+        </div>
       </div>
 
       {/* Navigation Items - Fixed */}
