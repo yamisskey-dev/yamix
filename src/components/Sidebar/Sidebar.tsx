@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ChatSessionList } from "./ChatSessionList";
+import { BookmarkList } from "./BookmarkList";
 import { NotificationBell } from "@/components/NotificationBell";
 import type { UserProfile } from "@/types";
 import { encodeHandle } from "@/lib/encode-handle";
@@ -212,6 +213,15 @@ export function Sidebar({ user, onClose }: Props) {
           )}
         </div>
       </div>
+
+      {/* Bookmarks Section - Fixed */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <div className="text-xs font-medium text-base-content/50 px-2 mb-2">ブックマーク</div>
+        <BookmarkList onSessionClick={onClose} />
+      </div>
+
+      {/* Divider */}
+      <div className="mx-5 my-2 border-t border-base-content/10 flex-shrink-0" />
 
       {/* Chat Session List - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 px-3">

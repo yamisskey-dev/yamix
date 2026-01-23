@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
+import { BookmarkButton } from "@/components/BookmarkButton";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 
 interface PageProps {
@@ -44,6 +45,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     isOwner: boolean;
     isAnonymous: boolean;
     currentUserId: string | null;
+    title: string | null;
   } | null>(null);
 
   // Fetch session data
@@ -75,6 +77,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           isOwner,
           isAnonymous: session.isAnonymous,
           currentUserId,
+          title: session.title,
         });
 
         // Build anonymous user map (User A, B, C, etc.)
@@ -409,6 +412,14 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   return (
     <div className="flex-1 flex flex-col h-full">
+      {/* Header */}
+      {sessionInfo && sessionInfo.title && (
+        <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
+          <h1 className="text-sm font-medium truncate flex-1">{sessionInfo.title}</h1>
+          <BookmarkButton sessionId={sessionId} />
+        </div>
+      )}
+
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="max-w-6xl mx-auto">

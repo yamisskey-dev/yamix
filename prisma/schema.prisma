@@ -48,6 +48,7 @@ model User {
   blockedBy     UserBlock[]     @relation("BlockedUser") // このユーザーをブロックしている人
   blocking      UserBlock[]     @relation("BlockingUser") // このユーザーがブロックしている人
   notifications Notification[]  // 通知
+  bookmarks     Bookmark[]      // ブックマーク
 
   @@map("users")
 }
@@ -320,8 +321,9 @@ model ChatSession {
   isPublic Boolean @default(false) // DEPRECATED: consultType=PUBLIC と同義
 
   // Relations
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ChatMessage[]
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  ChatMessage[]
+  bookmarks Bookmark[]    // このセッションをブックマークしているユーザー
 
   @@index([userId, updatedAt])
   @@index([consultType, createdAt])
@@ -380,6 +382,25 @@ enum NotificationType {
   MENTION        // メンション
   GAS_RECEIVED   // Gas受信
   SYSTEM         // システム通知
+}
+
+// ============================================
+// Bookmark - ブックマーク
+// 気に入った相談セッションを保存して後で振り返る
+// ============================================
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String   // ブックマークした人
+  sessionId String   // ブックマークされたセッション
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId]) // 同じセッションは1回だけブックマーク可能
+  @@index([userId, createdAt])
+  @@map("bookmarks")
 }
 
 // メッセージの送信者
