@@ -59,7 +59,7 @@ export function Sidebar({ user, onClose }: Props) {
   return (
     <div className="h-full flex flex-col bg-base-100">
       {/* Header - Instance icon + Notification */}
-      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center gap-16 px-2">
+      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center gap-24 px-2">
         <Link
           href="/main/about"
           onClick={onClose}
