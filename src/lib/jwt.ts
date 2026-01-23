@@ -5,7 +5,7 @@ const JWT_ISSUER = "yamix";
 const JWT_AUDIENCE = "yamix-users";
 const JWT_EXPIRY = "30d"; // 30 days
 
-interface JWTPayload {
+export interface JWTPayload {
   sub: string; // user handle
   userId: string;
   walletId: string;
