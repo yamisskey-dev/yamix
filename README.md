@@ -106,8 +106,22 @@ pnpm build         # プロダクションビルド
 pnpm start         # プロダクションサーバー起動
 pnpm lint          # Lintチェック
 pnpm typecheck     # 型チェック
+pnpm test          # E2Eテスト実行
+pnpm test:ui       # E2EテストをUIモードで実行
+pnpm test:report   # テストレポートを表示
 pnpm prisma:studio # Prisma Studio起動
 ```
+
+## CI/CD
+
+プルリクエストとmainブランチへのプッシュ時に、以下のチェックが自動実行されます：
+
+- コードのLint
+- TypeScriptの型チェック
+- プロダクションビルド
+- Playwrightを使用したE2Eテスト
+
+テスト失敗時は、Playwright Reportがアーティファクトとして保存されます。
 
 ## ロードマップ
 
