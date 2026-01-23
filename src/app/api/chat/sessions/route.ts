@@ -3,6 +3,8 @@ import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
+import { createChatSessionSchema, validateBody } from "@/lib/validation";
 
 // In-memory chat sessions store
 interface MemoryChatSession {
@@ -11,6 +13,7 @@ interface MemoryChatSession {
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
+  allowAnonymousResponses: boolean;
   category: string | null;
   isPublic: boolean; // DEPRECATED
   createdAt: Date;
@@ -165,6 +168,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
+  // レート制限チェック
+  const rateLimitKey = `chat-create:${payload.userId}`;
+  if (checkRateLimit(rateLimitKey, RateLimits.CHAT_CREATE)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   try {
     // リクエストボディをパース（空の場合はデフォルト値を使用）
     let body;
@@ -174,9 +186,13 @@ export async function POST(req: NextRequest) {
       body = {};
     }
 
-    const consultType = body.consultType || "PRIVATE"; // デフォルトはプライベート相談
-    const isAnonymous = body.isAnonymous || false;
-    const category = body.category || null;
+    // バリデーション
+    const validation = validateBody(createChatSessionSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const { consultType, isAnonymous, allowAnonymousResponses, category } = validation.data;
 
     const db = getPrismaClient();
 
@@ -186,6 +202,7 @@ export async function POST(req: NextRequest) {
           userId: payload.userId,
           consultType,
           isAnonymous,
+          allowAnonymousResponses,
           category,
           isPublic: consultType === "PUBLIC", // 後方互換性
         },
@@ -211,7 +228,8 @@ export async function POST(req: NextRequest) {
         title: null,
         consultType,
         isAnonymous,
-        category,
+        allowAnonymousResponses,
+        category: category ?? null,
         isPublic: consultType === "PUBLIC", // DEPRECATED
         createdAt: now,
         updatedAt: now,

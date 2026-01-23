@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 
 // Gas constants
 const GAS_TIP_AMOUNT = 3; // 灯（ともしび）の金額
@@ -26,6 +27,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const payload = await verifyJWT(token);
     if (!payload?.userId) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+
+    // レート制限チェック
+    const rateLimitKey = `gas:${payload.userId}`;
+    if (checkRateLimit(rateLimitKey, RateLimits.GAS_TIP)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
     }
 
     const db = getPrismaClient();

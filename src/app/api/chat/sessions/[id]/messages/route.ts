@@ -5,6 +5,8 @@ import { logger } from "@/lib/logger";
 import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
+import { sendMessageSchema, validateBody } from "@/lib/validation";
 
 // In-memory types
 interface MemoryChatSession {
@@ -72,20 +74,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 
+  // レート制限チェック
+  const rateLimitKey = `message:${payload.userId}`;
+  if (checkRateLimit(rateLimitKey, RateLimits.MESSAGE_SEND)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Please slow down." },
+      { status: 429 }
+    );
+  }
+
   const { id: sessionId } = await params;
 
-  let body: { message: string };
+  let body;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (!body.message || typeof body.message !== "string") {
-    return NextResponse.json({ error: "Message is required" }, { status: 400 });
+  // バリデーション
+  const validation = validateBody(sendMessageSchema, body);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const userMessage = body.message.trim();
+  const userMessage = validation.data.message.trim();
 
   try {
     const db = getPrismaClient();
