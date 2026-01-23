@@ -352,6 +352,7 @@ export interface ChatMessage {
   isCrisis: boolean;
   responderId?: string | null; // 人間回答者のID
   isAnonymous: boolean;        // 匿名回答
+  gasAmount: number;           // 受け取った灯（ともしび）の合計
   responder?: ResponderInfo | null; // 人間回答者の情報（includeで取得時）
   createdAt: Date;
 }

@@ -185,6 +185,7 @@ enum TransactionType {
   RESPONSE_COST    // 回答コスト（スパム防止）
   RESPONSE_REWARD  // 回答報酬
   BOOST_BONUS      // ブーストボーナス
+  GAS_TIP          // 灯（ともしび）を送る（感謝の追加報酬）
   DAILY_GRANT      // 毎日のBI付与
   DECAY            // 減衰（時間経過による減少）
   REACTION         // リアクション（投げ銭）
@@ -339,6 +340,7 @@ model ChatMessage {
   isCrisis    Boolean     @default(false) // 危機検出フラグ
   responderId String?     // 人間が回答した場合の回答者ID
   isAnonymous Boolean     @default(false) // 匿名回答
+  gasAmount   Int         @default(0)     // 受け取った灯（ともしび）の合計
   createdAt   DateTime    @default(now())
 
   // Relations

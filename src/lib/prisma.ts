@@ -113,6 +113,8 @@ interface ChatMessageRecord {
   content: string;
   isCrisis: boolean;
   responderId?: string;
+  isAnonymous: boolean;
+  gasAmount: number;
   createdAt: Date;
 }
 

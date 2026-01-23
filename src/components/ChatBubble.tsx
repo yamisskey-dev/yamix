@@ -22,6 +22,9 @@ interface ChatBubbleProps {
   responder?: ResponderInfo; // 人間の情報（相談者または回答者）
   isSessionOwner?: boolean; // セッション所有者かどうか
   onBlock?: (userId: string) => void; // ブロックコールバック
+  messageId?: string; // メッセージID（灯を送るため）
+  gasAmount?: number; // 受け取った灯の合計
+  onSendGas?: (messageId: string) => void; // 灯を送るコールバック
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -32,6 +35,9 @@ export const ChatBubble = memo(function ChatBubble({
   responder,
   isSessionOwner,
   onBlock,
+  messageId,
+  gasAmount,
+  onSendGas,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
@@ -39,6 +45,9 @@ export const ChatBubble = memo(function ChatBubble({
 
   // Show block button if: session owner, this is a human response (not owner's message), and has responderId
   const canBlock = isSessionOwner && !isUser && isHuman && responder!.responderId && onBlock;
+
+  // Show gas button if: not session owner, this is a human response, has messageId and callback
+  const canSendGas = !isSessionOwner && !isUser && isHuman && messageId && onSendGas;
 
   if (isLoading) {
     return (
@@ -131,6 +140,29 @@ export const ChatBubble = memo(function ChatBubble({
           >
             🚫
           </button>
+        </div>
+      )}
+
+      {/* Gas (tomoshibi) button and display */}
+      {!isUser && isHuman && (
+        <div className="chat-header flex items-center gap-1.5">
+          {/* Gas amount display */}
+          {gasAmount && gasAmount > 0 && (
+            <span className="text-xs opacity-60 flex items-center gap-0.5">
+              🕯️ {gasAmount}
+            </span>
+          )}
+
+          {/* Gas button (only for non-owners) */}
+          {canSendGas && (
+            <button
+              onClick={() => onSendGas!(messageId!)}
+              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:text-amber-500"
+              title="灯を送る（3 YAMI）"
+            >
+              🕯️
+            </button>
+          )}
         </div>
       )}
 

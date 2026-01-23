@@ -23,6 +23,7 @@ interface LocalMessage {
   content: string;
   timestamp: Date;
   responder?: ResponderInfo | null;
+  gasAmount?: number; // 受け取った灯の合計
 }
 
 export default function ChatSessionPage({ params }: PageProps) {
@@ -102,6 +103,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 role: "user" as const,
                 content: m.content,
                 timestamp: new Date(m.createdAt),
+                gasAmount: m.gasAmount,
               };
             }
 
@@ -112,6 +114,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 role: "assistant" as const,
                 content: m.content,
                 timestamp: new Date(m.createdAt),
+                gasAmount: m.gasAmount,
                 responder: {
                   displayName: session.isAnonymous ? null : (session.user?.displayName || null),
                   avatarUrl: session.isAnonymous ? null : (session.user?.avatarUrl || null),
@@ -127,6 +130,7 @@ export default function ChatSessionPage({ params }: PageProps) {
               role: "assistant" as const,
               content: m.content,
               timestamp: new Date(m.createdAt),
+              gasAmount: m.gasAmount,
               responder: m.responder ? {
                 displayName: m.isAnonymous
                   ? `User ${anonymousUserMap.get(m.responderId!)}`
@@ -186,6 +190,31 @@ export default function ChatSessionPage({ params }: PageProps) {
     } catch (error) {
       console.error("Block error:", error);
       alert("ブロックに失敗しました");
+    }
+  };
+
+  const handleSendGas = async (messageId: string) => {
+    try {
+      const res = await fetch(`/api/messages/${messageId}/gas`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // Update local message state to reflect new gasAmount
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
+          )
+        );
+        alert("灯を送りました（3 YAMI）");
+      } else {
+        const data = await res.json();
+        alert(data.error || "灯の送信に失敗しました");
+      }
+    } catch (error) {
+      console.error("Send gas error:", error);
+      alert("灯の送信に失敗しました");
     }
   };
 
@@ -411,6 +440,9 @@ export default function ChatSessionPage({ params }: PageProps) {
               responder={msg.responder || undefined}
               isSessionOwner={sessionInfo?.isOwner}
               onBlock={handleBlock}
+              messageId={msg.id}
+              gasAmount={msg.gasAmount}
+              onSendGas={handleSendGas}
             />
           ))}
 

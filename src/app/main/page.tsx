@@ -111,6 +111,122 @@ export default function NewChatPage() {
     }
   };
 
+  const isInitialState = messages.length === 0 && !isLoading && !showCrisisAlert;
+
+  // Input form component (reused in both layouts)
+  const inputForm = (
+    <>
+      <div className="bg-base-200/50 rounded-2xl border border-base-300/50 focus-within:border-primary/50 transition-colors">
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="相談してみましょう"
+          className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 focus:outline-none"
+          rows={1}
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+        />
+
+        {/* Footer with options and submit button */}
+        <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
+          {/* Left side: Options */}
+          <div className="flex items-center gap-1">
+            {/* Consult Type Toggle - Single button that switches between modes */}
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost"
+              onClick={() => {
+                if (consultType === "PRIVATE") {
+                  setConsultType("PUBLIC");
+                } else {
+                  setConsultType("PRIVATE");
+                  setIsAnonymous(false);
+                }
+              }}
+              disabled={isLoading}
+              title={consultType === "PRIVATE" ? "プライベート相談（AI専用）- クリックで公開に切替" : "公開相談（誰でも回答可能）- クリックで非公開に切替"}
+            >
+              <span className="text-base">{consultType === "PRIVATE" ? "🔒" : "🌍"}</span>
+            </button>
+
+            {/* Public options */}
+            {consultType === "PUBLIC" && (
+              <>
+                <div className="w-px h-4 bg-base-300 mx-1" />
+                <button
+                  type="button"
+                  className={`btn btn-xs btn-ghost ${
+                    isAnonymous ? "opacity-100" : "opacity-50"
+                  }`}
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  disabled={isLoading}
+                  title="匿名で相談"
+                >
+                  <span className="text-base">😎</span>
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-xs btn-ghost ${
+                    !allowAnonymousResponses ? "opacity-100 text-error" : "opacity-50"
+                  }`}
+                  onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
+                  disabled={isLoading}
+                  title={allowAnonymousResponses ? "匿名回答を許可" : "匿名回答を拒否"}
+                >
+                  <span className="text-base">{allowAnonymousResponses ? "🙂" : "🚫"}</span>
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Right side: Submit button */}
+          <button
+            onClick={handleSubmit}
+            className={`btn btn-primary btn-circle btn-sm ${
+              isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
+            }`}
+            disabled={isLoading || !inputValue.trim()}
+          >
+            {isLoading ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-4 h-4"
+              >
+                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+      <p className="text-xs text-center text-base-content/40 mt-2">
+        Shift + Enter で改行
+      </p>
+    </>
+  );
+
+  // Initial state: centered layout like ChatGPT/Claude
+  if (isInitialState) {
+    return (
+      <div className="flex-1 flex flex-col h-full">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-2xl">
+            <p className="text-base-content/50 text-lg text-center mb-6">
+              今日はどうしましたか？
+            </p>
+            {inputForm}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Chat mode: standard layout with messages at top, input at bottom
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Messages Area */}
@@ -125,14 +241,6 @@ export default function NewChatPage() {
                 setShowCrisisAlert(false);
               }}
             />
-          )}
-
-          {messages.length === 0 && !isLoading && !showCrisisAlert && (
-            <div className="flex flex-col items-center justify-center h-full text-center py-20">
-              <p className="text-base-content/50 text-lg">
-                今日はどうしましたか？
-              </p>
-            </div>
           )}
 
           {messages.map((msg) => (
@@ -159,97 +267,7 @@ export default function NewChatPage() {
       {/* Input Area */}
       <div className="p-4">
         <div className="max-w-6xl mx-auto">
-          <div className="bg-base-200/50 rounded-2xl border border-base-300/50 focus-within:border-primary/50 transition-colors">
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="相談してみましょう"
-              className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 focus:outline-none"
-              rows={1}
-              onKeyDown={handleKeyDown}
-              disabled={isLoading}
-            />
-
-            {/* Footer with options and submit button */}
-            <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
-              {/* Left side: Options */}
-              <div className="flex items-center gap-1">
-                {/* Consult Type Toggle - Single button that switches between modes */}
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
-                  onClick={() => {
-                    if (consultType === "PRIVATE") {
-                      setConsultType("PUBLIC");
-                    } else {
-                      setConsultType("PRIVATE");
-                      setIsAnonymous(false);
-                    }
-                  }}
-                  disabled={isLoading}
-                  title={consultType === "PRIVATE" ? "プライベート相談（AI専用）- クリックで公開に切替" : "公開相談（誰でも回答可能）- クリックで非公開に切替"}
-                >
-                  <span className="text-base">{consultType === "PRIVATE" ? "🔒" : "🌍"}</span>
-                </button>
-
-                {/* Public options */}
-                {consultType === "PUBLIC" && (
-                  <>
-                    <div className="w-px h-4 bg-base-300 mx-1" />
-                    <button
-                      type="button"
-                      className={`btn btn-xs btn-ghost ${
-                        isAnonymous ? "opacity-100" : "opacity-50"
-                      }`}
-                      onClick={() => setIsAnonymous(!isAnonymous)}
-                      disabled={isLoading}
-                      title="匿名で相談"
-                    >
-                      <span className="text-base">😎</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-xs btn-ghost ${
-                        !allowAnonymousResponses ? "opacity-100 text-error" : "opacity-50"
-                      }`}
-                      onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
-                      disabled={isLoading}
-                      title={allowAnonymousResponses ? "匿名回答を許可" : "匿名回答を拒否"}
-                    >
-                      <span className="text-base">{allowAnonymousResponses ? "🙂" : "🚫"}</span>
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Right side: Submit button */}
-              <button
-                onClick={handleSubmit}
-                className={`btn btn-primary btn-circle btn-sm ${
-                  isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
-                }`}
-                disabled={isLoading || !inputValue.trim()}
-              >
-                {isLoading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-4 h-4"
-                  >
-                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-          <p className="text-xs text-center text-base-content/40 mt-2">
-            Shift + Enter で改行
-          </p>
+          {inputForm}
         </div>
       </div>
     </div>
