@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,6 +46,7 @@ function NavItem({
 export function Sidebar({ user, onClose }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleNewChat = async () => {
     router.push("/main");
@@ -72,8 +74,8 @@ export function Sidebar({ user, onClose }: Props) {
         </Link>
       </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 overflow-y-auto">
+      {/* Navigation Items - Fixed */}
+      <nav className="flex-shrink-0">
         <NavItem
           icon={
             <svg
@@ -153,15 +155,63 @@ export function Sidebar({ user, onClose }: Props) {
             onClose?.();
           }}
         />
-
-        {/* Divider */}
-        <div className="mx-5 my-3 border-t border-base-content/10" />
-
-        {/* Chat Session List */}
-        <div className="px-3">
-          <ChatSessionList onSessionSelect={onClose} />
-        </div>
       </nav>
+
+      {/* Divider */}
+      <div className="mx-5 my-3 border-t border-base-content/10 flex-shrink-0" />
+
+      {/* Search input - Fixed */}
+      <div className="px-5 pb-2 flex-shrink-0">
+        <div className="relative">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="検索..."
+            className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Chat Session List - Scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0 px-3">
+        <ChatSessionList onSessionSelect={onClose} searchQuery={searchQuery} />
+      </div>
 
       {/* Bottom Section */}
       <div className="mt-auto pt-3 pb-3 bg-base-100 border-t border-base-content/10">

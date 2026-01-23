@@ -40,16 +40,16 @@ function groupSessionsByDate(sessions: ChatSessionListItem[]) {
 
 interface Props {
   onSessionSelect?: () => void;
+  searchQuery?: string;
 }
 
-export function ChatSessionList({ onSessionSelect }: Props) {
+export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
   const currentSessionId = pathname?.match(/\/main\/chat\/([^/]+)/)?.[1];
 
@@ -179,54 +179,6 @@ export function ChatSessionList({ onSessionSelect }: Props) {
 
   return (
     <div className="flex flex-col">
-      {/* Search input */}
-      <div className="px-2 pb-2">
-        <div className="relative">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="検索..."
-            className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
-
       {/* No search results */}
       {searchQuery && filteredSessions.length === 0 && (
         <div className="flex flex-col items-center justify-center py-6 text-center">
