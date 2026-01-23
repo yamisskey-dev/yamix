@@ -218,8 +218,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
 
               {/* Action buttons */}
               <div className="flex items-center gap-0.5 shrink-0">
-                {/* Consult type indicator - only show for PRIVATE */}
-                {session.consultType === "PRIVATE" && (
+                {/* Consult type indicator */}
+                {session.consultType === "PRIVATE" ? (
                   <div className={`${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title="プライベート相談">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -236,6 +236,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
                       />
                     </svg>
                   </div>
+                ) : (
+                  <span className="text-xs" title="公開相談">🌍</span>
                 )}
 
                 {/* Delete button */}

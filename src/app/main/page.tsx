@@ -176,31 +176,22 @@ export default function NewChatPage() {
             <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
               {/* Left side: Options */}
               <div className="flex items-center gap-1">
-                {/* Consult Type Toggle */}
+                {/* Consult Type Toggle - Single button that switches between modes */}
                 <button
                   type="button"
-                  className={`btn btn-xs btn-ghost ${
-                    consultType === "PRIVATE" ? "opacity-100" : "opacity-50"
-                  }`}
+                  className="btn btn-xs btn-ghost"
                   onClick={() => {
-                    setConsultType("PRIVATE");
-                    setIsAnonymous(false);
+                    if (consultType === "PRIVATE") {
+                      setConsultType("PUBLIC");
+                    } else {
+                      setConsultType("PRIVATE");
+                      setIsAnonymous(false);
+                    }
                   }}
                   disabled={isLoading}
-                  title="プライベート相談（AI専用）"
+                  title={consultType === "PRIVATE" ? "プライベート相談（AI専用）- クリックで公開に切替" : "公開相談（誰でも回答可能）- クリックで非公開に切替"}
                 >
-                  <span className="text-base">🔒</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn btn-xs btn-ghost ${
-                    consultType === "PUBLIC" ? "opacity-100" : "opacity-50"
-                  }`}
-                  onClick={() => setConsultType("PUBLIC")}
-                  disabled={isLoading}
-                  title="公開相談（誰でも回答可能）"
-                >
-                  <span className="text-base">🌐</span>
+                  <span className="text-base">{consultType === "PRIVATE" ? "🔒" : "🌍"}</span>
                 </button>
 
                 {/* Public options */}
