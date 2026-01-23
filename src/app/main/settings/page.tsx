@@ -380,25 +380,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ETH Wallet Section (Coming Soon) */}
-        <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg">
-              ETHウォレット連携
-              <span className="badge badge-outline badge-sm">Coming Soon</span>
-            </h2>
-            <p className="text-sm text-base-content/60">
-              YAMIが不足したときにOptimism
-              ETHで購入できるようになります。
-            </p>
-            <div className="card-actions justify-end">
-              <button className="btn btn-disabled btn-sm">
-                ウォレット接続
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Data Management Section */}
         <div className="card bg-base-200">
           <div className="card-body">
