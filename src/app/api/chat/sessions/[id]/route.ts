@@ -147,8 +147,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PATCH /api/chat/sessions/[id] - Update session (title only)
-// consultType と isAnonymous は作成時に決まり、変更不可
+// PATCH /api/chat/sessions/[id] - Update session
+// title と consultType が更新可能（isAnonymousは作成時のみ設定可能）
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
 
@@ -163,16 +163,21 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params;
 
-  let body: { title?: string };
+  let body: { title?: string; consultType?: "PRIVATE" | "PUBLIC" };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  // タイトルのみ更新可能
-  if (body.title === undefined) {
+  // タイトルまたはconsultTypeが指定されているか確認
+  if (body.title === undefined && body.consultType === undefined) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  }
+
+  // consultTypeのバリデーション
+  if (body.consultType && !["PRIVATE", "PUBLIC"].includes(body.consultType)) {
+    return NextResponse.json({ error: "Invalid consultType" }, { status: 400 });
   }
 
   try {
@@ -191,9 +196,21 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
+      const updateData: { title?: string; consultType?: "PRIVATE" | "PUBLIC"; updatedAt: Date } = {
+        updatedAt: new Date(),
+      };
+
+      if (body.title !== undefined) {
+        updateData.title = body.title;
+      }
+
+      if (body.consultType !== undefined) {
+        updateData.consultType = body.consultType;
+      }
+
       const updated = await db.chatSession.update({
         where: { id },
-        data: { title: body.title },
+        data: updateData,
       });
 
       return NextResponse.json(updated);
@@ -209,7 +226,14 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      session.title = body.title;
+      if (body.title !== undefined) {
+        session.title = body.title;
+      }
+
+      if (body.consultType !== undefined) {
+        session.consultType = body.consultType;
+      }
+
       session.updatedAt = new Date();
 
       chatSessionsStore.set(id, session);
