@@ -42,11 +42,12 @@ model User {
   serverId      String
   server        Server        @relation(fields: [serverId], references: [id])
   profile       Profile?
-  wallet        Wallet?       // 1:1 relation - one user has one wallet
-  chatSessions  ChatSession[] // AI相談セッション
-  chatResponses ChatMessage[] @relation("ChatResponses") // 人間として回答したメッセージ
-  blockedBy     UserBlock[]   @relation("BlockedUser") // このユーザーをブロックしている人
-  blocking      UserBlock[]   @relation("BlockingUser") // このユーザーがブロックしている人
+  wallet        Wallet?         // 1:1 relation - one user has one wallet
+  chatSessions  ChatSession[]   // AI相談セッション
+  chatResponses ChatMessage[]   @relation("ChatResponses") // 人間として回答したメッセージ
+  blockedBy     UserBlock[]     @relation("BlockedUser") // このユーザーをブロックしている人
+  blocking      UserBlock[]     @relation("BlockingUser") // このユーザーがブロックしている人
+  notifications Notification[]  // 通知
 
   @@map("users")
 }
@@ -350,6 +351,35 @@ model ChatMessage {
   @@index([sessionId, createdAt])
   @@index([responderId])
   @@map("chat_messages")
+}
+
+// ============================================
+// Notification - 通知
+// ユーザーへの通知（回答、メンション、Gas受信など）
+// ============================================
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           // 通知の受信者
+  type      NotificationType // 通知の種類
+  title     String           // 通知タイトル
+  message   String           // 通知本文
+  linkUrl   String?          // 通知をクリックした際のリンク
+  isRead    Boolean          @default(false) // 既読フラグ
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+// 通知の種類
+enum NotificationType {
+  RESPONSE       // 相談への回答
+  MENTION        // メンション
+  GAS_RECEIVED   // Gas受信
+  SYSTEM         // システム通知
 }
 
 // メッセージの送信者

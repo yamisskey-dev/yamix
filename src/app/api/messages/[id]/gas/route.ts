@@ -3,6 +3,7 @@ import { getPrismaClient } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
+import { notifyGasReceived } from "@/lib/notifications";
 
 // Gas constants
 const GAS_TIP_AMOUNT = 3; // 灯（ともしび）の金額
@@ -87,9 +88,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 送信者のウォレットを取得
+    // 送信者のウォレットとユーザー情報を取得
     const senderWallet = await db.wallet.findUnique({
       where: { userId: payload.userId },
+      include: {
+        user: true,
+      },
     });
 
     if (!senderWallet) {
@@ -152,6 +156,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       recipientId: message.responderId,
       amount: GAS_TIP_AMOUNT,
     });
+
+    // 通知を送信
+    await notifyGasReceived(
+      message.responderId,
+      senderWallet.user.handle,
+      message.session.id
+    );
 
     return NextResponse.json({
       success: true,

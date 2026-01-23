@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
+import { notifyResponse } from "@/lib/notifications";
 
 // In-memory types
 interface MemoryChatSession {
@@ -318,6 +319,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           netGain: actualReward - responseCost,
         };
       });
+
+      // 通知を送信（相談者が回答者と異なる場合のみ）
+      if (sessionWithMessages.userId !== payload.userId) {
+        await notifyResponse(
+          sessionWithMessages.userId,
+          payload.sub, // handle
+          id,
+          isAnonymous
+        );
+      }
 
       return NextResponse.json({
         message: result.message,
