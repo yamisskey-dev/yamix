@@ -224,6 +224,19 @@ export default function UserProfilePage({ params }: PageProps) {
 
   const displayName = user?.displayName || decodedHandle.split("@")[1] || decodedHandle;
 
+  // Parse handle to get Misskey profile URL
+  const getMisskeyProfileUrl = (handle: string) => {
+    // Handle format: @account@hostname
+    const parts = handle.split("@").filter(Boolean);
+    if (parts.length === 2) {
+      const [account, hostname] = parts;
+      return `https://${hostname}/@${account}`;
+    }
+    return null;
+  };
+
+  const misskeyProfileUrl = getMisskeyProfileUrl(decodedHandle);
+
   return (
     <div className="flex-1 overflow-y-auto h-full">
       <div className="max-w-2xl mx-auto p-4">
@@ -255,7 +268,18 @@ export default function UserProfilePage({ params }: PageProps) {
               {/* Name and Handle */}
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold truncate">{displayName}</h1>
-                <p className="text-sm text-base-content/50 truncate">{decodedHandle}</p>
+                {misskeyProfileUrl ? (
+                  <a
+                    href={misskeyProfileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-base-content/50 hover:text-primary hover:underline truncate block"
+                  >
+                    {decodedHandle}
+                  </a>
+                ) : (
+                  <p className="text-sm text-base-content/50 truncate">{decodedHandle}</p>
+                )}
               </div>
 
               {/* Block/Unblock button (only for other profiles) */}
