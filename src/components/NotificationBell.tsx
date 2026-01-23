@@ -180,14 +180,14 @@ export function NotificationBell() {
 
       {/* ドロップダウン */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[32rem] flex flex-col">
+        <div className="absolute right-0 mt-2 w-96 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[36rem] flex flex-col">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between p-3 border-b border-base-300">
-            <span className="font-bold text-sm">通知</span>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
+            <span className="font-bold">通知</span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-xs text-primary hover:underline"
+                className="text-sm text-primary hover:underline"
               >
                 全て既読にする
               </button>
@@ -201,7 +201,7 @@ export function NotificationBell() {
                 <span className="loading loading-spinner loading-sm"></span>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="text-center p-8 text-base-content/50 text-sm">
+              <div className="text-center p-8 text-base-content/50">
                 通知はありません
               </div>
             ) : (
@@ -211,7 +211,7 @@ export function NotificationBell() {
                     <Link
                       href={notification.linkUrl}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`block px-4 py-3 hover:bg-base-200 transition-colors border-b border-base-300 ${
+                      className={`block px-4 py-3.5 hover:bg-base-200 transition-colors border-b border-base-300/50 ${
                         !notification.isRead ? "bg-primary/5" : ""
                       }`}
                     >
@@ -220,7 +220,7 @@ export function NotificationBell() {
                   ) : (
                     <div
                       onClick={() => handleNotificationClick(notification)}
-                      className={`block px-4 py-3 cursor-pointer hover:bg-base-200 transition-colors border-b border-base-300 ${
+                      className={`block px-4 py-3.5 cursor-pointer hover:bg-base-200 transition-colors border-b border-base-300/50 ${
                         !notification.isRead ? "bg-primary/5" : ""
                       }`}
                     >
@@ -249,18 +249,18 @@ function NotificationItem({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className="text-2xl flex-shrink-0">{getIcon(notification.type)}</div>
+      <div className="text-xl flex-shrink-0 mt-0.5">{getIcon(notification.type)}</div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium truncate">{notification.title}</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="font-medium">{notification.title}</p>
           {!notification.isRead && (
             <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
           )}
         </div>
-        <p className="text-xs text-base-content/70 line-clamp-2 mt-0.5">
+        <p className="text-sm text-base-content/70 line-clamp-2 mb-1.5">
           {notification.message}
         </p>
-        <p className="text-xs text-base-content/50 mt-1">{getTime(notification.createdAt)}</p>
+        <p className="text-xs text-base-content/50">{getTime(notification.createdAt)}</p>
       </div>
     </div>
   );

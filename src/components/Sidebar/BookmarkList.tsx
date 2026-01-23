@@ -67,27 +67,17 @@ export function BookmarkList({ onSessionClick }: Props) {
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-0.5">
       {bookmarks.map((bookmark) => (
         <Link
           key={bookmark.id}
           href={`/main/chat/${bookmark.sessionId}`}
           onClick={onSessionClick}
-          className="block px-4 py-2 hover:bg-base-200 transition-colors rounded-lg"
+          className="block px-3 py-1.5 hover:bg-base-200 transition-colors rounded-md"
         >
-          <div className="flex items-start gap-2">
-            <span className="text-lg flex-shrink-0">🔖</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium truncate">
-                {bookmark.session.title || "無題の相談"}
-              </p>
-              {bookmark.session.preview && (
-                <p className="text-xs text-base-content/60 truncate mt-0.5">
-                  {bookmark.session.preview}
-                </p>
-              )}
-            </div>
-          </div>
+          <p className="text-xs truncate">
+            {bookmark.session.title || "無題の相談"}
+          </p>
         </Link>
       ))}
     </div>

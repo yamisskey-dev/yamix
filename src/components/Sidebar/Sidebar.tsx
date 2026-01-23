@@ -60,8 +60,7 @@ export function Sidebar({ user, onClose }: Props) {
   return (
     <div className="h-full flex flex-col bg-base-100">
       {/* Header - Instance icon + Notification */}
-      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-between px-2">
-        <div className="flex-1" />
+      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center gap-4 px-2">
         <Link
           href="/main/about"
           onClick={onClose}
@@ -75,9 +74,7 @@ export function Sidebar({ user, onClose }: Props) {
             className="rounded-lg"
           />
         </Link>
-        <div className="flex-1 flex justify-end">
-          <NotificationBell />
-        </div>
+        <NotificationBell />
       </div>
 
       {/* Navigation Items - Fixed */}
@@ -215,13 +212,12 @@ export function Sidebar({ user, onClose }: Props) {
       </div>
 
       {/* Bookmarks Section - Fixed */}
-      <div className="px-3 pb-2 flex-shrink-0">
-        <div className="text-xs font-medium text-base-content/50 px-2 mb-2">ブックマーク</div>
+      <div className="px-3 pb-1 flex-shrink-0">
         <BookmarkList onSessionClick={onClose} />
       </div>
 
       {/* Divider */}
-      <div className="mx-5 my-2 border-t border-base-content/10 flex-shrink-0" />
+      <div className="mx-5 my-1.5 border-t border-base-content/10 flex-shrink-0" />
 
       {/* Chat Session List - Scrollable */}
       <div className="flex-1 overflow-y-auto min-h-0 px-3">
