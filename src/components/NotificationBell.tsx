@@ -218,8 +218,8 @@ export function NotificationBell() {
                 <span className="loading loading-spinner loading-sm"></span>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="text-center p-8 text-base-content/50">
-                通知はありません
+              <div className="text-center py-8 px-4 text-base-content/50 text-sm">
+                まだありません
               </div>
             ) : (
               notifications.map((notification) => (
