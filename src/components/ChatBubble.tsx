@@ -62,7 +62,7 @@ export const ChatBubble = memo(function ChatBubble({
   }
 
   return (
-    <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-slide-up`}>
+    <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-slide-up group`}>
       {/* Avatar for assistant or human */}
       {!isUser && (
         <div className="chat-image avatar">
@@ -123,42 +123,10 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Header: Anonymous label, gas display/button, block button - all in one compact row */}
-      {!isUser && isHuman && (responder!.isAnonymous || canSendGas || canBlock || (gasAmount && gasAmount > 0)) && (
-        <div className="chat-header flex items-center gap-1.5">
-          {/* Anonymous user label (User A, B, C, etc.) */}
-          {responder!.isAnonymous && responder!.displayName && (
-            <span className="text-xs opacity-50">{responder!.displayName}</span>
-          )}
-
-          {/* Gas amount display (only if > 0) */}
-          {gasAmount && gasAmount > 0 && (
-            <span className="text-xs opacity-60 flex items-center gap-0.5">
-              🕯️ {gasAmount}
-            </span>
-          )}
-
-          {/* Gas button (only for non-owners) */}
-          {canSendGas && (
-            <button
-              onClick={() => onSendGas!(messageId!)}
-              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:text-amber-500 transition-all"
-              title="灯を送る（3 YAMI）"
-            >
-              🕯️
-            </button>
-          )}
-
-          {/* Block button (only for session owner) */}
-          {canBlock && (
-            <button
-              onClick={() => onBlock!(responder!.responderId!)}
-              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:btn-error transition-all"
-              title="このユーザーをブロック"
-            >
-              🚫
-            </button>
-          )}
+      {/* Anonymous user label (User A, B, C, etc.) - only label, no buttons */}
+      {!isUser && isHuman && responder!.isAnonymous && responder!.displayName && (
+        <div className="chat-header">
+          <span className="text-xs opacity-50">{responder!.displayName}</span>
         </div>
       )}
 
@@ -168,15 +136,43 @@ export const ChatBubble = memo(function ChatBubble({
         </p>
       </div>
 
-      {/* Timestamp */}
-      {timestamp && (
-        <div className="chat-footer opacity-40 mt-1">
-          <time className="text-xs">
-            {timestamp.toLocaleTimeString("ja-JP", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </time>
+      {/* Footer: Timestamp and action buttons (buttons visible on hover only) */}
+      {(timestamp || canSendGas || canBlock) && (
+        <div className="chat-footer flex items-center gap-2 mt-1">
+          {/* Timestamp */}
+          {timestamp && (
+            <time className="text-xs opacity-40">
+              {timestamp.toLocaleTimeString("ja-JP", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </time>
+          )}
+
+          {/* Action buttons - visible on message hover */}
+          <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+            {/* Gas button (only for non-owners) */}
+            {canSendGas && (
+              <button
+                onClick={() => onSendGas!(messageId!)}
+                className="btn btn-xs btn-ghost hover:text-amber-500 transition-colors"
+                title="灯を送る（3 YAMI）"
+              >
+                🕯️
+              </button>
+            )}
+
+            {/* Block button (only for session owner) */}
+            {canBlock && (
+              <button
+                onClick={() => onBlock!(responder!.responderId!)}
+                className="btn btn-xs btn-ghost hover:btn-error transition-colors"
+                title="このユーザーをブロック"
+              >
+                🚫
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
