@@ -123,30 +123,15 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      {/* Display name for anonymous users (User A, B, C, etc.) - only show if they have a label */}
-      {!isUser && isHuman && responder!.isAnonymous && responder!.displayName && (
-        <div className="chat-header opacity-50">
-          <span className="text-xs">{responder!.displayName}</span>
-        </div>
-      )}
-
-      {/* Block button for session owner */}
-      {canBlock && (
-        <div className="chat-header flex items-center gap-1">
-          <button
-            onClick={() => onBlock!(responder!.responderId!)}
-            className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:btn-error"
-            title="このユーザーをブロック"
-          >
-            🚫
-          </button>
-        </div>
-      )}
-
-      {/* Gas (tomoshibi) button and display */}
-      {!isUser && isHuman && (
+      {/* Header: Anonymous label, gas display/button, block button - all in one compact row */}
+      {!isUser && isHuman && (responder!.isAnonymous || canSendGas || canBlock || (gasAmount && gasAmount > 0)) && (
         <div className="chat-header flex items-center gap-1.5">
-          {/* Gas amount display */}
+          {/* Anonymous user label (User A, B, C, etc.) */}
+          {responder!.isAnonymous && responder!.displayName && (
+            <span className="text-xs opacity-50">{responder!.displayName}</span>
+          )}
+
+          {/* Gas amount display (only if > 0) */}
           {gasAmount && gasAmount > 0 && (
             <span className="text-xs opacity-60 flex items-center gap-0.5">
               🕯️ {gasAmount}
@@ -157,10 +142,21 @@ export const ChatBubble = memo(function ChatBubble({
           {canSendGas && (
             <button
               onClick={() => onSendGas!(messageId!)}
-              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:text-amber-500"
+              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:text-amber-500 transition-all"
               title="灯を送る（3 YAMI）"
             >
               🕯️
+            </button>
+          )}
+
+          {/* Block button (only for session owner) */}
+          {canBlock && (
+            <button
+              onClick={() => onBlock!(responder!.responderId!)}
+              className="btn btn-xs btn-ghost opacity-40 hover:opacity-100 hover:btn-error transition-all"
+              title="このユーザーをブロック"
+            >
+              🚫
             </button>
           )}
         </div>
