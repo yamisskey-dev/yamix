@@ -150,7 +150,7 @@ export const ChatBubble = memo(function ChatBubble({
           )}
 
           {/* Action buttons - visible on message hover */}
-          <div className="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
             {/* Gas button (only for non-owners) */}
             {canSendGas && (
               <button
