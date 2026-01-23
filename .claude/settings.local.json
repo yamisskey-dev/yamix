@@ -24,7 +24,8 @@
       "Bash(kill:*)",
       "Bash(git diff:*)",
       "Bash(chmod:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []
