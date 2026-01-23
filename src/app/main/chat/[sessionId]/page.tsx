@@ -49,6 +49,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     isAnonymous: boolean;
     currentUserId: string | null;
     title: string | null;
+    responseCount: number;
   } | null>(null);
 
   // Fetch session data
@@ -73,6 +74,11 @@ export default function ChatSessionPage({ params }: PageProps) {
         const isOwner = currentUser ? session.userId === currentUser.id : false;
         const currentUserId = currentUser?.id || null;
 
+        // Count responses from humans (not AI)
+        const responseCount = session.messages.filter(
+          (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
+        ).length;
+
         // Store session info
         setSessionInfo({
           consultType: session.consultType,
@@ -81,6 +87,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           isAnonymous: session.isAnonymous,
           currentUserId,
           title: session.title,
+          responseCount,
         });
 
         // Build anonymous user map (User A, B, C, etc.)
@@ -578,7 +585,11 @@ export default function ChatSessionPage({ params }: PageProps) {
       <ConfirmModal
         ref={deleteModalRef}
         title="相談を削除"
-        body={`この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`}
+        body={
+          sessionInfo?.consultType === "PUBLIC" && sessionInfo.responseCount > 0
+            ? `この公開相談には${sessionInfo.responseCount}件の回答があります。\n削除すると他のユーザーの回答も消えます。\n\nこの操作は取り消せません。\n\n本当に削除しますか？`
+            : `この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`
+        }
         confirmText={isDeleting ? "削除中..." : "削除する"}
         cancelText="キャンセル"
         onConfirm={handleDelete}

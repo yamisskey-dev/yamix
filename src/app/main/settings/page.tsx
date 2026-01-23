@@ -14,9 +14,11 @@ export default function SettingsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportData, setExportData] = useState<string>();
   const deleteModalRef = useRef<HTMLDialogElement>(null);
+  const deleteSessionsModalRef = useRef<HTMLDialogElement>(null);
   const exportModalRef = useRef<HTMLDialogElement>(null);
   const successModalRef = useRef<HTMLDialogElement>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isDeletingSessions, setIsDeletingSessions] = useState(false);
   const [customPrompt, setCustomPrompt] = useState("");
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [promptSaved, setPromptSaved] = useState(false);
@@ -131,6 +133,28 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("Failed to unblock user:", error);
+    }
+  };
+
+  const handleDeletePrivateSessions = async () => {
+    setIsDeletingSessions(true);
+    try {
+      const res = await fetch("/api/chat/sessions?type=private", {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSuccessMessage(`${data.deletedCount}件のプライベート相談を削除しました。`);
+        successModalRef.current?.showModal();
+      } else {
+        const data = await res.json();
+        alert(data.error || "削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("Delete sessions error:", error);
+      alert("削除に失敗しました");
+    } finally {
+      setIsDeletingSessions(false);
     }
   };
 
@@ -414,9 +438,18 @@ export default function SettingsPage() {
               </div>
               <div className="divider my-2"></div>
               <div>
-                <h3 className="text-sm font-medium mb-1">相談・回答の削除</h3>
-                <p className="text-xs text-base-content/60">
-                  各相談ページから個別に削除できます。他のユーザーへの回答は削除できません。
+                <h3 className="text-sm font-medium mb-1">チャットの削除</h3>
+                <p className="text-xs text-base-content/60 mb-2">
+                  相談ページから個別に削除できます。一括削除も可能です。
+                </p>
+                <button
+                  className="btn btn-error btn-outline btn-sm"
+                  onClick={() => deleteSessionsModalRef.current?.showModal()}
+                >
+                  全てのプライベート相談を削除
+                </button>
+                <p className="text-xs text-base-content/40 mt-2">
+                  ※ 公開相談は個別に削除してください（他人の回答も削除されるため）
                 </p>
               </div>
             </div>
@@ -445,6 +478,17 @@ export default function SettingsPage() {
         confirmText={isDeleting ? "削除中..." : "削除する"}
         cancelText="キャンセル"
         onConfirm={handleDeleteData}
+        confirmButtonClass="btn-error"
+      />
+
+      {/* Delete All Private Sessions Confirmation Modal */}
+      <ConfirmModal
+        ref={deleteSessionsModalRef}
+        title="プライベート相談を全て削除"
+        body={`全てのプライベート相談（AI専用の非公開相談）とそのメッセージが完全に削除されます。\nこの操作は取り消せません。\n\n※ 公開相談は削除されません。\n\n本当に削除しますか？`}
+        confirmText={isDeletingSessions ? "削除中..." : "削除する"}
+        cancelText="キャンセル"
+        onConfirm={handleDeletePrivateSessions}
         confirmButtonClass="btn-error"
       />
 

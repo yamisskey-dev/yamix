@@ -259,3 +259,73 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// DELETE /api/chat/sessions?type=private - Delete all sessions (or only private sessions)
+export async function DELETE(req: NextRequest) {
+  const token = getTokenFromCookie(req.headers.get("cookie"));
+
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const payload = await verifyJWT(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const type = searchParams.get("type"); // "private" or "all"
+
+  try {
+    const db = getPrismaClient();
+
+    if (db) {
+      const whereClause: { userId: string; consultType?: "PRIVATE" } = {
+        userId: payload.userId,
+      };
+
+      if (type === "private") {
+        whereClause.consultType = "PRIVATE";
+      }
+
+      const result = await db.chatSession.deleteMany({
+        where: whereClause,
+      });
+
+      return NextResponse.json({
+        success: true,
+        deletedCount: result.count
+      });
+    } else {
+      // In-memory fallback
+      let deletedCount = 0;
+      for (const [sessionId, session] of chatSessionsStore.entries()) {
+        if (session.userId === payload.userId) {
+          if (type === "private" && session.consultType !== "PRIVATE") {
+            continue;
+          }
+
+          chatSessionsStore.delete(sessionId);
+          // Delete associated messages
+          for (const [msgId, msg] of chatMessagesStore.entries()) {
+            if (msg.sessionId === sessionId) {
+              chatMessagesStore.delete(msgId);
+            }
+          }
+          deletedCount++;
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        deletedCount
+      });
+    }
+  } catch (error) {
+    logger.error("Delete chat sessions error", { userId: payload.userId }, error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
