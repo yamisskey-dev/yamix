@@ -191,13 +191,13 @@ export default function NewChatPage() {
                 <button
                   type="button"
                   className={`btn btn-xs btn-ghost ${
-                    !allowAnonymousResponses ? "opacity-100 text-error" : "opacity-50"
+                    !allowAnonymousResponses ? "opacity-100" : "opacity-50"
                   }`}
                   onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
                   disabled={isLoading}
                   title={allowAnonymousResponses ? "匿名回答を許可" : "匿名回答を拒否"}
                 >
-                  <span className="text-base">{allowAnonymousResponses ? "🙂" : "🚫"}</span>
+                  <span className="text-base">🎭</span>
                 </button>
               </>
             )}
