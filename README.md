@@ -27,6 +27,7 @@ menhera.jp の精神を継ぐ、OSS人生相談プラットフォーム。AIと�
 ### UI/UX
 - **テーマ切り替え** - ダーク/ライト + システム連動
 - **レスポンシブデザイン** - モバイル・デスクトップ対応
+- **PWA対応** - インストール可能、オフラインキャッシュ対応
 
 ## 構想中の機能
 
@@ -38,7 +39,6 @@ menhera.jp の精神を継ぐ、OSS人生相談プラットフォーム。AIと�
 ### 将来的な拡張（Phase 6）
 - **YAMI DAOガバナンス** - 経済パラメータの民主的調整
 - **多言語対応** - 英語・韓国語サポート
-- **PWA対応** - オフライン機能とインストール可能化
 - **プッシュ通知** - ※依存を深める可能性があるため慎重に検討中
 
 ## 設計思想
@@ -60,7 +60,8 @@ menhera.jp の精神を継ぐ、OSS人生相談プラットフォーム。AIと�
 | Auth | Misskey MiAuth + JWT |
 | Database | PostgreSQL + Prisma |
 | Cache | Redis |
-| Blockchain | Optimism（YAMI DAOと共通） |
+| PWA | next-pwa (Service Worker + Manifest) |
+| Blockchain | Optimism（構想中） |
 
 ## クイックスタート
 
@@ -103,22 +104,33 @@ pnpm dev
 ├── auth/                  # 認証
 │   ├── misskey-login/    # MiAuthセッション開始
 │   ├── callback/         # コールバック処理
-│   └── refresh/          # トークンリフレッシュ
+│   ├── refresh/          # トークンリフレッシュ
+│   └── logout/           # ログアウト
 ├── wallets/              # ウォレット管理
 │   └── [id]/
 │       ├── balance/      # 残高取得
 │       └── ...
-├── posts/                # 投稿・相談
+├── sessions/             # 相談セッション
 │   └── [id]/
+│       ├── messages/     # メッセージ一覧
+│       ├── public/       # 公開設定
 │       └── ...
+├── messages/             # メッセージ・回答
+│   └── [id]/
+│       ├── gas/          # ガスを送る
+│       └── ...
+├── users/                # ユーザー管理
+│   ├── block/            # ブロックリスト
+│   └── block/[id]/       # ブロック・解除
 ├── follows/              # フォロー
 │   └── [walletId]/
 │       └── timeline/     # ホームタイムライン
+├── bookmarks/            # ブックマーク
+├── notifications/        # 通知
 ├── transactions/         # 取引履歴
-├── tokens/               # YAMI経済
-│   ├── purchase/         # Optimism ETHでYAMI購入
-│   └── withdrawal/       # YAMIをOptimism ETHに換金
 └── yamii/                # AI相談プロキシ
+    ├── chat/             # AI相談
+    └── user/             # プロフィール管理
 ```
 
 ## 開発
@@ -158,9 +170,13 @@ pnpm prisma:studio # Prisma Studio起動
 - [x] 相談の公開/非公開切り替え
 - [x] 公開タイムライン（Misskey風UI）
 - [x] 人間による回答機能
+- [x] 匿名回答オプション
 - [x] リプライツリー表示
 - [x] ユーザープロフィールページ
 - [x] セッション検索
+- [x] 通知システム（アプリ内）
+- [x] ブックマーク機能
+- [x] ユーザーブロック機能
 
 ### Phase 3: UI/UX ✅
 - [x] テーマ切り替え（DXM/NGO + システム連動）
@@ -168,6 +184,7 @@ pnpm prisma:studio # Prisma Studio起動
 - [x] Misskey風ノートデザイン
 - [x] レスポンシブ対応
 - [x] 回答ポップアップUI（LINE風）
+- [x] PWA対応（インストール可能、オフラインキャッシュ）
 
 ### Phase 4: セキュリティ ✅
 - [x] JWT認証（HttpOnly Cookie）
@@ -184,7 +201,6 @@ pnpm prisma:studio # Prisma Studio起動
 ### Phase 6: 将来 📋
 - [ ] YAMI DAOガバナンス統合
 - [ ] 多言語対応（英語・韓国語）
-- [ ] PWA対応
 - [ ] プッシュ通知（※依存を深める可能性があるため慎重に検討中）
 
 ## 関連プロジェクト
