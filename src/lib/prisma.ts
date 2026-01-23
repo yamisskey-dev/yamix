@@ -118,6 +118,24 @@ interface ChatMessageRecord {
   createdAt: Date;
 }
 
+interface NotificationRecord {
+  id: string;
+  userId: string;
+  type: "RESPONSE" | "MENTION" | "GAS_RECEIVED" | "SYSTEM";
+  title: string;
+  message: string;
+  linkUrl: string | null;
+  isRead: boolean;
+  createdAt: Date;
+}
+
+interface BookmarkRecord {
+  id: string;
+  userId: string;
+  sessionId: string;
+  createdAt: Date;
+}
+
 interface MemoryDB {
   servers: Map<string, ServerRecord>;
   users: Map<string, UserRecord>;
@@ -129,6 +147,8 @@ interface MemoryDB {
   chatSessions: Map<string, ChatSessionRecord>;
   chatMessages: Map<string, ChatMessageRecord>;
   userBlocks: Map<string, UserBlockRecord>;
+  notifications: Map<string, NotificationRecord>;
+  bookmarks: Map<string, BookmarkRecord>;
 }
 
 // Initialize in-memory storage
@@ -144,6 +164,8 @@ if (!globalForPrisma.memoryDB) {
     chatSessions: new Map(),
     chatMessages: new Map(),
     userBlocks: new Map(),
+    notifications: new Map(),
+    bookmarks: new Map(),
   };
 }
 
