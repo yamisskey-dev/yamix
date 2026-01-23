@@ -384,27 +384,41 @@ export default function SettingsPage() {
         <div className="card bg-base-200">
           <div className="card-body">
             <h2 className="card-title text-lg">データ管理</h2>
-            <p className="text-sm text-base-content/60">
-              GDPRに準拠したデータ管理機能です。
-            </p>
-            <div className="card-actions justify-end gap-2">
-              <button
-                className={`btn btn-outline btn-sm ${isExporting ? "btn-disabled" : ""}`}
-                onClick={handleExportData}
-                disabled={isExporting}
-              >
-                {isExporting ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  "データをエクスポート"
-                )}
-              </button>
-              <button
-                className="btn btn-error btn-outline btn-sm"
-                onClick={() => deleteModalRef.current?.showModal()}
-              >
-                データを削除
-              </button>
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-medium mb-1">AI学習データ</h3>
+                <p className="text-xs text-base-content/60 mb-2">
+                  YamiiのAI学習データ（会話履歴、カスタムプロンプトなど）のエクスポートと削除ができます。
+                  <br />
+                  <span className="text-warning">※ Yamix上の相談・回答は削除されません。</span>
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    className={`btn btn-outline btn-sm ${isExporting ? "btn-disabled" : ""}`}
+                    onClick={handleExportData}
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                      "エクスポート"
+                    )}
+                  </button>
+                  <button
+                    className="btn btn-error btn-outline btn-sm"
+                    onClick={() => deleteModalRef.current?.showModal()}
+                  >
+                    AI学習データを削除
+                  </button>
+                </div>
+              </div>
+              <div className="divider my-2"></div>
+              <div>
+                <h3 className="text-sm font-medium mb-1">相談・回答の削除</h3>
+                <p className="text-xs text-base-content/60">
+                  各相談ページから個別に削除できます。他のユーザーへの回答は削除できません。
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -426,8 +440,8 @@ export default function SettingsPage() {
       {/* Delete Confirmation Modal */}
       <ConfirmModal
         ref={deleteModalRef}
-        title="データ削除の確認"
-        body={`この操作は取り消せません。\nYamii上のあなたのデータ（相談履歴、学習データなど）がすべて削除されます。\n\n本当に削除しますか？`}
+        title="AI学習データ削除の確認"
+        body={`この操作は取り消せません。\nYamii APIのAI学習データ（会話履歴、カスタムプロンプトなど）が削除されます。\n\n※ Yamix上の相談・回答は削除されません。各相談ページから個別に削除してください。\n\n本当に削除しますか？`}
         confirmText={isDeleting ? "削除中..." : "削除する"}
         cancelText="キャンセル"
         onConfirm={handleDeleteData}

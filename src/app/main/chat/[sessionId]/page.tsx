@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { BookmarkButton } from "@/components/BookmarkButton";
+import { ConfirmModal } from "@/components/Modal";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 
 interface PageProps {
@@ -39,6 +40,8 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [isAnonymousResponse, setIsAnonymousResponse] = useState(false); // 匿名で回答するか
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const deleteModalRef = useRef<HTMLDialogElement>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
     consultType: "PRIVATE" | "PUBLIC";
     userId: string;
@@ -218,6 +221,27 @@ export default function ChatSessionPage({ params }: PageProps) {
     } catch (error) {
       console.error("Send gas error:", error);
       alert("灯の送信に失敗しました");
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.push("/main");
+      } else {
+        const data = await res.json();
+        alert(data.error || "削除に失敗しました");
+      }
+    } catch (error) {
+      console.error("Delete session error:", error);
+      alert("削除に失敗しました");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -416,7 +440,18 @@ export default function ChatSessionPage({ params }: PageProps) {
       {sessionInfo && sessionInfo.title && (
         <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
           <h1 className="text-sm font-medium truncate flex-1">{sessionInfo.title}</h1>
-          <BookmarkButton sessionId={sessionId} />
+          <div className="flex items-center gap-2">
+            <BookmarkButton sessionId={sessionId} />
+            {sessionInfo.isOwner && (
+              <button
+                className="btn btn-ghost btn-xs text-error hover:bg-error/10"
+                onClick={() => deleteModalRef.current?.showModal()}
+                title="この相談を削除"
+              >
+                削除
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -538,6 +573,17 @@ export default function ChatSessionPage({ params }: PageProps) {
           </p>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        ref={deleteModalRef}
+        title="相談を削除"
+        body={`この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`}
+        confirmText={isDeleting ? "削除中..." : "削除する"}
+        cancelText="キャンセル"
+        onConfirm={handleDelete}
+        confirmButtonClass="btn-error"
+      />
     </div>
   );
 }
