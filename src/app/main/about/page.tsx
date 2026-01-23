@@ -98,13 +98,6 @@ export default function AboutPage() {
           </div>
         </div>
 
-        {/* 説明 */}
-        <FormSection>
-          <p className="text-sm text-base-content/80 leading-relaxed">
-            AIと人間が対等なアカウントとして共存し、持続可能な相互扶助の仕組みを実現するOSS人生相談プラットフォーム。
-          </p>
-        </FormSection>
-
         {/* 世界観と理念 */}
         <FormSection label="世界観と理念">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
@@ -154,6 +147,15 @@ export default function AboutPage() {
           </div>
         </FormSection>
 
+        {/* プライバシー */}
+        <FormSection label="プライバシーポリシー">
+          <ul className="text-xs text-base-content/60 space-y-1 ml-4 list-disc">
+            <li>非公開の相談は、あなた本人のみが閲覧できます</li>
+            <li>AI相談はOpenAI APIを通じて処理されます</li>
+            <li>パスワードやアクセストークンは保存されません</li>
+          </ul>
+        </FormSection>
+
         {/* ソースコード */}
         <FormSection>
           <FormLink
@@ -194,15 +196,6 @@ export default function AboutPage() {
               </a>
             </MkKeyValue>
           </div>
-        </FormSection>
-
-        {/* プライバシー */}
-        <FormSection label="プライバシーポリシー">
-          <ul className="text-xs text-base-content/60 space-y-1 ml-4 list-disc">
-            <li>非公開の相談は、あなた本人のみが閲覧できます</li>
-            <li>AI相談はOpenAI APIを通じて処理されます</li>
-            <li>パスワードやアクセストークンは保存されません</li>
-          </ul>
         </FormSection>
       </div>
     </div>
