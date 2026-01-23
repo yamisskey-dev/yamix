@@ -105,16 +105,29 @@ export default function AboutPage() {
           </p>
         </FormSection>
 
-        {/* サービス理念 */}
-        <FormSection label="サービスの理念">
+        {/* 世界観と理念 */}
+        <FormSection label="世界観と理念">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
             <p>
               Yamixは、<strong className="text-base-content/90">不健全な依存関係を解消する</strong>ために設計されたプラットフォームです。
             </p>
             <p>
               従来の人生相談では、回答者への過度な依存や、精神的資源の一方的な消費が問題でした。
+              支援する側が疲弊し、支援される側は依存を深めるという悪循環が生まれていました。
+            </p>
+            <p>
+              Yamixは、AIと人間が対等なアカウントとして共存し、
+              <strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>健全なコミュニティを目指します。
+            </p>
+          </div>
+        </FormSection>
+
+        {/* エコシステムの仕組み */}
+        <FormSection label="エコシステムの仕組み">
+          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
+            <p>
               Yamixは、<strong className="text-base-content/90">YAMIトークン経済</strong>を通じて、
-              この問題に以下の方法で取り組みます：
+              注意力と精神的資源を適切に分配します：
             </p>
             <ul className="ml-4 space-y-1.5 list-disc list-outside">
               <li>
@@ -138,10 +151,6 @@ export default function AboutPage() {
                 毎日の無料YAMIで誰でも参加でき、過度な蓄積は減衰で抑制
               </li>
             </ul>
-            <p>
-              トークン経済は、注意力と精神的資源を適切に分配するための仕組みです。
-              これにより、支え合いながらも依存しすぎない、健全なコミュニティを目指します。
-            </p>
           </div>
         </FormSection>
 
