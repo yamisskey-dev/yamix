@@ -70,7 +70,16 @@ pnpm dev
 
 起動後: http://localhost:3000
 
-## API構成
+## API
+
+### OpenAPI ドキュメント
+
+Yamix APIは **OpenAPI 3.0** 標準に準拠しています。FastAPI（Yamii）と統一的な規格でAPIドキュメントを提供します。
+
+- **Swagger UI**: http://localhost:3000/api-docs
+- **OpenAPI JSON**: http://localhost:3000/api/openapi
+
+### API構成
 
 ```
 /api/
