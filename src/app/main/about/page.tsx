@@ -1,7 +1,5 @@
 "use client";
 
-import Image from "next/image";
-
 // Misskey風のFormLinkコンポーネント
 function FormLink({
   href,
@@ -85,8 +83,8 @@ export default function AboutPage() {
           }}
         >
           <div className="absolute inset-0 bottom-10 flex flex-col items-center justify-center">
-            <Image
-              src="/icon.svg"
+            <img
+              src="/app-icon.png"
               alt="Yamix"
               width={64}
               height={64}

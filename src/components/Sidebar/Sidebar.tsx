@@ -62,8 +62,8 @@ export function Sidebar({ user, onClose }: Props) {
           onClick={onClose}
           className="flex items-center justify-center hover:opacity-80 transition-opacity"
         >
-          <Image
-            src="/icon.svg"
+          <img
+            src="/app-icon.png"
             alt="やみっくす"
             width={36}
             height={36}
