@@ -23,17 +23,22 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // 通知を取得
   const fetchNotifications = async () => {
-    setLoading(true);
+    // 既に通知がある場合はローディング表示しない（バックグラウンド更新）
+    if (notifications.length === 0) {
+      setLoading(true);
+    }
     try {
       const res = await fetch("/api/notifications?limit=10");
       if (res.ok) {
         const data: NotificationResponse = await res.json();
         setNotifications(data.notifications);
         setUnreadCount(data.unreadCount);
+        setLastFetch(Date.now());
       }
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
@@ -42,12 +47,20 @@ export function NotificationBell() {
     }
   };
 
-  // 初回ロード
+  // 未読カウントのみ初回ロード（軽量）
   useEffect(() => {
-    fetchNotifications();
-    // 30秒ごとに自動更新
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=1");
+        if (res.ok) {
+          const data: NotificationResponse = await res.json();
+          setUnreadCount(data.unreadCount);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+    fetchUnreadCount();
   }, []);
 
   // ドロップダウン外クリックで閉じる
@@ -149,7 +162,11 @@ export function NotificationBell() {
       <button
         onClick={() => {
           setIsOpen(!isOpen);
-          if (!isOpen) fetchNotifications(); // 開く時に最新化
+          // 初回、または30秒以上経過している場合のみ取得
+          const now = Date.now();
+          if (!isOpen && (notifications.length === 0 || now - lastFetch > 30000)) {
+            fetchNotifications();
+          }
         }}
         className="btn btn-ghost btn-circle relative"
         aria-label="通知"
