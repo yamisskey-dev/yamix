@@ -46,8 +46,8 @@ export const ChatBubble = memo(function ChatBubble({
   // Show block button if: session owner, this is a human response (not owner's message), and has responderId
   const canBlock = isSessionOwner && !isUser && isHuman && responder!.responderId && onBlock;
 
-  // Show gas button if: not session owner, this is a human response, has messageId and callback
-  const canSendGas = !isSessionOwner && !isUser && isHuman && messageId && onSendGas;
+  // Show gas button if: this is a human response (not your own), has messageId and callback
+  const canSendGas = !isUser && isHuman && messageId && onSendGas;
 
   if (isLoading) {
     return (
@@ -150,13 +150,13 @@ export const ChatBubble = memo(function ChatBubble({
           )}
 
           {/* Action buttons - visible on message hover */}
-          <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {/* Gas button (only for non-owners) */}
             {canSendGas && (
               <button
                 onClick={() => onSendGas!(messageId!)}
                 className="btn btn-xs btn-ghost hover:text-amber-500 transition-colors"
-                title="灯を送る（3 YAMI）"
+                title="このユーザーを応援する"
               >
                 🕯️
               </button>
