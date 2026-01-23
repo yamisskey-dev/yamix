@@ -180,7 +180,7 @@ export function NotificationBell() {
 
       {/* ドロップダウン */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[36rem] flex flex-col">
+        <div className="absolute right-0 mt-2 w-48 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[36rem] flex flex-col">
           {/* ヘッダー */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
             <span className="font-bold">通知</span>
