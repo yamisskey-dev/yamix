@@ -226,15 +226,6 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
         <TimelineIcon className="h-5 w-5" />
       </button>
 
-      {/* New Consultation Button (Center, Gradient) */}
-      <button
-        onClick={() => onNavigate("/main")}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-lg"
-        aria-label="新しい相談"
-      >
-        <ChatIcon className="h-5 w-5" />
-      </button>
-
       {/* Notification Button */}
       <button
         onClick={() => onNavigate("/main/notifications")}
@@ -265,6 +256,15 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
         aria-label="設定"
       >
         <SettingsIcon className="h-5 w-5" />
+      </button>
+
+      {/* New Consultation Button (Right, Gradient) */}
+      <button
+        onClick={() => onNavigate("/main")}
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-lg"
+        aria-label="新しい相談"
+      >
+        <ChatIcon className="h-5 w-5" />
       </button>
     </nav>
   );
