@@ -248,9 +248,9 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       {/* Title and preview */}
       <div className="flex-1 min-w-0">
         <span className={`text-[13px] font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
-          {session.title || "新しい相談"}
+          {session.title || session.preview || "新しい相談"}
         </span>
-        {session.preview && (
+        {session.title && session.preview && (
           <span className="text-[11px] text-base-content/50 truncate block mt-0.5">
             {session.preview}...
           </span>
