@@ -21,10 +21,10 @@ export const Modal = forwardRef<HTMLDialogElement, ModalProps>(
     return (
       <dialog ref={ref} className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg">{title}</h3>
-          <p className="py-4 whitespace-pre-line">{body}</p>
+          <h3 className="font-bold text-base">{title}</h3>
+          <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
           <div className="modal-action">
-            <button className="btn" onClick={handleClick}>
+            <button className="btn btn-sm" onClick={handleClick}>
               {buttonText}
             </button>
           </div>
@@ -79,13 +79,13 @@ export const ConfirmModal = forwardRef<HTMLDialogElement, ConfirmModalProps>(
     return (
       <dialog ref={ref} className="modal">
         <div className="modal-box">
-          <h3 className="font-bold text-lg">{title}</h3>
-          <p className="py-4 whitespace-pre-line">{body}</p>
+          <h3 className="font-bold text-base">{title}</h3>
+          <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
           <div className="modal-action">
-            <button className={`btn ${confirmButtonClass}`} onClick={handleConfirm}>
+            <button className={`btn btn-sm ${confirmButtonClass}`} onClick={handleConfirm}>
               {confirmText}
             </button>
-            <button className="btn" onClick={handleCancel}>
+            <button className="btn btn-sm" onClick={handleCancel}>
               {cancelText}
             </button>
           </div>

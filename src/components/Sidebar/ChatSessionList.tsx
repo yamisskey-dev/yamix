@@ -239,7 +239,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     <div
       key={session.id}
       onClick={() => handleSessionClick(session.id)}
-      className={`w-full group flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+      className={`w-full group flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-all cursor-pointer ${
         currentSessionId === session.id
           ? "bg-primary/10 border border-primary/20"
           : "hover:bg-base-200/70 border border-transparent"
@@ -247,11 +247,11 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     >
       {/* Title and preview */}
       <div className="flex-1 min-w-0">
-        <span className={`text-sm font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
+        <span className={`text-[13px] font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
           {session.title || "新しい相談"}
         </span>
         {session.preview && (
-          <span className="text-xs text-base-content/50 truncate block mt-0.5">
+          <span className="text-[11px] text-base-content/50 truncate block mt-0.5">
             {session.preview}...
           </span>
         )}
@@ -317,8 +317,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       {/* Bookmarked sessions */}
       {bookmarkedSessions.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 px-3 py-2">
-            <span className="text-xs font-medium text-base-content/40 uppercase tracking-wider">
+          <div className="flex items-center gap-2 px-3 py-1.5">
+            <span className="text-[11px] font-medium text-base-content/40 uppercase tracking-wider">
               ブックマーク
             </span>
             <div className="flex-1 h-px bg-base-content/10" />
@@ -331,8 +331,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       {groupedSessions.map((group, index) => (
         <div key={group.label}>
           {/* Date group header with subtle divider */}
-          <div className={`flex items-center gap-2 px-3 py-2 ${index > 0 || bookmarkedSessions.length > 0 ? "mt-2" : ""}`}>
-            <span className="text-xs font-medium text-base-content/40 uppercase tracking-wider">
+          <div className={`flex items-center gap-2 px-3 py-1.5 ${index > 0 || bookmarkedSessions.length > 0 ? "mt-1.5" : ""}`}>
+            <span className="text-[11px] font-medium text-base-content/40 uppercase tracking-wider">
               {group.label}
             </span>
             <div className="flex-1 h-px bg-base-content/10" />

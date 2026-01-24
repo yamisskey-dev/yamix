@@ -27,18 +27,18 @@ function NavItem({
   onClick: () => void;
 }) {
   return (
-    <div className="px-4 mb-2">
+    <div className="px-4 mb-1.5">
       <button
         onClick={onClick}
         className={`
-          group relative w-full h-11 rounded-full px-4
+          group relative w-full h-10 rounded-full px-4
           flex items-center gap-3
           transition-colors duration-150
           ${isActive ? "bg-primary/10 text-primary" : "text-base-content/70 hover:bg-primary/10 hover:text-primary"}
         `}
       >
         <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-[13px] font-medium">{label}</span>
       </button>
     </div>
   );
