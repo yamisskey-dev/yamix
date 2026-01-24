@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { SessionMenu } from "./SessionMenu";
 import { ConfirmModal } from "@/components/Modal";
+import { EmptyState } from "@/components/EmptyState";
 
 // Group sessions by date
 function groupSessionsByDate(sessions: ChatSessionListItem[]) {
@@ -211,26 +212,11 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
 
   if (sessions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <div className="w-12 h-12 rounded-full bg-base-200/50 flex items-center justify-center mb-3">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-base-content/30"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-        </div>
-        <p className="text-base-content/40 text-sm">まだ相談履歴がありません</p>
-        <p className="text-base-content/30 text-xs mt-1">新しい相談を始めてみましょう</p>
-      </div>
+      <EmptyState
+        message="まだ相談履歴がありません"
+        description="新しい相談を始めてみましょう"
+        showImage
+      />
     );
   }
 
