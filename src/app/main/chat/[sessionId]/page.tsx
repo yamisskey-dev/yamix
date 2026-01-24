@@ -564,14 +564,28 @@ export default function ChatSessionPage({ params }: PageProps) {
                 {sessionInfo && !sessionInfo.isOwner && sessionInfo.consultType === "PUBLIC" && (
                   <button
                     type="button"
-                    className={`btn btn-xs btn-ghost ${
-                      isAnonymousResponse ? "opacity-100" : "opacity-50"
+                    className={`btn btn-xs gap-1 ${
+                      isAnonymousResponse
+                        ? "btn-secondary btn-outline"
+                        : "btn-ghost opacity-60"
                     }`}
                     onClick={() => setIsAnonymousResponse(!isAnonymousResponse)}
                     disabled={isLoading}
-                    title="匿名で回答"
+                    aria-label="匿名で回答"
                   >
-                    <span className="text-base">😎</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="w-3.5 h-3.5"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-xs">匿名</span>
                   </button>
                 )}
               </div>
