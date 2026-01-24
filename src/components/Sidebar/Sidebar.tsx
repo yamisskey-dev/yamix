@@ -105,18 +105,6 @@ export function Sidebar({ user, onClose }: Props) {
 
         <NavItem
           icon={
-            <span className="text-lg font-bold">#</span>
-          }
-          label="見つける"
-          isActive={pathname === "/main/explore"}
-          onClick={() => {
-            router.push("/main/explore");
-            onClose?.();
-          }}
-        />
-
-        <NavItem
-          icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="w-full h-full"
@@ -136,6 +124,18 @@ export function Sidebar({ user, onClose }: Props) {
           isActive={pathname === "/main/notifications"}
           onClick={() => {
             router.push("/main/notifications");
+            onClose?.();
+          }}
+        />
+
+        <NavItem
+          icon={
+            <span className="text-lg font-bold">#</span>
+          }
+          label="見つける"
+          isActive={pathname === "/main/explore"}
+          onClick={() => {
+            router.push("/main/explore");
             onClose?.();
           }}
         />
