@@ -5,7 +5,6 @@ import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ChatSessionList } from "./ChatSessionList";
-import { NotificationBell } from "@/components/NotificationBell";
 import type { UserProfile } from "@/types";
 import { encodeHandle } from "@/lib/encode-handle";
 
@@ -60,8 +59,8 @@ export function Sidebar({ user, onClose }: Props) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - Instance icon + Notification */}
-      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center gap-24 px-2">
+      {/* Header - Instance icon */}
+      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center px-2">
         <Link
           href="/main/about"
           onClick={onClose}
@@ -75,7 +74,6 @@ export function Sidebar({ user, onClose }: Props) {
             className="rounded-lg"
           />
         </Link>
-        <NotificationBell />
       </div>
 
       {/* Navigation Items - Fixed */}
@@ -113,6 +111,31 @@ export function Sidebar({ user, onClose }: Props) {
           isActive={pathname === "/main/explore"}
           onClick={() => {
             router.push("/main/explore");
+            onClose?.();
+          }}
+        />
+
+        <NavItem
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-full h-full"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.75A6.75 6.75 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+              />
+            </svg>
+          }
+          label="通知"
+          isActive={pathname === "/main/notifications"}
+          onClick={() => {
+            router.push("/main/notifications");
             onClose?.();
           }}
         />
