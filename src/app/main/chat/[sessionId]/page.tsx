@@ -41,7 +41,10 @@ export default function ChatSessionPage({ params }: PageProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const deleteModalRef = useRef<HTMLDialogElement>(null);
+  const blockModalRef = useRef<HTMLDialogElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
+  const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
     consultType: "PRIVATE" | "PUBLIC";
     userId: string;
@@ -180,20 +183,23 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
   }, [inputValue]);
 
-  const handleBlock = async (userId: string) => {
-    if (!confirm("このユーザーをブロックしますか？\n\nブロックすると：\n• このユーザーの匿名・非匿名すべての回答がブロックされます\n• あなたの公開相談に回答できなくなります")) {
-      return;
-    }
+  const openBlockModal = (userId: string) => {
+    setBlockTargetId(userId);
+    blockModalRef.current?.showModal();
+  };
+
+  const handleBlock = async () => {
+    if (!blockTargetId) return;
+    setIsBlocking(true);
 
     try {
       const res = await fetch("/api/users/block", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockedUserId: userId }),
+        body: JSON.stringify({ blockedUserId: blockTargetId }),
       });
 
       if (res.ok) {
-        alert("ユーザーをブロックしました");
         // Reload to reflect the block
         window.location.reload();
       } else {
@@ -203,6 +209,9 @@ export default function ChatSessionPage({ params }: PageProps) {
     } catch (error) {
       console.error("Block error:", error);
       alert("ブロックに失敗しました");
+    } finally {
+      setIsBlocking(false);
+      setBlockTargetId(null);
     }
   };
 
@@ -239,6 +248,8 @@ export default function ChatSessionPage({ params }: PageProps) {
       });
 
       if (res.ok) {
+        // Notify sidebar to remove the session
+        window.dispatchEvent(new CustomEvent("chatSessionDeleted", { detail: { sessionId } }));
         router.push("/main");
       } else {
         const data = await res.json();
@@ -505,7 +516,7 @@ export default function ChatSessionPage({ params }: PageProps) {
               timestamp={msg.timestamp}
               responder={msg.responder || undefined}
               isSessionOwner={sessionInfo?.isOwner}
-              onBlock={handleBlock}
+              onBlock={openBlockModal}
               messageId={msg.id}
               gasAmount={msg.gasAmount}
               onSendGas={handleSendGas}
@@ -606,6 +617,17 @@ export default function ChatSessionPage({ params }: PageProps) {
         confirmText={isDeleting ? "削除中..." : "削除する"}
         cancelText="キャンセル"
         onConfirm={handleDelete}
+        confirmButtonClass="btn-error"
+      />
+
+      {/* Block Confirmation Modal */}
+      <ConfirmModal
+        ref={blockModalRef}
+        title="ユーザーをブロック"
+        body={"このユーザーをブロックしますか？\n\nブロックすると：\n• このユーザーの匿名・非匿名すべての回答がブロックされます\n• あなたの公開相談に回答できなくなります"}
+        confirmText={isBlocking ? "ブロック中..." : "ブロック"}
+        cancelText="キャンセル"
+        onConfirm={handleBlock}
         confirmButtonClass="btn-error"
       />
     </div>

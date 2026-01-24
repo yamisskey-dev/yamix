@@ -126,15 +126,32 @@ export const ChatBubble = memo(function ChatBubble({
               </Link>
             )
           ) : (
-            // AI avatar - not clickable
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+            // AI avatar - colorful robot icon (🤖 style)
+            <div className="w-8 h-8 flex items-center justify-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5 text-primary"
+                viewBox="0 0 36 36"
+                className="w-7 h-7"
               >
-                <path d="M12 2a2 2 0 012 2v1h2a2 2 0 012 2v2h1a2 2 0 110 4h-1v2a2 2 0 01-2 2h-2v1a2 2 0 11-4 0v-1H8a2 2 0 01-2-2v-2H5a2 2 0 110-4h1V7a2 2 0 012-2h2V4a2 2 0 012-2zm-2 7a1 1 0 100 2 1 1 0 000-2zm4 0a1 1 0 100 2 1 1 0 000-2z" />
+                {/* Antenna */}
+                <circle fill="#BE1931" cx="18" cy="4.5" r="2.5" />
+                <path fill="#BE1931" d="M18 9a1 1 0 01-1-1V5a1 1 0 012 0v3a1 1 0 01-1 1z" />
+                {/* Head */}
+                <path fill="#99AAB5" d="M30 13H6a3 3 0 00-3 3v8a3 3 0 003 3h24a3 3 0 003-3v-8a3 3 0 00-3-3z" />
+                {/* Eyes */}
+                <circle fill="#269" cx="11" cy="20" r="4" />
+                <circle fill="#55ACEE" cx="11" cy="20" r="2" />
+                <circle fill="#269" cx="25" cy="20" r="4" />
+                <circle fill="#55ACEE" cx="25" cy="20" r="2" />
+                {/* Mouth */}
+                <path fill="#66757F" d="M22 26H14a1 1 0 010-2h8a1 1 0 010 2z" />
+                {/* Ears */}
+                <path fill="#99AAB5" d="M2 15a1 1 0 00-1 1v6a1 1 0 002 0v-6a1 1 0 00-1-1zM34 15a1 1 0 00-1 1v6a1 1 0 002 0v-6a1 1 0 00-1-1z" />
+                {/* Body */}
+                <path fill="#99AAB5" d="M28 27H8a2 2 0 00-2 2v5h24v-5a2 2 0 00-2-2z" />
+                {/* Body lights */}
+                <circle fill="#BE1931" cx="14" cy="31" r="2" />
+                <circle fill="#FFAC33" cx="22" cy="31" r="2" />
               </svg>
             </div>
           )}

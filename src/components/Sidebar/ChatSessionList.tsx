@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { SessionMenu } from "./SessionMenu";
+import { ConfirmModal } from "@/components/Modal";
 
 // Group sessions by date
 function groupSessionsByDate(sessions: ChatSessionListItem[]) {
@@ -52,6 +53,9 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteModalRef = useRef<HTMLDialogElement>(null);
 
   const currentSessionId = pathname?.match(/\/main\/chat\/([^/]+)/)?.[1];
 
@@ -115,10 +119,18 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       fetchSessions();
     };
 
+    // Listen for session deleted event (from chat page header)
+    const handleSessionDeleted = (e: Event) => {
+      const detail = (e as CustomEvent<{ sessionId: string }>).detail;
+      setSessions((prev) => prev.filter((s) => s.id !== detail.sessionId));
+    };
+
     window.addEventListener("newChatSessionCreated", handleNewSession);
+    window.addEventListener("chatSessionDeleted", handleSessionDeleted);
 
     return () => {
       window.removeEventListener("newChatSessionCreated", handleNewSession);
+      window.removeEventListener("chatSessionDeleted", handleSessionDeleted);
     };
   }, [fetchSessions, fetchBookmarks]);
 
@@ -127,23 +139,32 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     onSessionSelect?.();
   };
 
-  const deleteSession = async (sessionId: string) => {
-    if (!confirm("この相談を削除しますか？")) return;
+  const openDeleteModal = (sessionId: string) => {
+    setDeleteTargetId(sessionId);
+    deleteModalRef.current?.showModal();
+  };
+
+  const deleteSession = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
 
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+      const res = await fetch(`/api/chat/sessions/${deleteTargetId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete session");
 
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      setSessions((prev) => prev.filter((s) => s.id !== deleteTargetId));
 
       // If we deleted the current session, navigate to new chat
-      if (currentSessionId === sessionId) {
+      if (currentSessionId === deleteTargetId) {
         router.push("/main");
       }
     } catch (error) {
       console.error("Error deleting session:", error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTargetId(null);
     }
   };
 
@@ -272,7 +293,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
         {/* Session menu */}
         <SessionMenu
           session={session}
-          onDelete={() => deleteSession(session.id)}
+          onDelete={() => openDeleteModal(session.id)}
           onUpdate={() => {
             fetchSessions();
             fetchBookmarks();
@@ -328,6 +349,17 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
           もっと見る
         </button>
       )}
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        ref={deleteModalRef}
+        title="相談を削除"
+        body="この相談を削除してもよろしいですか？この操作は取り消せません。"
+        confirmText={isDeleting ? "削除中..." : "削除"}
+        cancelText="キャンセル"
+        onConfirm={deleteSession}
+        confirmButtonClass="btn-error"
+      />
     </div>
   );
 }
