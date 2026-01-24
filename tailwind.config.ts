@@ -52,9 +52,9 @@ const config: Config = {
           "accent-content": "#FFFFFF",
           "neutral": "#391E60",           // fg
           "neutral-content": "#FFF5FC",   // bg
-          "base-100": "#FFF8FE",          // bg (slightly warmer pink)
-          "base-200": "#FFFFFF",          // panel/cards (pure white for clarity)
-          "base-300": "#F5EAFA",          // sidebar/nav (lavender tint for distinction)
+          "base-100": "#FFF5FC",          // bg (NGO: rgba(255, 245, 252, 0.95))
+          "base-200": "#FCF9FF",          // panel (NGO: rgba(252, 249, 255, 0.85))
+          "base-300": "#FBF0FF",          // navBg (NGO: rgba(251, 240, 255, 0.98))
           "base-content": "#391E60",      // fg
           "info": "#3A7DFF",              // mention
           "info-content": "#FFFFFF",
@@ -80,9 +80,9 @@ const config: Config = {
           "accent-content": "#FFFFFF",
           "neutral": "#C2CBE0",           // fg
           "neutral-content": "#130E26",   // bg
-          "base-100": "#1a1432",          // bg (lighter purple main area)
-          "base-200": "#0f0a1e",          // panel/cards (darker for depth)
-          "base-300": "#241a40",          // sidebar/nav (distinct accent)
+          "base-100": "#130E26",          // bg (DXM: rgba(19, 14, 38, 0.94))
+          "base-200": "#100B22",          // panel (DXM: rgba(16, 11, 34, 0.86))
+          "base-300": "#170F2A",          // navBg (DXM: rgba(23, 15, 42, 0.92))
           "base-content": "#C2CBE0",      // fg
           "info": "#44A4C1",              // link color
           "info-content": "#FFFFFF",

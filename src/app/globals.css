@@ -4,7 +4,7 @@
 
 /* DXM Dark Theme (default) */
 :root {
-  --background: #1a1432;
+  --background: #130E26;
   --foreground: #C2CBE0;
   --accent-purple: #A374FF;
   --accent-pink: #B32DB6;
@@ -13,7 +13,7 @@
 
 /* NGO Light Theme */
 [data-theme="light"] {
-  --background: #FFF8FE;
+  --background: #FFF5FC;
   --foreground: #391E60;
   --accent-purple: #966BFF;
   --accent-pink: #FF9DFF;
@@ -45,11 +45,11 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(26, 20, 50, 0.6);
+  background: rgba(19, 14, 38, 0.6);
 }
 
 [data-theme="light"] .animated-bg::after {
-  background: rgba(255, 248, 254, 0.7);
+  background: rgba(255, 245, 252, 0.7);
 }
 
 /* Spinner animation */
