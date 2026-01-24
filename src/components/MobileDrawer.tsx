@@ -245,19 +245,6 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
         )}
       </button>
 
-      {/* Settings Button */}
-      <button
-        onClick={() => onNavigate("/main/settings")}
-        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
-          pathname === "/main/settings"
-            ? "text-primary bg-primary/10"
-            : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
-        }`}
-        aria-label="設定"
-      >
-        <SettingsIcon className="h-5 w-5" />
-      </button>
-
       {/* New Consultation Button (Right, Gradient) */}
       <button
         onClick={() => onNavigate("/main")}
