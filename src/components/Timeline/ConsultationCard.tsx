@@ -65,11 +65,11 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
   return (
     <article
       onClick={handleClick}
-      className="note-article group flex py-4 px-4 sm:py-5 sm:px-6 border-b border-base-content/10 hover:bg-base-content/[0.02] transition-colors cursor-pointer relative"
+      className="note-article group flex py-5 px-5 sm:py-5 sm:px-6 bg-base-200/60 border-b border-base-content/10 hover:bg-base-200/80 transition-colors cursor-pointer relative"
     >
       {/* Avatar */}
       <div className="flex-shrink-0 mr-3 sm:mr-3.5">
-        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden">
+        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden">
           {isAIResponse ? (
             <div className="bg-base-200 flex items-center justify-center w-full h-full text-xl">
               🤖

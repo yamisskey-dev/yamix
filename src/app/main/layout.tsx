@@ -70,7 +70,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       {/* Desktop Layout - サイドバー + メインコンテンツ */}
       <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
-        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-100" role="navigation" aria-label="メインナビゲーション">
+        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-200" role="navigation" aria-label="メインナビゲーション">
           <Sidebar user={user} />
         </aside>
 

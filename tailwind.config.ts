@@ -52,9 +52,9 @@ const config: Config = {
           "accent-content": "#FFFFFF",
           "neutral": "#391E60",           // fg
           "neutral-content": "#FFF5FC",   // bg
-          "base-100": "#FFF5FC",          // bg (rgba to hex)
-          "base-200": "#FCF9FF",          // panel
-          "base-300": "#FBF0FF",          // navBg
+          "base-100": "#FFF8FE",          // bg (slightly warmer pink)
+          "base-200": "#FFFFFF",          // panel/cards (pure white for clarity)
+          "base-300": "#F5EAFA",          // sidebar/nav (lavender tint for distinction)
           "base-content": "#391E60",      // fg
           "info": "#3A7DFF",              // mention
           "info-content": "#FFFFFF",
@@ -80,9 +80,9 @@ const config: Config = {
           "accent-content": "#FFFFFF",
           "neutral": "#C2CBE0",           // fg
           "neutral-content": "#130E26",   // bg
-          "base-100": "#130E26",          // bg (rgba to hex)
-          "base-200": "#100B22",          // panel
-          "base-300": "#170F2A",          // navBg
+          "base-100": "#0f0a1e",          // bg (darker for main content area)
+          "base-200": "#1a1432",          // panel/cards (lighter purple, visible)
+          "base-300": "#241a40",          // sidebar/nav (even lighter for distinction)
           "base-content": "#C2CBE0",      // fg
           "info": "#44A4C1",              // link color
           "info-content": "#FFFFFF",

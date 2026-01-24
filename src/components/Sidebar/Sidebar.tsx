@@ -57,7 +57,7 @@ export function Sidebar({ user, onClose }: Props) {
   const isTimelineActive = pathname === "/main/timeline";
 
   return (
-    <div className="h-full flex flex-col bg-base-100">
+    <div className="h-full flex flex-col">
       {/* Header - Instance icon + Notification */}
       <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center gap-24 px-2">
         <Link
@@ -203,7 +203,7 @@ export function Sidebar({ user, onClose }: Props) {
       </div>
 
       {/* Bottom Section */}
-      <div className="mt-auto pt-3 pb-3 bg-base-100 border-t border-base-content/10">
+      <div className="mt-auto pt-3 pb-3 border-t border-base-content/10">
         {/* Post Button */}
         <div className="px-4 mb-3">
           <button
