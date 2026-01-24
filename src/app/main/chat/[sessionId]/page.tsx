@@ -529,7 +529,10 @@ export default function ChatSessionPage({ params }: PageProps) {
           {isLoading && <ChatBubble role="assistant" content="" isLoading />}
 
           {error && (
-            <div className="alert alert-error text-sm">
+            <div className="alert alert-error text-sm" role="alert" aria-live="polite">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
               <span>{error}</span>
             </div>
           )}
@@ -596,10 +599,9 @@ export default function ChatSessionPage({ params }: PageProps) {
               {/* Right side: Submit button */}
               <button
                 onClick={handleSubmit}
-                className={`btn btn-primary btn-circle btn-sm ${
-                  isLoading || !inputValue.trim() ? "btn-disabled opacity-50" : ""
-                }`}
+                className="btn btn-primary btn-circle btn-sm"
                 disabled={isLoading || !inputValue.trim()}
+                aria-label="送信"
               >
                 {isLoading ? (
                   <span className="loading loading-spinner loading-xs" />

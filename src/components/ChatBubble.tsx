@@ -184,8 +184,8 @@ export const ChatBubble = memo(function ChatBubble({
             </time>
           )}
 
-          {/* Action buttons - visible on message hover */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Action buttons - always visible on mobile, hover on desktop */}
+          <div className="flex items-center gap-1 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity">
             {/* Gas button (only for non-owners) */}
             {canSendGas && (
               <button

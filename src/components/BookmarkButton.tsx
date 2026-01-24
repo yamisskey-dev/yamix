@@ -57,6 +57,7 @@ export function BookmarkButton({
       disabled={loading}
       className={`btn btn-ghost btn-sm ${className}`}
       title={isBookmarked ? "ブックマークを解除" : "ブックマークに追加"}
+      aria-label={loading ? "処理中..." : isBookmarked ? "ブックマークを解除" : "ブックマークに追加"}
     >
       {loading ? (
         <span className="loading loading-spinner loading-xs"></span>

@@ -211,7 +211,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate }: BottomNav
         <button
           key={index}
           onClick={item.onClick}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 ${
+          className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
             item.isActive
               ? "text-primary bg-primary/10"
               : "text-base-content/60 hover:bg-primary/10 hover:text-primary"

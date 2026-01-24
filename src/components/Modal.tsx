@@ -18,10 +18,12 @@ export const Modal = forwardRef<HTMLDialogElement, ModalProps>(
       onClick?.();
     };
 
+    const titleId = `modal-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
     return (
-      <dialog ref={ref} className="modal">
+      <dialog ref={ref} className="modal" aria-labelledby={titleId}>
         <div className="modal-box">
-          <h3 className="font-bold text-base">{title}</h3>
+          <h3 id={titleId} className="font-bold text-base">{title}</h3>
           <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
           <div className="modal-action">
             <button className="btn btn-sm" onClick={handleClick}>
@@ -30,7 +32,7 @@ export const Modal = forwardRef<HTMLDialogElement, ModalProps>(
           </div>
         </div>
         <form method="dialog" className="modal-backdrop">
-          <button onClick={onClick}>close</button>
+          <button onClick={onClick} tabIndex={-1}>close</button>
         </form>
       </dialog>
     );
@@ -76,10 +78,12 @@ export const ConfirmModal = forwardRef<HTMLDialogElement, ConfirmModalProps>(
       onCancel?.();
     };
 
+    const titleId = `confirm-modal-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
+
     return (
-      <dialog ref={ref} className="modal">
+      <dialog ref={ref} className="modal" aria-labelledby={titleId}>
         <div className="modal-box">
-          <h3 className="font-bold text-base">{title}</h3>
+          <h3 id={titleId} className="font-bold text-base">{title}</h3>
           <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
           <div className="modal-action">
             <button className={`btn btn-sm ${confirmButtonClass}`} onClick={handleConfirm}>
@@ -91,7 +95,7 @@ export const ConfirmModal = forwardRef<HTMLDialogElement, ConfirmModalProps>(
           </div>
         </div>
         <form method="dialog" className="modal-backdrop">
-          <button onClick={handleCancel}>close</button>
+          <button onClick={handleCancel} tabIndex={-1}>close</button>
         </form>
       </dialog>
     );
