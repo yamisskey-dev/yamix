@@ -126,33 +126,15 @@ export const ChatBubble = memo(function ChatBubble({
               </Link>
             )
           ) : (
-            // AI avatar - colorful robot icon (🤖 style)
-            <div className="w-8 h-8 flex items-center justify-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 36 36"
-                className="w-7 h-7"
-              >
-                {/* Antenna */}
-                <circle fill="#BE1931" cx="18" cy="4.5" r="2.5" />
-                <path fill="#BE1931" d="M18 9a1 1 0 01-1-1V5a1 1 0 012 0v3a1 1 0 01-1 1z" />
-                {/* Head */}
-                <path fill="#99AAB5" d="M30 13H6a3 3 0 00-3 3v8a3 3 0 003 3h24a3 3 0 003-3v-8a3 3 0 00-3-3z" />
-                {/* Eyes */}
-                <circle fill="#269" cx="11" cy="20" r="4" />
-                <circle fill="#55ACEE" cx="11" cy="20" r="2" />
-                <circle fill="#269" cx="25" cy="20" r="4" />
-                <circle fill="#55ACEE" cx="25" cy="20" r="2" />
-                {/* Mouth */}
-                <path fill="#66757F" d="M22 26H14a1 1 0 010-2h8a1 1 0 010 2z" />
-                {/* Ears */}
-                <path fill="#99AAB5" d="M2 15a1 1 0 00-1 1v6a1 1 0 002 0v-6a1 1 0 00-1-1zM34 15a1 1 0 00-1 1v6a1 1 0 002 0v-6a1 1 0 00-1-1z" />
-                {/* Body */}
-                <path fill="#99AAB5" d="M28 27H8a2 2 0 00-2 2v5h24v-5a2 2 0 00-2-2z" />
-                {/* Body lights */}
-                <circle fill="#BE1931" cx="14" cy="31" r="2" />
-                <circle fill="#FFAC33" cx="22" cy="31" r="2" />
-              </svg>
+            // AI avatar - Yamii icon
+            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary/30">
+              <Image
+                src="/yamii.png"
+                alt="Yamii"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+              />
             </div>
           )}
         </div>
