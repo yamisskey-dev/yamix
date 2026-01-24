@@ -37,8 +37,7 @@ yarn-error.log*
 # Database
 *.sqlite
 *.sqlite-journal
-/postgres-data
-/redis-data
+/data
 
 # Docker
 .docker

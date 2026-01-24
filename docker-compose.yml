@@ -44,7 +44,7 @@ services:
       - internal_network
       - external_network
     volumes:
-      - yamii-data:/app/data
+      - ./data/yamii:/app/data
       - ./yamii/config/YAMII.md:/app/config/YAMII.md:ro
     restart: unless-stopped
     healthcheck:
@@ -67,7 +67,7 @@ services:
     expose:
       - '5432'
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U yamix']
       interval: 10s
@@ -83,17 +83,12 @@ services:
     expose:
       - '6379'
     volumes:
-      - redis-data:/data
+      - ./data/redis:/data
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
-
-volumes:
-  postgres-data:
-  redis-data:
-  yamii-data:
 
 networks:
   internal_network:
