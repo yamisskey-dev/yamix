@@ -63,7 +63,7 @@ export function NotificationBell() {
     fetchUnreadCount();
   }, []);
 
-  // ドロップダウン外クリックで閉じる
+  // ドロップダウン外クリックで閉じる + Escapeキー対応
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -71,10 +71,20 @@ export function NotificationBell() {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen]);
 
   // 通知を既読にする
@@ -190,7 +200,9 @@ export function NotificationBell() {
           }
         }}
         className="btn btn-ghost btn-circle relative"
-        aria-label="通知"
+        aria-label={`通知${unreadCount > 0 ? `（${unreadCount}件の未読）` : ""}`}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -218,14 +230,14 @@ export function NotificationBell() {
 
       {/* ドロップダウン */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[36rem] flex flex-col">
+        <div className="absolute right-0 mt-2 w-80 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 max-h-[36rem] flex flex-col animate-dropdown-in">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
-            <span className="font-bold">通知</span>
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-base-300">
+            <span className="font-bold text-[13px]">通知</span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-sm text-primary hover:underline"
+                className="text-[12px] text-primary hover:underline"
               >
                 全て既読にする
               </button>
@@ -292,19 +304,19 @@ function NotificationItem({
   getTime: (date: string) => string;
 }) {
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2.5">
       <div className="flex-shrink-0 mt-0.5">{getIcon(notification.type)}</div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <p className="font-medium">{notification.title}</p>
+        <div className="flex items-center gap-2 mb-0.5">
+          <p className="font-medium text-[13px]">{notification.title}</p>
           {!notification.isRead && (
-            <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></span>
           )}
         </div>
-        <p className="text-sm text-base-content/70 line-clamp-2 mb-1.5">
+        <p className="text-[12px] text-base-content/70 line-clamp-2 mb-1">
           {notification.message}
         </p>
-        <p className="text-xs text-base-content/50">{getTime(notification.createdAt)}</p>
+        <p className="text-[11px] text-base-content/50">{getTime(notification.createdAt)}</p>
       </div>
     </div>
   );

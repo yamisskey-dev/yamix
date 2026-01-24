@@ -62,33 +62,42 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   return (
     <UserContext.Provider value={{ user, loading, refetch: fetchUser }}>
+      {/* Skip link for keyboard users */}
+      <a href="#main-content" className="skip-link">
+        メインコンテンツにスキップ
+      </a>
+
       {/* Desktop Layout - サイドバー + メインコンテンツ */}
       <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
-        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-100">
+        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-100" role="navigation" aria-label="メインナビゲーション">
           <Sidebar user={user} />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 h-screen overflow-hidden flex flex-col">
+        <main id="main-content" className="flex-1 h-screen overflow-hidden flex flex-col" role="main">
           {children}
         </main>
       </div>
 
       {/* Mobile/Tablet Layout - ボトムナビ + ドロワー */}
       <div className="xl:hidden flex flex-col min-h-screen">
-        <main className="flex-1 flex flex-col pb-14">{children}</main>
+        <main id="main-content-mobile" className="flex-1 flex flex-col pb-14" role="main">{children}</main>
 
         {/* Mobile Bottom Navigation */}
-        <MobileBottomNav
-          pathname={pathname}
-          onMenuClick={handleOpenDrawer}
-          onNavigate={handleNavigate}
-        />
+        <nav aria-label="モバイルナビゲーション">
+          <MobileBottomNav
+            pathname={pathname}
+            onMenuClick={handleOpenDrawer}
+            onNavigate={handleNavigate}
+          />
+        </nav>
 
         {/* Mobile Drawer */}
         <MobileDrawer isOpen={sidebarOpen} onClose={handleCloseDrawer}>
-          <Sidebar user={user} onClose={handleCloseDrawer} />
+          <nav aria-label="メインナビゲーション">
+            <Sidebar user={user} onClose={handleCloseDrawer} />
+          </nav>
         </MobileDrawer>
       </div>
     </UserContext.Provider>

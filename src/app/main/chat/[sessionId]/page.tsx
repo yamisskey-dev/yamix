@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { ConfirmModal } from "@/components/Modal";
+import { useToast } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 
 interface PageProps {
@@ -31,6 +32,7 @@ interface LocalMessage {
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
+  const toast = useToast();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -200,15 +202,16 @@ export default function ChatSessionPage({ params }: PageProps) {
       });
 
       if (res.ok) {
+        toast.success("ユーザーをブロックしました");
         // Reload to reflect the block
         window.location.reload();
       } else {
         const data = await res.json();
-        alert(data.error || "ブロックに失敗しました");
+        toast.error(data.error || "ブロックに失敗しました");
       }
     } catch (error) {
       console.error("Block error:", error);
-      alert("ブロックに失敗しました");
+      toast.error("ブロックに失敗しました");
     } finally {
       setIsBlocking(false);
       setBlockTargetId(null);
@@ -229,14 +232,14 @@ export default function ChatSessionPage({ params }: PageProps) {
             m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
           )
         );
-        alert("灯を送りました（3 YAMI）");
+        toast.success("灯を送りました（3 YAMI）");
       } else {
         const data = await res.json();
-        alert(data.error || "灯の送信に失敗しました");
+        toast.error(data.error || "灯の送信に失敗しました");
       }
     } catch (error) {
       console.error("Send gas error:", error);
-      alert("灯の送信に失敗しました");
+      toast.error("灯の送信に失敗しました");
     }
   };
 
@@ -253,11 +256,11 @@ export default function ChatSessionPage({ params }: PageProps) {
         router.push("/main");
       } else {
         const data = await res.json();
-        alert(data.error || "削除に失敗しました");
+        toast.error(data.error || "削除に失敗しました");
       }
     } catch (error) {
       console.error("Delete session error:", error);
-      alert("削除に失敗しました");
+      toast.error("削除に失敗しました");
     } finally {
       setIsDeleting(false);
     }

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { ChatSessionListItem } from "@/types";
+import { useToast } from "@/components/Toast";
 
 interface SessionLike {
   id: string;
@@ -23,8 +24,9 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
   const [newTitle, setNewTitle] = useState(session.title || "");
   const [loading, setLoading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const toast = useToast();
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -32,10 +34,20 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen]);
 
   const handleShare = async () => {
@@ -44,10 +56,10 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       // セッションの共有URLをクリップボードにコピー
       const shareUrl = `${window.location.origin}/main/chat/${session.id}`;
       await navigator.clipboard.writeText(shareUrl);
-      alert("共有URLをコピーしました");
+      toast.success("共有URLをコピーしました");
     } catch (error) {
       console.error("Failed to copy share URL:", error);
-      alert("URLのコピーに失敗しました");
+      toast.error("URLのコピーに失敗しました");
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -65,11 +77,11 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
 
       if (!res.ok) throw new Error("Failed to make public");
 
-      alert("公開相談に変更しました");
+      toast.success("公開相談に変更しました");
       onUpdate();
     } catch (error) {
       console.error("Failed to make public:", error);
-      alert("公開に失敗しました");
+      toast.error("公開に失敗しました");
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -93,7 +105,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       setIsRenaming(false);
     } catch (error) {
       console.error("Failed to rename:", error);
-      alert("名前の変更に失敗しました");
+      toast.error("名前の変更に失敗しました");
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -117,12 +129,12 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
 
         if (!res.ok) throw new Error("Failed to bookmark");
 
-        alert("ブックマークに追加しました");
+        toast.success("ブックマークに追加しました");
         setIsOpen(false);
       }
     } catch (error) {
       console.error("Failed to toggle bookmark:", error);
-      alert("ブックマーク操作に失敗しました");
+      toast.error("ブックマーク操作に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -141,8 +153,11 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="opacity-0 group-hover:opacity-100 btn btn-ghost btn-xs btn-circle"
+        className="opacity-0 group-hover:opacity-100 focus:opacity-100 btn btn-ghost btn-xs btn-circle"
         title="メニュー"
+        aria-label="相談のメニューを開く"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -163,7 +178,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 mt-1 w-48 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 py-1"
+          className="absolute right-0 mt-1 w-48 bg-base-100 rounded-lg shadow-xl border border-base-300 z-50 py-1 animate-dropdown-in"
           onClick={(e) => e.stopPropagation()}
         >
           {isRenaming ? (

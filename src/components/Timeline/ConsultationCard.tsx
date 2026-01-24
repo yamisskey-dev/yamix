@@ -65,29 +65,29 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
   return (
     <article
       onClick={handleClick}
-      className="note-article group flex py-6 px-8 sm:py-7 sm:px-8 border-b border-base-content/10 hover:bg-base-content/[0.02] transition-colors cursor-pointer relative"
+      className="note-article group flex py-4 px-4 sm:py-5 sm:px-6 border-b border-base-content/10 hover:bg-base-content/[0.02] transition-colors cursor-pointer relative"
     >
       {/* Avatar */}
-      <div className="flex-shrink-0 mr-3.5 sm:mr-4">
-        <div className="w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-full overflow-hidden">
+      <div className="flex-shrink-0 mr-3 sm:mr-3.5">
+        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden">
           {isAIResponse ? (
-            <div className="bg-base-200 flex items-center justify-center w-full h-full text-2xl">
+            <div className="bg-base-200 flex items-center justify-center w-full h-full text-xl">
               🤖
             </div>
           ) : isAnonymous ? (
-            <div className="bg-base-300 flex items-center justify-center w-full h-full text-2xl">
+            <div className="bg-base-300 flex items-center justify-center w-full h-full text-xl">
               😎
             </div>
           ) : displayUser?.avatarUrl ? (
             <Image
               src={displayUser.avatarUrl}
               alt={displayName}
-              width={50}
-              height={50}
+              width={44}
+              height={44}
               className="rounded-full object-cover w-full h-full"
             />
           ) : (
-            <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-lg font-bold">
+            <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-base font-bold">
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
@@ -98,30 +98,30 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
       {/* Content */}
       <div className="flex-1 min-w-0">
         {/* Header - Misskey style: name · @username · visibility · time */}
-        <header className="flex items-center flex-wrap gap-x-1.5 mb-1">
+        <header className="flex items-center flex-wrap gap-x-1.5 mb-0.5">
           {isAIResponse ? (
             <>
-              <span className="font-bold text-[0.95em] shrink-0">
+              <span className="font-bold text-[13px] shrink-0">
                 {displayName}
               </span>
-              <span className="text-[0.85em] text-base-content/50">
+              <span className="text-[12px] text-base-content/50">
                 {displayHandle}
               </span>
             </>
           ) : isAnonymous ? (
-            <span className="font-bold text-[0.95em] text-base-content/70 shrink-0">
+            <span className="font-bold text-[13px] text-base-content/70 shrink-0">
               {displayName}
             </span>
           ) : displayUser ? (
             <>
               <Link
                 href={`/main/user/${encodeHandle(displayUser.handle)}`}
-                className="font-bold text-[0.95em] hover:underline truncate max-w-[180px]"
+                className="font-bold text-[13px] hover:underline truncate max-w-[180px]"
                 onClick={(e) => e.stopPropagation()}
               >
                 {displayName}
               </Link>
-              <span className="text-[0.85em] text-base-content/50 truncate max-w-[180px]">
+              <span className="text-[12px] text-base-content/50 truncate max-w-[180px]">
                 {displayUser.handle}
               </span>
             </>
@@ -133,7 +133,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
               <span className="text-base-content/40" title="プライベート相談">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-3.5 w-3.5 inline-block"
+                  className="h-3 w-3 inline-block"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -147,7 +147,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                 </svg>
               </span>
             )}
-            <span className="text-[0.85em] text-base-content/50">
+            <span className="text-[12px] text-base-content/50">
               {formatDate(new Date(consultation.createdAt))}
             </span>
           </div>
@@ -157,60 +157,60 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
         {isResponseMode ? (
           <>
             {/* 回答モード: 質問を引用として表示 */}
-            <div className="mb-2 pl-3 border-l-2 border-base-content/10">
-              <div className="flex items-start gap-2">
+            <div className="mb-1.5 pl-2.5 border-l-2 border-base-content/10">
+              <div className="flex items-start gap-1.5">
                 <div className="flex-shrink-0 mt-0.5">
                   {consultation.user ? (
                     consultation.user.avatarUrl ? (
                       <Image
                         src={consultation.user.avatarUrl}
                         alt={consultation.user.displayName || "相談者"}
-                        width={20}
-                        height={20}
+                        width={18}
+                        height={18}
                         className="rounded-full"
                       />
                     ) : (
-                      <div className="w-5 h-5 rounded-full bg-base-300/60 flex items-center justify-center text-[0.6em]">
+                      <div className="w-[18px] h-[18px] rounded-full bg-base-300/60 flex items-center justify-center text-[9px]">
                         {(consultation.user.displayName || "?").charAt(0).toUpperCase()}
                       </div>
                     )
                   ) : (
-                    <div className="w-5 h-5 rounded-full bg-base-300 flex items-center justify-center">
-                      <span className="text-xs">😎</span>
+                    <div className="w-[18px] h-[18px] rounded-full bg-base-300 flex items-center justify-center">
+                      <span className="text-[10px]">😎</span>
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-[0.75em] text-base-content/50">
+                  <span className="text-[11px] text-base-content/50">
                     {consultation.isAnonymous
                       ? "匿名さん"
                       : consultation.user?.displayName || consultation.user?.handle.split("@")[1] || "ユーザー"}
                     への回答
                   </span>
-                  <p className="text-[0.85em] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] line-clamp-2 mt-0.5">
+                  <p className="text-[12px] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] line-clamp-2 mt-0.5">
                     {parseMentions(consultation.question)}
                   </p>
                 </div>
               </div>
             </div>
             {/* 回答内容 */}
-            <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
+            <p className="text-[13px] whitespace-pre-wrap break-words leading-[1.6]">
               {consultation.answer ? parseMentions(consultation.answer) : ""}
             </p>
           </>
         ) : (
           /* 通常モード: 質問を表示 */
-          <p className="text-[0.95em] whitespace-pre-wrap break-words leading-[1.6]">
+          <p className="text-[13px] whitespace-pre-wrap break-words leading-[1.6]">
             {parseMentions(consultation.question)}
           </p>
         )}
 
         {/* Reply count metadata */}
         {replyCount > 0 && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-base-content/50">
+          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-base-content/50">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
+              className="h-3.5 w-3.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

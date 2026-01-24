@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import Image from "next/image";
 import { ConsultationCard } from "@/components/Timeline";
+import { useToast } from "@/components/Toast";
 import type { TimelineConsultation, TimelineResponse, UserStats } from "@/types";
 
 interface PageProps {
@@ -32,6 +33,7 @@ interface WalletData {
 export default function UserProfilePage({ params }: PageProps) {
   const { handle } = use(params);
   const decodedHandle = decodeURIComponent(handle);
+  const toast = useToast();
 
   const [user, setUser] = useState<UserProfile | null>(null);
   const [items, setItems] = useState<TimelineConsultation[]>([]);
@@ -166,7 +168,7 @@ export default function UserProfilePage({ params }: PageProps) {
       if (isBlocked) {
         // Unblock - we need userId for this
         if (!userId) {
-          alert("ブロック解除に失敗しました");
+          toast.error("ブロック解除に失敗しました");
           return;
         }
         const res = await fetch(`/api/users/block/${userId}`, {
@@ -174,15 +176,16 @@ export default function UserProfilePage({ params }: PageProps) {
         });
         if (res.ok) {
           setIsBlocked(false);
+          toast.success("ブロックを解除しました");
         } else {
-          alert("ブロック解除に失敗しました");
+          toast.error("ブロック解除に失敗しました");
         }
       } else {
         // Block - we need userId for this too
         // We need to get userId first from somewhere
         // Let's try to get it from the timeline API user object
         if (!userId) {
-          alert("ブロックに失敗しました");
+          toast.error("ブロックに失敗しました");
           return;
         }
         const res = await fetch("/api/users/block", {
@@ -192,14 +195,15 @@ export default function UserProfilePage({ params }: PageProps) {
         });
         if (res.ok) {
           setIsBlocked(true);
+          toast.success("ユーザーをブロックしました");
         } else {
           const data = await res.json();
-          alert(data.error || "ブロックに失敗しました");
+          toast.error(data.error || "ブロックに失敗しました");
         }
       }
     } catch (err) {
       console.error("Block toggle error:", err);
-      alert("操作に失敗しました");
+      toast.error("操作に失敗しました");
     } finally {
       setIsBlockLoading(false);
     }

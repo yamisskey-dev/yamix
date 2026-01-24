@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
+import { useToast } from "@/components/Toast";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user } = useUser();
   const { theme, preference, setPreference } = useTheme();
+  const toast = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportData, setExportData] = useState<string>();
@@ -148,11 +150,11 @@ export default function SettingsPage() {
         successModalRef.current?.showModal();
       } else {
         const data = await res.json();
-        alert(data.error || "削除に失敗しました");
+        toast.error(data.error || "削除に失敗しました");
       }
     } catch (error) {
       console.error("Delete sessions error:", error);
-      alert("削除に失敗しました");
+      toast.error("削除に失敗しました");
     } finally {
       setIsDeletingSessions(false);
     }
@@ -175,8 +177,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 pb-20 window:pb-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="flex-1 overflow-y-auto p-3 pb-20 window:pb-4">
+      <div className="max-w-2xl mx-auto space-y-4">
         {/* Theme Section - Misskey style */}
         <div className="card bg-base-200 overflow-hidden">
           <div className="card-body p-0">
@@ -301,8 +303,8 @@ export default function SettingsPage() {
             </div>
 
             {/* System Sync Toggle */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-base-content/10">
-              <span className="text-sm">デバイスのダークモードと同期</span>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-base-content/10">
+              <span className="text-[13px]">デバイスのダークモードと同期</span>
               <input
                 type="checkbox"
                 className="toggle toggle-sm toggle-primary"
@@ -321,8 +323,8 @@ export default function SettingsPage() {
 
         {/* Custom Prompt Section */}
         <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg gap-2">
+          <div className="card-body p-4">
+            <h2 className="card-title text-base gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-primary">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -330,7 +332,7 @@ export default function SettingsPage() {
               カスタムプロンプト
             </h2>
             <textarea
-              className="textarea textarea-bordered w-full h-32 text-sm"
+              className="textarea textarea-bordered w-full h-28 text-[13px]"
               placeholder="例: 敬語で話してください / アドバイスより共感を重視して / 私は20代エンジニアです"
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}
@@ -358,8 +360,8 @@ export default function SettingsPage() {
 
         {/* Blocked Users Section */}
         <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg gap-2">
+          <div className="card-body p-4">
+            <h2 className="card-title text-base gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-warning">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
@@ -419,8 +421,8 @@ export default function SettingsPage() {
 
         {/* Data Management Section */}
         <div className="card bg-base-200 border border-error/20">
-          <div className="card-body">
-            <h2 className="card-title text-lg gap-2">
+          <div className="card-body p-4">
+            <h2 className="card-title text-base gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-error">
                 <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m6 4.125 2.25 2.25m0 0 2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
               </svg>
@@ -476,8 +478,8 @@ export default function SettingsPage() {
 
         {/* Logout Section */}
         <div className="card bg-base-200">
-          <div className="card-body">
-            <h2 className="card-title text-lg gap-2">
+          <div className="card-body p-4">
+            <h2 className="card-title text-base gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-base-content/70">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
               </svg>

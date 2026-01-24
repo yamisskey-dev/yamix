@@ -25,7 +25,8 @@
       "Bash(git diff:*)",
       "Bash(chmod:*)",
       "Bash(docker ps:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
