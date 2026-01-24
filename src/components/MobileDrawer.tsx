@@ -168,6 +168,29 @@ export function SettingsIcon({ className = "h-6 w-6" }: NavIconProps) {
 }
 
 // ============================================
+// Notification Icon
+// ============================================
+
+export function NotificationIcon({ className = "h-6 w-6" }: NavIconProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+      />
+    </svg>
+  );
+}
+
+// ============================================
 // Mobile Bottom Navigation
 // ============================================
 
@@ -175,52 +198,74 @@ interface BottomNavProps {
   pathname: string | null;
   onMenuClick: () => void;
   onNavigate: (path: string) => void;
+  unreadNotificationCount?: number;
 }
 
-export function MobileBottomNav({ pathname, onMenuClick, onNavigate }: BottomNavProps) {
-  const navItems = [
-    {
-      icon: MenuIcon,
-      onClick: onMenuClick,
-      isActive: false,
-      ariaLabel: "メニューを開く",
-    },
-    {
-      icon: ChatIcon,
-      onClick: () => onNavigate("/main"),
-      isActive: pathname === "/main" || pathname?.startsWith("/main/chat"),
-      ariaLabel: "相談",
-    },
-    {
-      icon: TimelineIcon,
-      onClick: () => onNavigate("/main/timeline"),
-      isActive: pathname === "/main/timeline",
-      ariaLabel: "タイムライン",
-    },
-    {
-      icon: SettingsIcon,
-      onClick: () => onNavigate("/main/settings"),
-      isActive: pathname === "/main/settings",
-      ariaLabel: "設定",
-    },
-  ];
-
+export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotificationCount = 0 }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-14 bg-base-100/95 backdrop-blur-sm border-t border-base-300 flex items-center justify-around px-2 z-40">
-      {navItems.map((item, index) => (
-        <button
-          key={index}
-          onClick={item.onClick}
-          className={`flex flex-col items-center justify-center w-14 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
-            item.isActive
-              ? "text-primary bg-primary/10"
-              : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
-          }`}
-          aria-label={item.ariaLabel}
-        >
-          <item.icon />
-        </button>
-      ))}
+      {/* Menu (Burger) Button */}
+      <button
+        onClick={onMenuClick}
+        className="flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        aria-label="メニューを開く"
+      >
+        <MenuIcon className="h-5 w-5" />
+      </button>
+
+      {/* Timeline Button */}
+      <button
+        onClick={() => onNavigate("/main/timeline")}
+        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+          pathname === "/main/timeline"
+            ? "text-primary bg-primary/10"
+            : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        }`}
+        aria-label="タイムライン"
+      >
+        <TimelineIcon className="h-5 w-5" />
+      </button>
+
+      {/* New Consultation Button (Center, Gradient) */}
+      <button
+        onClick={() => onNavigate("/main")}
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-lg"
+        aria-label="新しい相談"
+      >
+        <ChatIcon className="h-5 w-5" />
+      </button>
+
+      {/* Notification Button */}
+      <button
+        onClick={() => onNavigate("/main/notifications")}
+        className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+          pathname === "/main/notifications"
+            ? "text-primary bg-primary/10"
+            : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        }`}
+        aria-label={`通知${unreadNotificationCount > 0 ? `（${unreadNotificationCount}件の未読）` : ""}`}
+      >
+        <NotificationIcon className="h-5 w-5" />
+        {unreadNotificationCount > 0 && (
+          <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-error"></span>
+          </span>
+        )}
+      </button>
+
+      {/* Settings Button */}
+      <button
+        onClick={() => onNavigate("/main/settings")}
+        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+          pathname === "/main/settings"
+            ? "text-primary bg-primary/10"
+            : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        }`}
+        aria-label="設定"
+      >
+        <SettingsIcon className="h-5 w-5" />
+      </button>
     </nav>
   );
 }

@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useCallback, ReactNode } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileDrawer, MobileBottomNav } from "@/components/MobileDrawer";
+import { MobileNotificationPanel } from "@/components/MobileNotificationPanel";
 import { UserContext } from "@/contexts/UserContext";
 import { authApi } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
@@ -15,6 +16,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const fetchUser = useCallback(async () => {
     try {
@@ -32,13 +35,35 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
+  // 未読通知カウントを取得
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=1");
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadNotificationCount(data.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
+
   // パスが変わったらドロワーを閉じる
   useEffect(() => {
     setSidebarOpen(false);
+    setNotificationPanelOpen(false);
   }, [pathname]);
 
   const handleNavigate = useCallback(
     (path: string) => {
+      // 通知ボタンは特別処理（パネルを開く）
+      if (path === "/main/notifications") {
+        setNotificationPanelOpen(true);
+        return;
+      }
       router.push(path);
     },
     [router]
@@ -50,6 +75,14 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   const handleOpenDrawer = useCallback(() => {
     setSidebarOpen(true);
+  }, []);
+
+  const handleCloseNotificationPanel = useCallback(() => {
+    setNotificationPanelOpen(false);
+  }, []);
+
+  const handleNotificationCountChange = useCallback((count: number) => {
+    setUnreadNotificationCount(count);
   }, []);
 
   if (loading) {
@@ -90,6 +123,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             pathname={pathname}
             onMenuClick={handleOpenDrawer}
             onNavigate={handleNavigate}
+            unreadNotificationCount={unreadNotificationCount}
           />
         </nav>
 
@@ -99,6 +133,13 @@ export default function MainLayout({ children }: { children: ReactNode }) {
             <Sidebar user={user} onClose={handleCloseDrawer} />
           </nav>
         </MobileDrawer>
+
+        {/* Mobile Notification Panel */}
+        <MobileNotificationPanel
+          isOpen={notificationPanelOpen}
+          onClose={handleCloseNotificationPanel}
+          onUnreadCountChange={handleNotificationCountChange}
+        />
       </div>
     </UserContext.Provider>
   );

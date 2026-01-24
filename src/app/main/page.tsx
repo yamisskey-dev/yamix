@@ -267,16 +267,31 @@ export default function NewChatPage() {
     </>
   );
 
-  // Initial state: centered layout like ChatGPT/Claude
+  // Initial state: centered on desktop, input at bottom on mobile
   if (isInitialState) {
     return (
       <div className="flex-1 flex flex-col h-full">
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
+        {/* Desktop: centered layout like ChatGPT/Claude */}
+        <div className="hidden xl:flex flex-1 flex-col items-center justify-center p-4">
           <div className="w-full max-w-2xl">
             <p className="text-base-content/50 text-lg text-center mb-6">
               今日はどうしましたか？
             </p>
             {inputForm}
+          </div>
+        </div>
+
+        {/* Mobile: greeting at center, input at bottom for easier tapping */}
+        <div className="xl:hidden flex-1 flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-4">
+            <p className="text-base-content/50 text-lg text-center">
+              今日はどうしましたか？
+            </p>
+          </div>
+          <div className="p-4 pt-0">
+            <div className="max-w-2xl mx-auto">
+              {inputForm}
+            </div>
           </div>
         </div>
       </div>
