@@ -30,7 +30,7 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
       {showImage ? (
         <img
-          src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yami.ski/yui-404.png"
+          src="/yamii.png"
           alt="空っぽ"
           className="w-32 h-32 mb-4 opacity-80"
         />
