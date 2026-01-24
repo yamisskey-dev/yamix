@@ -100,7 +100,7 @@ Yamixの開発計画と進捗状況を示します。
 ## 関連ドキュメント
 
 - [README](README.md) - プロジェクト概要
-- [YAMI トークン経済設計](docs/YAMI_ECONOMY.md) - 経済システムの詳細
+- [ECONOMY](docs/ECONOMY.md) - 経済システムの詳細
 
 ---
 

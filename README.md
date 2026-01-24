@@ -16,7 +16,7 @@ menhera.jp の精神を継ぐ、OSS人生相談プラットフォーム。AIと�
 
 ## 設計思想
 
-詳細: [YAMI トークン経済設計](docs/YAMI_ECONOMY.md)
+詳細: [ECONOMY.md](docs/ECONOMY.md)
 
 - **AIによる依存の代替** - 人間への不健全な依存をAIが吸収し、人間同士の関係を健全化
 - **依存へのブレーキ** - 相談にはコストがかかり、無制限の依存を防止
@@ -107,7 +107,7 @@ pnpm prisma:studio # Prisma Studio起動
 
 - [FEATURES.md](FEATURES.md) - 機能一覧（実装済み・構想中）
 - [ROADMAP.md](ROADMAP.md) - 開発計画と進捗状況
-- [トークン経済設計](docs/TOKEN_ECONOMY.md) - 経済システムの詳細
+- [ECONOMY.md](docs/ECONOMY.md) - 経済システムの詳細
 
 **現在の状況**: Phase 4まで完了、Phase 5（経済システム）進行中
 

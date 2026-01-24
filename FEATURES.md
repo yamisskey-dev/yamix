@@ -154,7 +154,7 @@ Yamixで利用可能な機能と構想中の機能を示します。
 
 - [README](README.md) - プロジェクト概要
 - [ROADMAP](ROADMAP.md) - 開発計画
-- [YAMI トークン経済設計](docs/YAMI_ECONOMY.md) - 経済システムの詳細
+- [ECONOMY](docs/ECONOMY.md) - 経済システムの詳細
 
 ---
 
