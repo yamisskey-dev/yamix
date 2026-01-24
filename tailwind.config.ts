@@ -80,9 +80,9 @@ const config: Config = {
           "accent-content": "#FFFFFF",
           "neutral": "#C2CBE0",           // fg
           "neutral-content": "#130E26",   // bg
-          "base-100": "#0f0a1e",          // bg (darker for main content area)
-          "base-200": "#1a1432",          // panel/cards (lighter purple, visible)
-          "base-300": "#241a40",          // sidebar/nav (even lighter for distinction)
+          "base-100": "#1a1432",          // bg (lighter purple main area)
+          "base-200": "#0f0a1e",          // panel/cards (darker for depth)
+          "base-300": "#241a40",          // sidebar/nav (distinct accent)
           "base-content": "#C2CBE0",      // fg
           "info": "#44A4C1",              // link color
           "info-content": "#FFFFFF",

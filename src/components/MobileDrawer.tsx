@@ -67,7 +67,7 @@ export function MobileDrawer({ isOpen, onClose, children }: MobileDrawerProps) {
 
       {/* Drawer Panel */}
       <div
-        className={`absolute left-0 top-0 h-full w-60 bg-base-200 shadow-xl transition-transform duration-300 ease-out ${
+        className={`absolute left-0 top-0 h-full w-60 bg-base-300/95 shadow-xl transition-transform duration-300 ease-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

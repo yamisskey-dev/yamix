@@ -4,7 +4,7 @@
 
 /* DXM Dark Theme (default) */
 :root {
-  --background: #0f0a1e;
+  --background: #1a1432;
   --foreground: #C2CBE0;
   --accent-purple: #A374FF;
   --accent-pink: #B32DB6;
@@ -45,7 +45,7 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(15, 10, 30, 0.6);
+  background: rgba(26, 20, 50, 0.6);
 }
 
 [data-theme="light"] .animated-bg::after {
