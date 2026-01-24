@@ -30,7 +30,7 @@ export function EmptyState({
     <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
       {showImage ? (
         <img
-          src="/yamii.png"
+          src="/yui-empty.png"
           alt="空っぽ"
           className="w-32 h-32 mb-4 opacity-80"
         />
