@@ -129,7 +129,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
         {/* Mobile Drawer */}
         <MobileDrawer isOpen={sidebarOpen} onClose={handleCloseDrawer}>
-          <nav aria-label="メインナビゲーション">
+          <nav aria-label="メインナビゲーション" className="h-full">
             <Sidebar user={user} onClose={handleCloseDrawer} />
           </nav>
         </MobileDrawer>
