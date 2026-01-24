@@ -136,7 +136,11 @@ export default function NewChatPage() {
             {/* Consult Type Toggle - Single button that switches between modes */}
             <button
               type="button"
-              className="btn btn-xs btn-ghost"
+              className={`btn btn-xs gap-1 ${
+                consultType === "PRIVATE"
+                  ? "btn-ghost"
+                  : "btn-primary btn-outline"
+              }`}
               onClick={() => {
                 if (consultType === "PRIVATE") {
                   setConsultType("PUBLIC");
@@ -146,30 +150,36 @@ export default function NewChatPage() {
                 }
               }}
               disabled={isLoading}
-              title={consultType === "PRIVATE" ? "プライベート相談（AI専用）- クリックで公開に切替" : "公開相談（誰でも回答可能）- クリックで非公開に切替"}
+              aria-label={consultType === "PRIVATE" ? "プライベート相談" : "公開相談"}
             >
               {consultType === "PRIVATE" ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-4 h-4"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-3.5 h-3.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-xs">非公開</span>
+                </>
               ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-4 h-4"
-                >
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
-                </svg>
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-3.5 h-3.5"
+                  >
+                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
+                  </svg>
+                  <span className="text-xs">公開</span>
+                </>
               )}
             </button>
 
@@ -177,27 +187,53 @@ export default function NewChatPage() {
             {consultType === "PUBLIC" && (
               <>
                 <div className="w-px h-4 bg-base-300 mx-1" />
+                {/* Anonymous toggle */}
                 <button
                   type="button"
-                  className={`btn btn-xs btn-ghost ${
-                    isAnonymous ? "opacity-100" : "opacity-50"
+                  className={`btn btn-xs gap-1 ${
+                    isAnonymous
+                      ? "btn-secondary btn-outline"
+                      : "btn-ghost opacity-60"
                   }`}
                   onClick={() => setIsAnonymous(!isAnonymous)}
                   disabled={isLoading}
-                  title="匿名で相談"
+                  aria-label="匿名で相談"
                 >
-                  <span className="text-base">😎</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-3.5 h-3.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="text-xs">匿名</span>
                 </button>
+                {/* Allow anonymous responses toggle */}
                 <button
                   type="button"
-                  className={`btn btn-xs btn-ghost ${
-                    !allowAnonymousResponses ? "opacity-100" : "opacity-50"
+                  className={`btn btn-xs gap-1 ${
+                    !allowAnonymousResponses
+                      ? "btn-warning btn-outline"
+                      : "btn-ghost opacity-60"
                   }`}
                   onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
                   disabled={isLoading}
-                  title={allowAnonymousResponses ? "匿名回答を許可" : "匿名回答を拒否"}
+                  aria-label={allowAnonymousResponses ? "匿名回答を許可中" : "匿名回答を拒否中"}
                 >
-                  <span className="text-base">🎭</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-3.5 h-3.5"
+                  >
+                    <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+                  </svg>
+                  <span className="text-xs">{allowAnonymousResponses ? "匿名回答OK" : "匿名NG"}</span>
                 </button>
               </>
             )}

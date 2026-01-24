@@ -73,7 +73,18 @@ export const ChatBubble = memo(function ChatBubble({
                 {responder!.isAnonymous ? (
                   // Anonymous user - show generic anonymous avatar
                   <div className="w-full h-full rounded-full bg-base-300 flex items-center justify-center text-base-content/50">
-                    <span className="text-lg">😎</span>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                   </div>
                 ) : responder!.avatarUrl ? (
                   // User with avatar (no handle)
@@ -116,8 +127,15 @@ export const ChatBubble = memo(function ChatBubble({
             )
           ) : (
             // AI avatar - not clickable
-            <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
-              <span className="text-lg">🤖</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-5 h-5 text-primary"
+              >
+                <path d="M12 2a2 2 0 012 2v1h2a2 2 0 012 2v2h1a2 2 0 110 4h-1v2a2 2 0 01-2 2h-2v1a2 2 0 11-4 0v-1H8a2 2 0 01-2-2v-2H5a2 2 0 110-4h1V7a2 2 0 012-2h2V4a2 2 0 012-2zm-2 7a1 1 0 100 2 1 1 0 000-2zm4 0a1 1 0 100 2 1 1 0 000-2z" />
+              </svg>
             </div>
           )}
         </div>
@@ -157,8 +175,16 @@ export const ChatBubble = memo(function ChatBubble({
                 onClick={() => onSendGas!(messageId!)}
                 className="btn btn-xs btn-ghost hover:text-amber-500 transition-colors"
                 title="このユーザーを応援する"
+                aria-label="応援する"
               >
-                🕯️
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                </svg>
               </button>
             )}
 
@@ -168,8 +194,22 @@ export const ChatBubble = memo(function ChatBubble({
                 onClick={() => onBlock!(responder!.responderId!)}
                 className="btn btn-xs btn-ghost hover:btn-error transition-colors"
                 title="このユーザーをブロック"
+                aria-label="ブロック"
               >
-                🚫
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                  />
+                </svg>
               </button>
             )}
           </div>
@@ -188,8 +228,15 @@ export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: Cri
   return (
     <div className="chat chat-start animate-slide-up">
       <div className="chat-image avatar">
-        <div className="w-8 h-8 rounded-full bg-base-200 flex items-center justify-center">
-          <span className="text-lg">🫂</span>
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-warning/20 to-error/20 flex items-center justify-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-5 h-5 text-warning"
+          >
+            <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+          </svg>
         </div>
       </div>
       <div className="chat-bubble chat-assistant shadow-sm">
