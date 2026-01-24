@@ -60,7 +60,7 @@ export function BookmarkButton({
       aria-label={loading ? "処理中..." : isBookmarked ? "ブックマークを解除" : "ブックマークに追加"}
     >
       {loading ? (
-        <span className="loading loading-spinner loading-xs"></span>
+        <img src="/static/loading/1.gif" alt="処理中" className="w-4 h-4" />
       ) : isBookmarked ? (
         <svg
           xmlns="http://www.w3.org/2000/svg"

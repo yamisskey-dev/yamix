@@ -247,7 +247,7 @@ export default function NewChatPage() {
             aria-label="送信"
           >
             {isLoading ? (
-              <span className="loading loading-spinner loading-xs" />
+              <img src="/static/loading/1.gif" alt="送信中" className="w-4 h-4" />
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"

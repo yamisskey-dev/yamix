@@ -71,7 +71,7 @@ function CallbackContent() {
 
   return (
     <div className="w-screen h-screen flex flex-col items-center justify-center gap-4">
-      <LoadingSpinner size={64} text="認証中..." />
+      <LoadingSpinner size="lg" text="認証中..." />
 
       <Modal
         ref={errorModalRef}
@@ -89,7 +89,7 @@ export default function MisskeyCallbackPage() {
     <Suspense
       fallback={
         <div className="w-screen h-screen flex items-center justify-center">
-          <LoadingSpinner size={64} />
+          <LoadingSpinner size="lg" />
         </div>
       }
     >

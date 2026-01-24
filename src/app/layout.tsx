@@ -91,7 +91,7 @@ export default async function RootLayout({
               <Suspense
                 fallback={
                   <div className="w-full h-screen flex items-center justify-center">
-                    <span className="loading loading-spinner loading-lg" />
+                    <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
                   </div>
                 }
               >

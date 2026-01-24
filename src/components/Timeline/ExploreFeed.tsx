@@ -89,7 +89,7 @@ export function ExploreFeed() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <span className="loading loading-spinner loading-lg" />
+        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
       </div>
     );
   }
@@ -139,7 +139,7 @@ export function ExploreFeed() {
 
       {loadingMore && (
         <div className="flex justify-center py-4">
-          <span className="loading loading-spinner loading-md" />
+          <img src="/static/loading/1.gif" alt="読み込み中" className="w-10 h-10" />
         </div>
       )}
 

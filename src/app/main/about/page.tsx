@@ -102,46 +102,29 @@ export default function AboutPage() {
         <FormSection label="世界観と理念">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
             <p>
-              Yamixは、<strong className="text-base-content/90">不健全な依存関係を解消する</strong>ために設計されたプラットフォームです。
+              Yamixは、<strong className="text-base-content/90">健全な相談関係</strong>を築くためのプラットフォームです。
             </p>
             <p>
-              従来の人生相談では、回答者への過度な依存や、精神的資源の一方的な消費が問題でした。
-              支援する側が疲弊し、支援される側は依存を深めるという悪循環が生まれていました。
-            </p>
-            <p>
-              Yamixは、AIと人間が対等なアカウントとして共存し、
-              <strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>健全なコミュニティを目指します。
+              AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>コミュニティを目指しています。
             </p>
           </div>
         </FormSection>
 
-        {/* エコシステムの仕組み */}
-        <FormSection label="エコシステムの仕組み">
+        {/* YAMIトークン経済 */}
+        <FormSection label="YAMIトークン経済">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
-            <p>
-              Yamixは、<strong className="text-base-content/90">YAMIトークン経済</strong>を通じて、
-              注意力と精神的資源を適切に分配します：
-            </p>
             <ul className="ml-4 space-y-1.5 list-disc list-outside">
               <li>
-                <strong>AIによる依存の吸収</strong> -
-                人間への不健全な依存をAIが代わりに受け止め、人間同士の関係を健全化
+                <strong>相談にはYAMIを消費</strong> - 限りある資源として大切に使う仕組み
               </li>
               <li>
-                <strong>相談へのコスト</strong> -
-                無制限の依存を防ぎ、本当に必要な時だけ相談する仕組み
+                <strong>回答で報酬を獲得</strong> - 助け合いが正当に評価される設計
               </li>
               <li>
-                <strong>回答者への報酬</strong> -
-                精神的労働には正当な対価が支払われる経済設計
+                <strong>灯で感謝を伝える</strong> - 良い回答には灯を送って応援
               </li>
               <li>
-                <strong>ガスシステム</strong> -
-                役立った回答には、灯を灯し続けるためのガスを送ることで、回答者のYAMIトークンを補充し、質の高い支援を促進
-              </li>
-              <li>
-                <strong>ベーシックインカムと減衰</strong> -
-                毎日の無料YAMIで誰でも参加でき、過度な蓄積は減衰で抑制
+                <strong>毎日のYAMI支給</strong> - 誰でも参加できるベーシックインカム
               </li>
             </ul>
           </div>

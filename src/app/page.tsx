@@ -99,7 +99,7 @@ export default function LoginPage() {
     return (
       <div className="w-screen h-screen flex items-center justify-center">
         <div className="animated-bg" />
-        <LoadingSpinner size={64} />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -200,7 +200,7 @@ export default function LoginPage() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <span className="loading loading-spinner" />
+                <LoadingSpinner size="xs" inline />
               ) : (
                 <span>ログイン</span>
               )}

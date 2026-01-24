@@ -248,7 +248,7 @@ export function NotificationBell() {
           <div className="overflow-y-auto flex-1">
             {loading ? (
               <div className="flex items-center justify-center p-8">
-                <span className="loading loading-spinner loading-sm"></span>
+                <img src="/static/loading/1.gif" alt="読み込み中" className="w-6 h-6" />
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 px-4">

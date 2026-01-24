@@ -212,7 +212,7 @@ export default function UserProfilePage({ params }: PageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <span className="loading loading-spinner loading-lg" />
+        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
       </div>
     );
   }
@@ -294,7 +294,7 @@ export default function UserProfilePage({ params }: PageProps) {
                   className={`btn btn-sm ${isBlocked ? "btn-ghost" : "btn-error btn-outline"}`}
                 >
                   {isBlockLoading ? (
-                    <span className="loading loading-spinner loading-xs" />
+                    <img src="/static/loading/1.gif" alt="処理中" className="w-4 h-4" />
                   ) : isBlocked ? (
                     "ブロック解除"
                   ) : (

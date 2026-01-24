@@ -53,7 +53,7 @@ export function BookmarkList({ onSessionClick }: Props) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <span className="loading loading-spinner loading-sm"></span>
+        <img src="/static/loading/1.gif" alt="読み込み中" className="w-6 h-6" />
       </div>
     );
   }

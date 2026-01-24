@@ -171,7 +171,7 @@ export default function SettingsPage() {
   if (!user) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg" />
+        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
       </div>
     );
   }
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                 disabled={isSavingPrompt}
               >
                 {isSavingPrompt ? (
-                  <span className="loading loading-spinner loading-xs" />
+                  <img src="/static/loading/1.gif" alt="保存中" className="w-4 h-4" />
                 ) : promptSaved ? (
                   "保存しました"
                 ) : (
@@ -372,7 +372,7 @@ export default function SettingsPage() {
             </p>
             {isLoadingBlocks ? (
               <div className="flex justify-center py-4">
-                <span className="loading loading-spinner loading-sm" />
+                <img src="/static/loading/1.gif" alt="読み込み中" className="w-6 h-6" />
               </div>
             ) : blockedUsers.length === 0 ? (
               <p className="text-sm text-base-content/40 py-4 text-center">
@@ -443,7 +443,7 @@ export default function SettingsPage() {
                     disabled={isExporting}
                   >
                     {isExporting ? (
-                      <span className="loading loading-spinner loading-xs" />
+                      <img src="/static/loading/1.gif" alt="処理中" className="w-4 h-4" />
                     ) : (
                       "エクスポート"
                     )}

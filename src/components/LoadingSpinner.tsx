@@ -1,35 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
+type SpinnerSize = "xs" | "sm" | "md" | "lg";
 
-const LOADING_GIFS = [1, 2, 3] as const;
+const sizeMap: Record<SpinnerSize, string> = {
+  xs: "w-4 h-4",
+  sm: "w-6 h-6",
+  md: "w-10 h-10",
+  lg: "w-16 h-16",
+};
+
+const pixelSizeMap: Record<SpinnerSize, number> = {
+  xs: 16,
+  sm: 24,
+  md: 40,
+  lg: 64,
+};
 
 interface Props {
-  size?: number;
+  /** Size of the spinner */
+  size?: SpinnerSize;
+  /** Optional message to display below the spinner */
   text?: string;
+  /** Additional CSS classes */
   className?: string;
+  /** Use inline style (no wrapper, no text) */
+  inline?: boolean;
 }
 
-export function LoadingSpinner({ size = 64, text, className = "" }: Props) {
-  const [gifId, setGifId] = useState<number>(1);
+/**
+ * Unified loading spinner component using blobcat gif
+ */
+export function LoadingSpinner({ size = "md", text, className = "", inline = false }: Props) {
+  const sizeClass = sizeMap[size];
+  const pixelSize = pixelSizeMap[size];
 
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * LOADING_GIFS.length);
-    setGifId(LOADING_GIFS[randomIndex]);
-  }, []);
+  if (inline) {
+    return (
+      <img
+        src="/static/loading/1.gif"
+        alt="読み込み中"
+        width={pixelSize}
+        height={pixelSize}
+        className={`${sizeClass} inline-block ${className}`}
+      />
+    );
+  }
 
   return (
     <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
-      <Image
-        src={`/static/loading/${gifId}.gif`}
-        width={size}
-        height={size}
-        alt="Loading"
-        unoptimized
-        priority
+      <img
+        src="/static/loading/1.gif"
+        alt="読み込み中"
+        width={pixelSize}
+        height={pixelSize}
+        className={sizeClass}
       />
-      {text && <span className="text-base-content/70">{text}</span>}
+      {text && <span className="text-sm text-base-content/60">{text}</span>}
     </div>
   );
 }
