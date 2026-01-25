@@ -129,7 +129,7 @@ export const ChatBubble = memo(function ChatBubble({
             // AI avatar - Yamii icon
             <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary/30">
               <Image
-                src="/yamii.png"
+                src="/yamii.svg"
                 alt="Yamii"
                 width={32}
                 height={32}
