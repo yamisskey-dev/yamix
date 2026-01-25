@@ -132,11 +132,21 @@ export default function AboutPage() {
 
         {/* プライバシー */}
         <FormSection label="プライバシーポリシー">
-          <ul className="text-xs text-base-content/60 space-y-1 ml-4 list-disc">
-            <li>非公開の相談は、あなた本人のみが閲覧できます</li>
-            <li>AI相談はOpenAI APIを通じて処理されます</li>
-            <li>パスワードやアクセストークンは保存されません</li>
-          </ul>
+          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
+            <p className="font-medium text-base-content/90">データ保護</p>
+            <ul className="text-base-content/60 space-y-1 ml-4 list-disc">
+              <li>メッセージは<strong className="text-base-content/80">AES-256-GCM</strong>で暗号化して保存</li>
+              <li>IPアドレス・User-Agentは<strong className="text-base-content/80">記録しません</strong></li>
+              <li>パスワードやアクセストークンは保存されません</li>
+              <li>非公開の相談は、あなた本人のみが閲覧できます</li>
+            </ul>
+            <p className="font-medium text-base-content/90 pt-2">AI処理について</p>
+            <ul className="text-base-content/60 space-y-1 ml-4 list-disc">
+              <li>AI相談はOpenAI APIを通じて処理されます</li>
+              <li>AIがメッセージを読むため、処理時に復号されます</li>
+              <li>データベースには暗号化された状態で保存されます</li>
+            </ul>
+          </div>
         </FormSection>
 
         {/* ソースコード */}
