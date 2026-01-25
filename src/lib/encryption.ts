@@ -76,15 +76,15 @@ export function encryptMessage(plaintext: string, userId: string): string {
 /**
  * メッセージを復号
  *
- * @param ciphertext - 暗号化されたメッセージ
+ * @param ciphertext - 暗号化されたメッセージ（または平文）
  * @param userId - ユーザーID（キー派生に使用）
  * @returns 復号されたメッセージ
- * @throws 暗号化されていないメッセージの場合はエラー
  */
 export function decryptMessage(ciphertext: string, userId: string): string {
-  // 暗号化されていないメッセージはエラー
+  // 後方互換性: 暗号化されていないメッセージはそのまま返す
+  // マイグレーション完了後に削除可能: pnpm encrypt:check で確認
   if (!ciphertext.startsWith(ENCRYPTED_PREFIX)) {
-    throw new Error("Message is not encrypted. Run migration script to encrypt existing data.");
+    return ciphertext;
   }
 
   const key = deriveUserKey(userId);
