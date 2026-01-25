@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 
@@ -276,18 +275,9 @@ export default function NewChatPage() {
         {/* Desktop: centered layout like ChatGPT/Claude */}
         <div className="hidden xl:flex flex-1 flex-col items-center justify-center p-4">
           <div className="w-full max-w-2xl">
-            <div className="flex flex-col items-center mb-6">
-              <Image
-                src="/yamii.svg"
-                alt="Yamii"
-                width={48}
-                height={48}
-                className="mb-3"
-              />
-              <p className="text-base-content/50 text-lg text-center">
-                今日はどうしましたか？
-              </p>
-            </div>
+            <p className="text-base-content/50 text-lg text-center mb-6">
+              今日はどうしましたか？
+            </p>
             {inputForm}
           </div>
         </div>
@@ -295,13 +285,6 @@ export default function NewChatPage() {
         {/* Mobile: greeting at center, input at bottom for easier tapping */}
         <div className="xl:hidden flex-1 flex flex-col">
           <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <Image
-              src="/yamii.svg"
-              alt="Yamii"
-              width={48}
-              height={48}
-              className="mb-3"
-            />
             <p className="text-base-content/50 text-lg text-center">
               今日はどうしましたか？
             </p>
