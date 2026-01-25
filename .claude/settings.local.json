@@ -26,7 +26,8 @@
       "Bash(chmod:*)",
       "Bash(docker ps:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": [],
     "ask": []
