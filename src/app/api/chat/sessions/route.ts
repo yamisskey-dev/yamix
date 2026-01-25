@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { createChatSessionSchema, validateBody } from "@/lib/validation";
+import { decryptMessage } from "@/lib/encryption";
 
 // In-memory chat sessions store
 interface MemoryChatSession {
@@ -87,15 +88,22 @@ export async function GET(req: NextRequest) {
       const hasMore = sessions.length > limit;
       const items: ChatSessionListItem[] = sessions
         .slice(0, limit)
-        .map((s: PrismaSessionResult) => ({
-          id: s.id,
-          title: s.title,
-          preview: s.messages[0]?.content?.slice(0, 50) || null,
-          consultType: s.consultType,
-          isAnonymous: s.isAnonymous,
-          isPublic: s.isPublic, // DEPRECATED
-          updatedAt: s.updatedAt,
-        }));
+        .map((s: PrismaSessionResult) => {
+          // Decrypt message content for preview (backwards compatible)
+          const rawContent = s.messages[0]?.content;
+          const decryptedContent = rawContent
+            ? decryptMessage(rawContent, payload.userId)
+            : null;
+          return {
+            id: s.id,
+            title: s.title,
+            preview: decryptedContent?.slice(0, 50) || null,
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            isPublic: s.isPublic, // DEPRECATED
+            updatedAt: s.updatedAt,
+          };
+        });
 
       const response: ChatSessionsResponse = {
         sessions: items,
@@ -127,10 +135,15 @@ export async function GET(req: NextRequest) {
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         const lastMessage = sessionMessages[0];
 
+        // Decrypt message content for preview (backwards compatible)
+        const decryptedContent = lastMessage?.content
+          ? decryptMessage(lastMessage.content, payload.userId)
+          : null;
+
         return {
           id: s.id,
           title: s.title,
-          preview: lastMessage?.content?.slice(0, 50) || null,
+          preview: decryptedContent?.slice(0, 50) || null,
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
           isPublic: s.isPublic, // DEPRECATED

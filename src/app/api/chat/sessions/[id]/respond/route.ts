@@ -6,6 +6,7 @@ import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
 import { notifyResponse } from "@/lib/notifications";
+import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
 // In-memory types
 interface MemoryChatSession {
@@ -146,10 +147,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       // If @yamii is mentioned, call AI instead of saving human response
       if (hasYamiiMention) {
-        // Prepare conversation history
+        // Prepare conversation history (decrypt messages for Yamii)
         const existingMessages: ConversationMessage[] = sessionWithMessages.messages.map((m: PrismaMessage) => ({
           role: m.role === "USER" ? "user" : "assistant",
-          content: m.content,
+          content: decryptMessage(m.content, sessionWithMessages.userId),
         })) as ConversationMessage[];
 
         // Remove @yamii mention before sending to Yamii
@@ -175,12 +176,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
         // Save both user's message and AI response in a transaction
         const result = await db.$transaction(async (tx) => {
+          // Encrypt messages for storage
+          const encryptedUserContent = encryptMessage(body.content.trim(), sessionWithMessages.userId);
+          const encryptedAiContent = encryptMessage(yamiiResponse.response, sessionWithMessages.userId);
+
           // Save user's message with @yamii mention (with responderId to track who asked)
           const userMessage = await tx.chatMessage.create({
             data: {
               sessionId: id,
               role: "USER",
-              content: body.content.trim(),
+              content: encryptedUserContent,
               responderId: payload.userId, // Track who asked this question
               isAnonymous,
               isCrisis: false,
@@ -192,7 +197,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             data: {
               sessionId: id,
               role: "ASSISTANT",
-              content: yamiiResponse.response,
+              content: encryptedAiContent,
               responderId: null, // AI response
               isAnonymous: false, // AI is never anonymous
               isCrisis: yamiiResponse.is_crisis,
@@ -208,9 +213,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           return { userMessage, aiMessage };
         });
 
+        // Return decrypted content to client
         return NextResponse.json({
-          userMessage: result.userMessage,
-          message: result.aiMessage,
+          userMessage: { ...result.userMessage, content: body.content.trim() },
+          message: { ...result.aiMessage, content: yamiiResponse.response },
           success: true,
           isAIResponse: true,
           isCrisis: yamiiResponse.is_crisis,
@@ -258,12 +264,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
 
-        // 3. Create the human response message
+        // 3. Create the human response message (encrypted)
+        const encryptedContent = encryptMessage(body.content.trim(), sessionWithMessages.userId);
         const message = await tx.chatMessage.create({
           data: {
             sessionId: id,
             role: "ASSISTANT",
-            content: body.content.trim(),
+            content: encryptedContent,
             responderId: payload.userId,
             isAnonymous,
             isCrisis: false,
@@ -330,8 +337,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
 
+      // Return decrypted content to client
       return NextResponse.json({
-        message: result.message,
+        message: { ...result.message, content: body.content.trim() },
         success: true,
         cost: responseCost,
         reward: result.actualReward,
@@ -384,7 +392,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       // If @yamii is mentioned, call AI instead of saving human response
       if (hasYamiiMention) {
-        // Prepare conversation history
+        // Prepare conversation history (decrypt messages for Yamii)
         const messages = Array.from(chatMessagesStore.values())
           .filter((m) => m.sessionId === id)
           .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
@@ -392,7 +400,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
         const existingMessages: ConversationMessage[] = messages.map((m) => ({
           role: m.role === "USER" ? "user" : "assistant",
-          content: m.content,
+          content: decryptMessage(m.content, session.userId),
         })) as ConversationMessage[];
 
         // Remove @yamii mention before sending to Yamii
@@ -418,13 +426,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
         const now = new Date();
 
+        // Encrypt messages for storage
+        const encryptedUserContent = encryptMessage(body.content.trim(), session.userId);
+        const encryptedAiContent = encryptMessage(yamiiResponse.response, session.userId);
+
         // Save user's message with @yamii mention (with responderId to track who asked)
         const userMessageId = generateId();
         const userMessage: MemoryChatMessage = {
           id: userMessageId,
           sessionId: id,
           role: "USER",
-          content: body.content.trim(),
+          content: encryptedUserContent,
           responderId: payload.userId, // Track who asked this question
           isAnonymous,
           isCrisis: false,
@@ -438,7 +450,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           id: aiMessageId,
           sessionId: id,
           role: "ASSISTANT",
-          content: yamiiResponse.response,
+          content: encryptedAiContent,
           responderId: undefined, // AI response
           isAnonymous: false, // AI is never anonymous
           isCrisis: yamiiResponse.is_crisis,
@@ -449,9 +461,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         session.updatedAt = new Date();
         chatSessionsStore.set(id, session);
 
+        // Return decrypted content to client
         return NextResponse.json({
-          userMessage,
-          message: aiMessage,
+          userMessage: { ...userMessage, content: body.content.trim() },
+          message: { ...aiMessage, content: yamiiResponse.response },
           success: true,
           isAIResponse: true,
           isCrisis: yamiiResponse.is_crisis,
@@ -482,13 +495,14 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Deduct response cost
       responderWallet.balance -= responseCost;
 
-      // Create the human response message
+      // Create the human response message (encrypted)
+      const encryptedContent = encryptMessage(body.content.trim(), session.userId);
       const messageId = generateId();
       const message: MemoryChatMessage = {
         id: messageId,
         sessionId: id,
         role: "ASSISTANT",
-        content: body.content.trim(),
+        content: encryptedContent,
         responderId: payload.userId,
         isAnonymous,
         isCrisis: false,
@@ -505,8 +519,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       const netGain = rewardAmount - responseCost;
 
+      // Return decrypted content to client
       return NextResponse.json({
-        message,
+        message: { ...message, content: body.content.trim() },
         success: true,
         cost: responseCost,
         reward: rewardAmount,

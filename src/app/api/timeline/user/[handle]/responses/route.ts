@@ -3,6 +3,7 @@ import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
+import { decryptMessage } from "@/lib/encryption";
 
 // In-memory types
 interface MemoryChatMessage {
@@ -102,13 +103,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       const consultations: TimelineConsultation[] = items.map((response) => {
         const session = response.session;
-        const question = session.messages[0]?.content || "";
+        // Decrypt message content (backwards compatible)
+        const rawQuestion = session.messages[0]?.content || "";
+        const question = decryptMessage(rawQuestion, session.userId);
+        const answer = decryptMessage(response.content, session.userId);
 
         return {
           id: response.id,
           sessionId: session.id,
           question,
-          answer: response.content,
+          answer,
           consultType: session.consultType,
           isAnonymous: session.isAnonymous,
           user: session.isAnonymous
@@ -186,13 +190,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             .filter((m) => m.sessionId === session.id && m.role === "USER")
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
-          const question = messages[0]?.content || "";
+          // Decrypt message content (backwards compatible)
+          const rawQuestion = messages[0]?.content || "";
+          const question = decryptMessage(rawQuestion, session.userId);
+          const answer = decryptMessage(response.content, session.userId);
 
           return {
             id: response.id,
             sessionId: session.id,
             question,
-            answer: response.content,
+            answer,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
             user: session.isAnonymous

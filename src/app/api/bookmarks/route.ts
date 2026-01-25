@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { decryptMessage } from "@/lib/encryption";
 
 /**
  * GET /api/bookmarks
@@ -55,25 +56,32 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
-      bookmarks: bookmarks.map((b) => ({
-        id: b.id,
-        sessionId: b.sessionId,
-        createdAt: b.createdAt,
-        session: {
-          id: b.session.id,
-          title: b.session.title,
-          consultType: b.session.consultType,
-          isAnonymous: b.session.isAnonymous,
-          preview: b.session.messages[0]?.content?.slice(0, 50) || null,
-          updatedAt: b.session.updatedAt,
-          user: {
-            id: b.session.user.id,
-            handle: b.session.user.handle,
-            displayName: b.session.user.profile?.displayName || null,
-            avatarUrl: b.session.user.profile?.avatarUrl || null,
+      bookmarks: bookmarks.map((b) => {
+        // Decrypt message content for preview (backwards compatible)
+        const rawContent = b.session.messages[0]?.content;
+        const decryptedContent = rawContent
+          ? decryptMessage(rawContent, b.session.userId)
+          : null;
+        return {
+          id: b.id,
+          sessionId: b.sessionId,
+          createdAt: b.createdAt,
+          session: {
+            id: b.session.id,
+            title: b.session.title,
+            consultType: b.session.consultType,
+            isAnonymous: b.session.isAnonymous,
+            preview: decryptedContent?.slice(0, 50) || null,
+            updatedAt: b.session.updatedAt,
+            user: {
+              id: b.session.user.id,
+              handle: b.session.user.handle,
+              displayName: b.session.user.profile?.displayName || null,
+              avatarUrl: b.session.user.profile?.avatarUrl || null,
+            },
           },
-        },
-      })),
+        };
+      }),
     });
   } catch (error) {
     logger.error("Get bookmarks error", { userId: payload.userId }, error);

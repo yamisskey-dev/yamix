@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { decryptMessage } from "@/lib/encryption";
 
 // In-memory types
 interface MemoryChatSession {
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 
-      // Format response with user info
+      // Format response with user info (decrypt messages for client)
       return NextResponse.json({
         ...session,
         user: {
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         },
         messages: session.messages.map((m) => ({
           ...m,
+          content: decryptMessage(m.content, session.userId), // Decrypt with owner's key
           responder: m.responder ? {
             id: m.responder.id,
             handle: m.responder.handle,
@@ -125,7 +127,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       const messages = Array.from(chatMessagesStore.values())
         .filter((m) => m.sessionId === id)
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((m) => ({
+          ...m,
+          content: decryptMessage(m.content, session.userId), // Decrypt with owner's key
+        }));
 
       return NextResponse.json({
         ...session,

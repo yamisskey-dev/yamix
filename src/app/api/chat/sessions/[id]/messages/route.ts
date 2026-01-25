@@ -7,6 +7,7 @@ import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { sendMessageSchema, validateBody } from "@/lib/validation";
+import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
 // In-memory types
 interface MemoryChatSession {
@@ -129,9 +130,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       session = sessionWithMessages;
       isFirstMessage = sessionWithMessages.messages.length === 0;
+      // Decrypt existing messages for conversation history (backwards compatible)
       existingMessages = sessionWithMessages.messages.map((m: PrismaMessage) => ({
         role: m.role === "USER" ? "user" : "assistant",
-        content: m.content,
+        content: decryptMessage(m.content, payload.userId),
       })) as ConversationMessage[];
     } else {
       // In-memory fallback
@@ -151,9 +153,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         .slice(-10);
 
       isFirstMessage = messages.length === 0;
+      // Decrypt existing messages for conversation history (backwards compatible)
       existingMessages = messages.map((m) => ({
         role: m.role === "USER" ? "user" : "assistant",
-        content: m.content,
+        content: decryptMessage(m.content, payload.userId),
       })) as ConversationMessage[];
     }
 
@@ -257,12 +260,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
 
-        // Create user message
+        // Create user message (encrypt content for privacy)
+        const encryptedUserContent = encryptMessage(userMessage, payload.userId);
         const userMsg = await tx.chatMessage.create({
           data: {
             sessionId,
             role: "USER",
-            content: userMessage,
+            content: encryptedUserContent,
             isCrisis: false,
           },
         });
@@ -270,11 +274,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         // Create assistant message if we got a response from Yamii
         let assistantMsg = null;
         if (shouldCallYamii && yamiiResponse) {
+          const encryptedAssistantContent = encryptMessage(yamiiResponse.response, payload.userId);
           assistantMsg = await tx.chatMessage.create({
             data: {
               sessionId,
               role: "ASSISTANT",
-              content: yamiiResponse.response,
+              content: encryptedAssistantContent,
               isCrisis: yamiiResponse.is_crisis,
             },
           });
@@ -299,9 +304,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return { userMsg, assistantMsg };
       });
 
+      // Return decrypted content to client
       return NextResponse.json({
-        userMessage: result.userMsg,
-        assistantMessage: result.assistantMsg,
+        userMessage: { ...result.userMsg, content: userMessage },
+        assistantMessage: result.assistantMsg
+          ? { ...result.assistantMsg, content: yamiiResponse?.response || "" }
+          : null,
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || false,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
@@ -319,11 +327,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Deduct consult cost
       wallet.balance -= consultCost;
 
+      // Encrypt messages for privacy
+      const encryptedUserContent = encryptMessage(userMessage, payload.userId);
       const userMsg = {
         id: generateId(),
         sessionId,
         role: "USER" as const,
-        content: userMessage,
+        content: encryptedUserContent,
         isCrisis: false,
         createdAt: now,
       };
@@ -332,11 +342,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Create assistant message if we got a response from Yamii
       let assistantMsg = null;
       if (shouldCallYamii && yamiiResponse) {
+        const encryptedAssistantContent = encryptMessage(yamiiResponse.response, payload.userId);
         assistantMsg = {
           id: generateId(),
           sessionId,
           role: "ASSISTANT" as const,
-          content: yamiiResponse.response,
+          content: encryptedAssistantContent,
           isCrisis: yamiiResponse.is_crisis,
           createdAt: new Date(now.getTime() + 1),
         };
@@ -351,9 +362,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       sessionData.updatedAt = now;
       chatSessionsStore.set(sessionId, sessionData);
 
+      // Return decrypted content to client
       return NextResponse.json({
-        userMessage: userMsg,
-        assistantMessage: assistantMsg,
+        userMessage: { ...userMsg, content: userMessage },
+        assistantMessage: assistantMsg
+          ? { ...assistantMsg, content: yamiiResponse?.response || "" }
+          : null,
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || false,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,

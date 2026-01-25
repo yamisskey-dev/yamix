@@ -3,6 +3,7 @@ import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
+import { decryptMessage } from "@/lib/encryption";
 
 // In-memory types
 interface MemoryChatSession {
@@ -121,11 +122,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           const userMsg = s.messages.find((m) => m.role === "USER");
           const assistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
 
+          // Decrypt message content (backwards compatible)
+          const question = userMsg?.content
+            ? decryptMessage(userMsg.content, user.id)
+            : "";
+          const answer = assistantMsg?.content
+            ? decryptMessage(assistantMsg.content, user.id)
+            : null;
+
           return {
             id: s.id,
             sessionId: s.id,
-            question: userMsg?.content || "",
-            answer: assistantMsg?.content || null, // PUBLIC相談ではnullの場合あり
+            question,
+            answer, // PUBLIC相談ではnullの場合あり
             consultType: s.consultType,
             isAnonymous: s.isAnonymous,
             user: s.isAnonymous ? null : { // 匿名の場合はnull
@@ -194,11 +203,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
           if (!userMsg || !assistantMsg) return null;
 
+          // Decrypt message content (backwards compatible)
+          const question = decryptMessage(userMsg.content, targetUser.id);
+          const answer = decryptMessage(assistantMsg.content, targetUser.id);
+
           return {
             id: s.id,
             sessionId: s.id,
-            question: userMsg.content,
-            answer: assistantMsg.content,
+            question,
+            answer,
             consultType: s.consultType,
             isAnonymous: s.isAnonymous,
             user: s.isAnonymous ? null : { // 匿名の場合はnull

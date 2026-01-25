@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
+import { decryptMessage } from "@/lib/encryption";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -83,12 +84,16 @@ export async function GET(req: NextRequest) {
 
       const consultations: TimelineConsultation[] = items.map((msg) => {
         const session = msg.session;
+        const ownerId = session.user.id;
+
+        // Decrypt message content (backwards compatible)
+        const decryptedMsgContent = decryptMessage(msg.content, ownerId);
 
         // Find the previous USER message for this message
         let question = "";
         let questionMessage = null; // Store the actual message object
         if (msg.role === "USER") {
-          question = msg.content;
+          question = decryptedMsgContent;
           questionMessage = msg;
         } else {
           // For ASSISTANT messages, find the most recent USER message before this one
@@ -99,7 +104,8 @@ export async function GET(req: NextRequest) {
 
           if (previousUserMessages.length > 0) {
             questionMessage = previousUserMessages[previousUserMessages.length - 1];
-            question = questionMessage.content;
+            // Decrypt question content (backwards compatible)
+            question = decryptMessage(questionMessage.content, ownerId);
           }
         }
 
@@ -110,7 +116,7 @@ export async function GET(req: NextRequest) {
           return {
             id: msg.id,
             sessionId: session.id,
-            question: msg.content,
+            question: decryptedMsgContent,
             answer: null,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
@@ -138,8 +144,8 @@ export async function GET(req: NextRequest) {
           return {
             id: msg.id,
             sessionId: session.id,
-            question, // Previous USER message
-            answer: msg.content,
+            question, // Previous USER message (already decrypted)
+            answer: decryptedMsgContent,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
             user: session.isAnonymous
@@ -195,11 +201,14 @@ export async function GET(req: NextRequest) {
       const items = messages.slice(0, limit);
 
       const consultations: TimelineConsultation[] = items.map(({ msg, session }) => {
+        // Decrypt message content (backwards compatible)
+        const decryptedMsgContent = decryptMessage(msg.content, session.userId);
+
         // Find the previous USER message for this message
         let question = "";
         let questionMessage: MemoryChatMessage | null = null;
         if (msg.role === "USER") {
-          question = msg.content;
+          question = decryptedMsgContent;
           questionMessage = msg;
         } else {
           // For ASSISTANT messages, find the most recent USER message before this one
@@ -208,7 +217,8 @@ export async function GET(req: NextRequest) {
             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
           if (sessionMessages.length > 0) {
             questionMessage = sessionMessages[sessionMessages.length - 1];
-            question = questionMessage.content;
+            // Decrypt question content (backwards compatible)
+            question = decryptMessage(questionMessage.content, session.userId);
           }
         }
 
@@ -216,7 +226,7 @@ export async function GET(req: NextRequest) {
           return {
             id: msg.id,
             sessionId: session.id,
-            question: msg.content,
+            question: decryptedMsgContent,
             answer: null,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
@@ -236,8 +246,8 @@ export async function GET(req: NextRequest) {
           return {
             id: msg.id,
             sessionId: session.id,
-            question, // Previous USER message
-            answer: msg.content,
+            question, // Previous USER message (already decrypted)
+            answer: decryptedMsgContent,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
             user: session.isAnonymous
