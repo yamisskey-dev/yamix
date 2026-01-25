@@ -118,7 +118,7 @@ export default function NewChatPage() {
   // Input form component (reused in both layouts)
   const inputForm = (
     <>
-      <div className="bg-base-200/50 rounded-2xl border border-base-300/50 focus-within:border-primary/50 transition-colors">
+      <div className="bg-base-200/50 rounded-2xl border border-base-300/50">
         {/* Textarea */}
         <textarea
           ref={textareaRef}
