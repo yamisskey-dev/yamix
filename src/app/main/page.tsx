@@ -125,7 +125,7 @@ export default function NewChatPage() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="相談してみましょう"
-          className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 focus:outline-none"
+          className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 focus:border-0"
           rows={1}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
