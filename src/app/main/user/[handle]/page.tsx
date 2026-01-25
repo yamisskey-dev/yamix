@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from "react";
 import Image from "next/image";
 import { ConsultationCard } from "@/components/Timeline";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
 import type { TimelineConsultation, TimelineResponse, UserStats } from "@/types";
 
@@ -212,7 +213,7 @@ export default function UserProfilePage({ params }: PageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -294,7 +295,7 @@ export default function UserProfilePage({ params }: PageProps) {
                   className={`btn btn-sm ${isBlocked ? "btn-ghost" : "btn-error btn-outline"}`}
                 >
                   {isBlockLoading ? (
-                    <img src="/static/loading/1.gif" alt="処理中" className="w-4 h-4" />
+                    <LoadingSpinner size="xs" inline />
                   ) : isBlocked ? (
                     "ブロック解除"
                   ) : (

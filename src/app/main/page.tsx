@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 
 interface LocalMessage {
   id: string;
@@ -247,7 +248,7 @@ export default function NewChatPage() {
             aria-label="送信"
           >
             {isLoading ? (
-              <img src="/static/loading/1.gif" alt="送信中" className="w-4 h-4" />
+              <LoadingSpinner size="xs" inline />
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"

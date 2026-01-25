@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useCallback, ReactNode } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { MobileDrawer, MobileBottomNav } from "@/components/MobileDrawer";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserContext } from "@/contexts/UserContext";
 import { authApi } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
@@ -72,7 +73,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
-        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }

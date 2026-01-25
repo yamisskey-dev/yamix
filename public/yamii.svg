@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+<defs>
+  <!-- 元の深みのある病みの月のグラデーション -->
+  <linearGradient id="moonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#371566;stop-opacity:1" />
+    <stop offset="45%" style="stop-color:#521873;stop-opacity:1" />
+    <stop offset="75%" style="stop-color:#7A2272;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#A32E6B;stop-opacity:0.95" />
+  </linearGradient>
+  
+  <!-- 元の鍵のグラデーション（ニューラルネットワーク用） -->
+  <linearGradient id="neuralGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" style="stop-color:#5A2C99;stop-opacity:1" />
+    <stop offset="45%" style="stop-color:#4B45B9;stop-opacity:1" />
+    <stop offset="75%" style="stop-color:#3B69B9;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#2B8AC9;stop-opacity:1" />
+  </linearGradient>
+  
+  <!-- ノード用グラデーション -->
+  <radialGradient id="nodeGradient" cx="30%" cy="30%" r="70%">
+    <stop offset="0%" style="stop-color:#7DD3FC;stop-opacity:1" />
+    <stop offset="50%" style="stop-color:#3B82F6;stop-opacity:1" />
+    <stop offset="100%" style="stop-color:#4B45B9;stop-opacity:1" />
+  </radialGradient>
+  
+  <!-- 元のダークネオングロー効果 -->
+  <filter id="darkNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+    <feColorMatrix in="blur" type="matrix" values="
+      1 0 0 0 0
+      0 1 0 0 0
+      0 0 1 0 0
+      0 0 0 4.5 -2" result="glow"/>
+    <feBlend in="SourceGraphic" in2="glow" mode="screen"/>
+  </filter>
+  
+  <!-- ニューラル用グロー -->
+  <filter id="neuralGlow" x="-50%" y="-50%" width="200%" height="200%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+    <feColorMatrix in="blur" type="matrix" values="
+      0.3 0 0 0 0.1
+      0.3 0 0 0 0.2
+      1 0 0 0 0.4
+      0 0 0 0.6 0"/>
+    <feMerge>
+      <feMergeNode/>
+      <feMergeNode in="SourceGraphic"/>
+    </feMerge>
+  </filter>
+</defs>
+
+<!-- 元の月のシルエット -->
+<g transform="translate(0.000000,320.000000) scale(0.100000,-0.100000)">
+  <path d="M1451 3139 c-233 -27 -543 -145 -706 -269 -33 -25 -87 -67 -121 -93 -64 -48 -204 -202 -274 -300 -102 -143 -208 -398 -246 -592 -27 -140 -25 -485 4 -622 31 -142 73 -257 149 -403 143 -276 353 -492 618 -634 257 -139 455 -189 740 -189 300 0 536 66 801 224 302 179 544 483 646 814 47 150 44 160 -16 60 -67 -108 -131 -183 -241 -278 -110 -96 -225 -163 -363 -209 -266 -90 -497 -89 -762 5 -239 84 -425 228 -570 438 -125 183 -184 354 -196 571 -15 285 44 504 200 741 59 89 194 224 299 298 141 99 345 178 532 205 102 15 138 16 240 6 126 -11 241 -38 338 -77 78 -31 58 -9 -57 62 -310 192 -682 280 -1015 242z" 
+    fill="url(#moonGradient)" 
+    filter="url(#darkNeonGlow)"/>
+</g>
+
+<!-- ニューラルネットワーク（さらに上に移動） -->
+<g filter="url(#neuralGlow)">
+  <!-- 接続線 -->
+  <g stroke="url(#neuralGradient)" stroke-linecap="round" fill="none">
+    <!-- メイン接続 -->
+    <path d="M180 55 L200 100 L190 145 L205 190 L180 230" stroke-width="2" opacity="0.7"/>
+    
+    <!-- サブ接続 -->
+    <path d="M200 100 L230 85" stroke-width="1.8" opacity="0.6"/>
+    <path d="M190 145 L225 135" stroke-width="1.8" opacity="0.6"/>
+    <path d="M205 190 L235 180" stroke-width="1.8" opacity="0.6"/>
+    
+    <!-- クロス接続 -->
+    <path d="M230 85 L225 135" stroke-width="1.5" opacity="0.5"/>
+    <path d="M225 135 L235 180" stroke-width="1.5" opacity="0.5"/>
+  </g>
+  
+  <!-- ノード -->
+  <circle cx="180" cy="55" r="8" fill="url(#nodeGradient)"/>
+  <circle cx="200" cy="100" r="10" fill="url(#nodeGradient)"/>
+  <circle cx="190" cy="145" r="9" fill="url(#nodeGradient)"/>
+  <circle cx="205" cy="190" r="10" fill="url(#nodeGradient)"/>
+  <circle cx="180" cy="230" r="7" fill="url(#nodeGradient)"/>
+  
+  <!-- 外側ノード -->
+  <circle cx="230" cy="85" r="6" fill="url(#nodeGradient)"/>
+  <circle cx="225" cy="135" r="6" fill="url(#nodeGradient)"/>
+  <circle cx="235" cy="180" r="6" fill="url(#nodeGradient)"/>
+</g>
+
+</svg>

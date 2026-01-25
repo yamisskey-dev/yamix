@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { ConsultationCard } from "./ConsultationCard";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 
 export function TimelineFeed() {
@@ -89,7 +90,7 @@ export function TimelineFeed() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -139,7 +140,7 @@ export function TimelineFeed() {
 
       {loadingMore && (
         <div className="flex justify-center py-4">
-          <img src="/static/loading/1.gif" alt="読み込み中" className="w-10 h-10" />
+          <LoadingSpinner size="md" />
         </div>
       )}
 

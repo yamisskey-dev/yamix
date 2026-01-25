@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/UserContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
 
 export default function SettingsPage() {
@@ -171,7 +172,7 @@ export default function SettingsPage() {
   if (!user) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <img src="/static/loading/1.gif" alt="読み込み中" className="w-16 h-16" />
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
@@ -347,7 +348,7 @@ export default function SettingsPage() {
                 disabled={isSavingPrompt}
               >
                 {isSavingPrompt ? (
-                  <img src="/static/loading/1.gif" alt="保存中" className="w-4 h-4" />
+                  <LoadingSpinner size="xs" inline />
                 ) : promptSaved ? (
                   "保存しました"
                 ) : (
@@ -372,7 +373,7 @@ export default function SettingsPage() {
             </p>
             {isLoadingBlocks ? (
               <div className="flex justify-center py-4">
-                <img src="/static/loading/1.gif" alt="読み込み中" className="w-6 h-6" />
+                <LoadingSpinner size="sm" />
               </div>
             ) : blockedUsers.length === 0 ? (
               <p className="text-sm text-base-content/40 py-4 text-center">
@@ -443,7 +444,7 @@ export default function SettingsPage() {
                     disabled={isExporting}
                   >
                     {isExporting ? (
-                      <img src="/static/loading/1.gif" alt="処理中" className="w-4 h-4" />
+                      <LoadingSpinner size="xs" inline />
                     ) : (
                       "エクスポート"
                     )}
