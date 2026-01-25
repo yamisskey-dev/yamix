@@ -280,9 +280,9 @@ export default function NewChatPage() {
               <Image
                 src="/yamii.svg"
                 alt="Yamii"
-                width={80}
-                height={80}
-                className="mb-4"
+                width={48}
+                height={48}
+                className="mb-3"
               />
               <p className="text-base-content/50 text-lg text-center">
                 今日はどうしましたか？
@@ -298,9 +298,9 @@ export default function NewChatPage() {
             <Image
               src="/yamii.svg"
               alt="Yamii"
-              width={80}
-              height={80}
-              className="mb-4"
+              width={48}
+              height={48}
+              className="mb-3"
             />
             <p className="text-base-content/50 text-lg text-center">
               今日はどうしましたか？

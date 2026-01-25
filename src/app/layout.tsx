@@ -91,13 +91,13 @@ export default async function RootLayout({
               <Suspense
                 fallback={
                   <div className="w-full h-screen flex items-center justify-center">
-                    <div className="relative w-16 h-16">
-                      <svg className="absolute inset-0 w-16 h-16 text-current opacity-25" viewBox="0 0 168 168" xmlns="http://www.w3.org/2000/svg">
+                    <div className="relative w-10 h-10">
+                      <svg className="absolute inset-0 w-10 h-10 text-current opacity-25" viewBox="0 0 168 168" xmlns="http://www.w3.org/2000/svg">
                         <g transform="matrix(1.125,0,0,1.125,12,12)">
                           <circle cx="64" cy="64" r="64" style={{ fill: "none", stroke: "currentColor", strokeWidth: "21.33px" }} />
                         </g>
                       </svg>
-                      <svg className="absolute inset-0 w-16 h-16 text-primary animate-spin" style={{ animationDuration: "0.5s" }} viewBox="0 0 168 168" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="absolute inset-0 w-10 h-10 text-primary animate-spin" style={{ animationDuration: "0.5s" }} viewBox="0 0 168 168" xmlns="http://www.w3.org/2000/svg">
                         <g transform="matrix(1.125,0,0,1.125,12,12)">
                           <path d="M128,64C128,28.654 99.346,0 64,0C99.346,0 128,28.654 128,64Z" style={{ fill: "none", stroke: "currentColor", strokeWidth: "21.33px", strokeLinecap: "round" }} />
                         </g>
