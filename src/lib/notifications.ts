@@ -51,8 +51,8 @@ export async function notifyGasReceived(
   await createNotification({
     userId: recipientId,
     type: "GAS_RECEIVED",
-    title: "灯（ともしび）を受け取りました",
-    message: `@${senderHandle}さんからあなたの回答に灯が送られました`,
+    title: "💜を受け取りました",
+    message: `@${senderHandle}さんからあなたの回答に💜が送られました`,
     linkUrl: `/main/chat/${sessionId}`,
   });
 }

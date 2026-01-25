@@ -31,7 +31,9 @@
     "test:report": "playwright show-report",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "encrypt:check": "tsx scripts/check-encryption-status.ts",
+    "encrypt:migrate": "tsx scripts/migrate-encrypt-messages.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.0.1",
@@ -64,6 +66,7 @@
     "postcss": "^8",
     "prisma": "^6.0.1",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }

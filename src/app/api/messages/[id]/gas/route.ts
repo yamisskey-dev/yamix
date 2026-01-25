@@ -6,7 +6,7 @@ import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { notifyGasReceived } from "@/lib/notifications";
 
 // Gas constants
-const GAS_TIP_AMOUNT = 3; // 灯（ともしび）の金額
+const GAS_TIP_AMOUNT = 3; // 💜の金額
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,7 +14,7 @@ interface RouteParams {
 
 /**
  * POST /api/messages/[id]/gas
- * 回答に灯（ともしび）を送る
+ * 回答に💜（ガス）を送る
  */
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {

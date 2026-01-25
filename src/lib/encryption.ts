@@ -3,7 +3,7 @@
  *
  * - AES-256-GCM による対称暗号化
  * - ユーザーごとの派生キー (PBKDF2)
- * - 後方互換性: 暗号化されていないメッセージも読める
+ * - 全メッセージは暗号化必須
  */
 
 import crypto from "crypto";
@@ -76,14 +76,15 @@ export function encryptMessage(plaintext: string, userId: string): string {
 /**
  * メッセージを復号
  *
- * @param ciphertext - 暗号化されたメッセージ（またはプレーンテキスト）
+ * @param ciphertext - 暗号化されたメッセージ
  * @param userId - ユーザーID（キー派生に使用）
  * @returns 復号されたメッセージ
+ * @throws 暗号化されていないメッセージの場合はエラー
  */
 export function decryptMessage(ciphertext: string, userId: string): string {
-  // 暗号化されていないメッセージはそのまま返す（後方互換性）
+  // 暗号化されていないメッセージはエラー
   if (!ciphertext.startsWith(ENCRYPTED_PREFIX)) {
-    return ciphertext;
+    throw new Error("Message is not encrypted. Run migration script to encrypt existing data.");
   }
 
   const key = deriveUserKey(userId);

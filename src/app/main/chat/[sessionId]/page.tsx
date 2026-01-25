@@ -233,14 +233,14 @@ export default function ChatSessionPage({ params }: PageProps) {
             m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
           )
         );
-        toast.success("灯を送りました（3 YAMI）");
+        toast.success("💜を送りました（3 YAMI）");
       } else {
         const data = await res.json();
-        toast.error(data.error || "灯の送信に失敗しました");
+        toast.error(data.error || "💜の送信に失敗しました");
       }
     } catch (error) {
       console.error("Send gas error:", error);
-      toast.error("灯の送信に失敗しました");
+      toast.error("💜の送信に失敗しました");
     }
   };
 

@@ -676,8 +676,8 @@ HTTPステータスコード:
       "/api/messages/{id}/gas": {
         post: {
           tags: ["Messages"],
-          summary: "ガス（灯）を送る",
-          description: "回答に対してガス（感謝の追加報酬）を送ります",
+          summary: "💜（ガス）を送る",
+          description: "回答に対して💜（感謝の追加報酬）を送ります",
           security: [{ cookieAuth: [] }],
           parameters: [
             {
@@ -1529,7 +1529,7 @@ HTTPステータスコード:
             isCrisis: { type: "boolean", description: "危機検出フラグ" },
             responderId: { type: "string", nullable: true, description: "人間回答者のID" },
             isAnonymous: { type: "boolean" },
-            gasAmount: { type: "integer", description: "受け取った灯（ともしび）の合計" },
+            gasAmount: { type: "integer", description: "受け取った💜の合計" },
             responder: {
               nullable: true,
               allOf: [{ $ref: "#/components/schemas/User" }],
