@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
           },
           messages: {
             orderBy: { createdAt: "asc" },
+            take: 100,
             include: {
               responder: {
                 include: {

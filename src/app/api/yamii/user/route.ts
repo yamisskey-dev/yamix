@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { yamiiClient } from "@/lib/yamii-client";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     const profile = await yamiiClient.getUserProfile(payload.userId);
     return NextResponse.json(profile);
   } catch (error) {
-    console.error("Failed to get yamii user profile:", error);
+    logger.error("Failed to get yamii user profile:", {}, error);
     // Return default profile if user doesn't exist yet
     return NextResponse.json({
       user_id: payload.userId,
@@ -65,7 +66,7 @@ export async function PATCH(req: NextRequest) {
     });
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Failed to update yamii user profile:", error);
+    logger.error("Failed to update yamii user profile:", {}, error);
     return NextResponse.json(
       { error: "Failed to update profile" },
       { status: 500 }
@@ -96,7 +97,7 @@ export async function DELETE(req: NextRequest) {
     const result = await yamiiClient.deleteUserData(payload.userId);
     return NextResponse.json(result);
   } catch (error) {
-    console.error("Failed to delete yamii user data:", error);
+    logger.error("Failed to delete yamii user data:", {}, error);
     return NextResponse.json(
       { error: "Failed to delete data" },
       { status: 500 }

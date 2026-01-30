@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       allowDirectedConsult: (profile as { allowDirectedConsult?: boolean })?.allowDirectedConsult ?? false,
     });
   } catch (error) {
-    console.error("Get profile error:", error);
+    logger.error("Get profile error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

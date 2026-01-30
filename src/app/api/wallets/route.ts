@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { processDailyEconomy, getEquilibriumBalance } from "@/lib/economy";
+import { logger } from "@/lib/logger";
 
 // GET /api/wallets - Get current user's wallet (single wallet per user)
 // 日次経済処理（BI付与・減衰）を自動実行
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(wallet);
     }
   } catch (error) {
-    console.error("Get wallet error:", error);
+    logger.error("Get wallet error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

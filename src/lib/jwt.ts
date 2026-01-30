@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET ||
     : "yamix-dev-secret-key");
 const JWT_ISSUER = "yamix";
 const JWT_AUDIENCE = "yamix-users";
-const JWT_EXPIRY = "30d"; // 30 days
+const JWT_EXPIRY = "7d"; // 7 days
 
 export interface JWTPayload {
   sub: string; // user handle
@@ -37,7 +37,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload | null> {
     });
     return payload as unknown as JWTPayload;
   } catch (error) {
-    console.error("JWT verification failed:", error);
+    // JWT verification failure is expected for expired/invalid tokens - no logging needed
     return null;
   }
 }
@@ -55,7 +55,7 @@ export function getTokenFromCookie(cookieHeader: string | null): string | null {
 }
 
 export function createTokenCookie(token: string): string {
-  const maxAge = 30 * 24 * 60 * 60; // 30 days in seconds
+  const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
   return `yamix-token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${
     process.env.NODE_ENV === "production" ? "; Secure" : ""
   }`;

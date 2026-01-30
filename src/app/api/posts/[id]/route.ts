@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -116,7 +117,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Get post error:", error);
+    logger.error("Get post error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -185,7 +186,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
       return new NextResponse(null, { status: 204 });
     }
   } catch (error) {
-    console.error("Delete post error:", error);
+    logger.error("Delete post error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

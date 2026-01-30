@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { getUserStats } from "@/lib/stats";
 import { prisma, isPrismaAvailable } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/stats - ユーザーの使用統計と依存度を取得
@@ -98,7 +99,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error("Get stats error:", error);
+    logger.error("Get stats error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

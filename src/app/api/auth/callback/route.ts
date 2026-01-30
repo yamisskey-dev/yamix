@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { RedisService } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 import { createJWT, createTokenCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
 
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     if (!userKeyRes.ok) {
       const errorText = await userKeyRes.text();
-      console.error("Failed to get userkey:", errorText);
+      logger.error("Failed to get userkey:", { detail: errorText });
       return NextResponse.json(
         { error: "Failed to authenticate with Misskey" },
         { status: 401 }
@@ -241,7 +242,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Callback error:", error);
+    logger.error("Callback error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

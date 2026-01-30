@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { isPrismaAvailable } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import {
   getEconomyConfig,
   getEquilibriumBalance,
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
       personalStatus,
     });
   } catch (error) {
-    console.error("Get economy config error:", error);
+    logger.error("Get economy config error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
       finalBalance: result.finalBalance,
     });
   } catch (error) {
-    console.error("Process daily economy error:", error);
+    logger.error("Process daily economy error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
+import { logger } from "@/lib/logger";
 
 // POST /api/tokens/purchase - Initiate YAMI purchase with Optimism ETH
 export async function POST(req: NextRequest) {
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
       }, { status: 201 });
     }
   } catch (error) {
-    console.error("YAMI purchase error:", error);
+    logger.error("YAMI purchase error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -164,7 +165,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([]);
     }
   } catch (error) {
-    console.error("Get purchase history error:", error);
+    logger.error("Get purchase history error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

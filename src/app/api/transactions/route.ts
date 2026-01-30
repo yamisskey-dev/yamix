@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
+import { logger } from "@/lib/logger";
 
 // POST /api/transactions - Send tokens to a post (reaction)
 export async function POST(req: NextRequest) {
@@ -159,7 +160,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(transaction, { status: 201 });
     }
   } catch (error) {
-    console.error("Create transaction error:", error);
+    logger.error("Create transaction error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -194,7 +195,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(transactions);
     }
   } catch (error) {
-    console.error("Get transactions error:", error);
+    logger.error("Get transactions error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

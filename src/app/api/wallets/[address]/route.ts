@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ address: string }>;
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       });
     }
   } catch (error) {
-    console.error("Get wallet error:", error);
+    logger.error("Get wallet error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

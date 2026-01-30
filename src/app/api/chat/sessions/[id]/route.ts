@@ -63,6 +63,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           },
           messages: {
             orderBy: { createdAt: "asc" },
+            take: 200,
             include: {
               responder: {
                 include: {

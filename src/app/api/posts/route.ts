@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
+import { logger } from "@/lib/logger";
 
 // GET /api/posts - Get all posts (with pagination)
 export async function GET(req: NextRequest) {
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
       });
     }
   } catch (error) {
-    console.error("Get posts error:", error);
+    logger.error("Get posts error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -315,7 +316,7 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error) {
-    console.error("Create post error:", error);
+    logger.error("Create post error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

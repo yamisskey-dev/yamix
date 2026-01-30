@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { yamiiClient } from "@/lib/yamii-client";
 import type { ConversationMessage } from "@/types";
+import { logger } from "@/lib/logger";
 
 interface CounselingRequest {
   message: string;
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Yamii API error:", error);
+    logger.error("Yamii API error:", {}, error);
 
     // Return fallback response when yamii is unavailable
     return NextResponse.json({

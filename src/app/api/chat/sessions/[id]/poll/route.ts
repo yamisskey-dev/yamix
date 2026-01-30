@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { decryptMessage } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -110,7 +111,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }));
 
     return NextResponse.json({ messages });
-  } catch {
+  } catch (error) {
+    logger.error("Poll error", { sessionId: id }, error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

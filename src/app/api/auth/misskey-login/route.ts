@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { RedisService } from "@/lib/redis";
 import { detectInstance, isMisskeyLike } from "@/lib/detect-instance";
+import { logger } from "@/lib/logger";
 import type { MiAuthSession } from "@/types";
 
 const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
 
       if (!createAppRes.ok) {
         const errorText = await createAppRes.text();
-        console.error("Failed to create Misskey app:", errorText);
+        logger.error("Failed to create Misskey app:", { detail: errorText });
         return NextResponse.json(
           { error: `Failed to create app on instance: ${errorText}` },
           { status: 500 }
@@ -172,7 +173,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(authSession);
   } catch (error) {
-    console.error("Misskey login error:", error);
+    logger.error("Misskey login error:", {}, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
