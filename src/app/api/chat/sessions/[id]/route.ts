@@ -243,6 +243,19 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       }
 
       if (body.consultType !== undefined) {
+        // crisis非公開化されたセッションは再公開禁止
+        if (body.consultType !== "PRIVATE") {
+          const hasCrisis = await db.chatMessage.findFirst({
+            where: { sessionId: id, isCrisis: true },
+            select: { id: true },
+          });
+          if (hasCrisis) {
+            return NextResponse.json(
+              { error: "安全上の理由により、この相談は非公開から変更できません" },
+              { status: 403 }
+            );
+          }
+        }
         updateData.consultType = body.consultType;
       }
 
@@ -269,6 +282,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       }
 
       if (body.consultType !== undefined) {
+        // crisis非公開化されたセッションは再公開禁止
+        if (body.consultType !== "PRIVATE") {
+          const hasCrisis = Array.from(chatMessagesStore.values()).some(
+            (m) => m.sessionId === id && m.isCrisis
+          );
+          if (hasCrisis) {
+            return NextResponse.json(
+              { error: "安全上の理由により、この相談は非公開から変更できません" },
+              { status: 403 }
+            );
+          }
+        }
         session.consultType = body.consultType;
       }
 
