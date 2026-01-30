@@ -5,6 +5,7 @@ import type {
 } from "@/types";
 
 const YAMII_API_URL = process.env.YAMII_API_URL || "http://localhost:8000";
+const YAMII_API_KEY = process.env.YAMII_API_KEY || "";
 
 export class YamiiClient {
   private baseUrl: string;
@@ -12,7 +13,7 @@ export class YamiiClient {
 
   constructor(baseUrl?: string, apiKey?: string) {
     this.baseUrl = baseUrl || YAMII_API_URL;
-    this.apiKey = apiKey;
+    this.apiKey = apiKey || YAMII_API_KEY || undefined;
   }
 
   private async request<T>(

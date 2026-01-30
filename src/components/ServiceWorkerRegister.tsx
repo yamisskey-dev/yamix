@@ -17,7 +17,7 @@ export function ServiceWorkerRegister() {
       navigator.serviceWorker
         .register("/sw.js")
         .then((registration) => {
-          logger.info("Service Worker registered", {
+          logger.debug("Service Worker registered", {
             scope: registration.scope,
           });
 
@@ -31,7 +31,7 @@ export function ServiceWorkerRegister() {
                   navigator.serviceWorker.controller
                 ) {
                   // 新しいバージョンが利用可能
-                  logger.info("New version available");
+                  logger.debug("New version available");
                 }
               });
             }

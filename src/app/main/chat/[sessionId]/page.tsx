@@ -449,7 +449,8 @@ export default function ChatSessionPage({ params }: PageProps) {
               for (const line of lines) {
                 const trimmed = line.trim();
                 if (!trimmed || !trimmed.startsWith("data: ")) continue;
-                const dataStr = trimmed.slice(6);
+                const dataStr = trimmed.slice(6).trim();
+                if (!dataStr || !dataStr.startsWith("{")) continue;
                 try {
                   const event = JSON.parse(dataStr);
 
