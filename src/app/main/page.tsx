@@ -149,16 +149,26 @@ export default function NewChatPage() {
         throw new Error("メッセージの送信に失敗しました");
       }
 
-      const data = await msgRes.json();
-
-      if (data.isCrisis && typeof window !== "undefined") {
-        const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-        if (!disabled) {
-          setShowCrisisAlert(true);
+      // Response may be SSE stream or JSON depending on consultType.
+      // We don't need to process the stream here — just navigate to the session page.
+      // The session page will handle displaying the streamed response.
+      const contentType = msgRes.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        // Non-streaming JSON response (PUBLIC/DIRECTED without @yamii)
+        try {
+          const data = await msgRes.json();
+          if (data.isCrisis && typeof window !== "undefined") {
+            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+            if (!disabled) {
+              setShowCrisisAlert(true);
+            }
+          }
+        } catch {
+          // Ignore parse errors
         }
       }
 
-      // Navigate to the session page (this preserves the conversation)
+      // Navigate to the session page
       router.push(`/main/chat/${session.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
