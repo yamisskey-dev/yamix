@@ -50,6 +50,13 @@ export async function GET(req: NextRequest) {
               { account: { contains: query, mode: "insensitive" } },
             ],
           },
+          // 指名相談を受け付けないユーザーを除外
+          {
+            OR: [
+              { profile: { allowDirectedConsult: true } },
+              { profile: null }, // プロフィール未作成はデフォルトで許可
+            ],
+          },
         ],
       },
       take: 10,

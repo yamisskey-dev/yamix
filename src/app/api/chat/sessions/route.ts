@@ -303,6 +303,25 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // オプトアウトチェック: 指名相談を受け付けないユーザーを除外
+        const optedOutProfiles = await db.profile.findMany({
+          where: {
+            userId: { in: targetUserIds },
+            allowDirectedConsult: false,
+          },
+          select: { userId: true },
+        });
+        if (optedOutProfiles.length > 0) {
+          const optedOutIds = new Set(optedOutProfiles.map((p) => p.userId));
+          targetUserIds = targetUserIds.filter((id) => !optedOutIds.has(id));
+          if (targetUserIds.length === 0) {
+            return NextResponse.json(
+              { error: "指名先のユーザーは指名相談を受け付けていません" },
+              { status: 400 }
+            );
+          }
+        }
+
       }
 
       const session = await db.chatSession.create({

@@ -36,6 +36,8 @@ export default function SettingsPage() {
     } | null;
   }>>([]);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(true);
+  const [allowDirectedConsult, setAllowDirectedConsult] = useState(true);
+  const [isSavingDirected, setIsSavingDirected] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -53,6 +55,42 @@ export default function SettingsPage() {
     };
     fetchProfile();
   }, []);
+
+  // 指名相談設定を取得
+  useEffect(() => {
+    const fetchDirectedSetting = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.allowDirectedConsult !== undefined) {
+            setAllowDirectedConsult(data.allowDirectedConsult);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch directed setting:", error);
+      }
+    };
+    fetchDirectedSetting();
+  }, []);
+
+  const handleToggleDirectedConsult = async (value: boolean) => {
+    setIsSavingDirected(true);
+    try {
+      const res = await fetch("/api/auth/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allowDirectedConsult: value }),
+      });
+      if (res.ok) {
+        setAllowDirectedConsult(value);
+      }
+    } catch (error) {
+      console.error("Failed to update directed setting:", error);
+    } finally {
+      setIsSavingDirected(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBlockedUsers = async () => {
@@ -417,6 +455,32 @@ export default function SettingsPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Directed Consultation Opt-out */}
+        <div className="card bg-base-200">
+          <div className="card-body p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-medium flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-accent">
+                    <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
+                  </svg>
+                  指名相談を受け付ける
+                </h2>
+                <p className="text-xs text-base-content/60 mt-1">
+                  オフにすると、他のユーザーからの指名相談が届かなくなります
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                className="toggle toggle-sm toggle-primary"
+                checked={allowDirectedConsult}
+                disabled={isSavingDirected}
+                onChange={(e) => handleToggleDirectedConsult(e.target.checked)}
+              />
+            </div>
           </div>
         </div>
 

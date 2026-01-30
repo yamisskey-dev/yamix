@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
   const token = getTokenFromCookie(req.headers.get("cookie"));
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
       displayName: profile?.displayName,
       avatarUrl: profile?.avatarUrl,
       ethAddress: user.ethAddress,
+      allowDirectedConsult: (profile as { allowDirectedConsult?: boolean })?.allowDirectedConsult ?? true,
     });
   } catch (error) {
     console.error("Get profile error:", error);
@@ -78,5 +80,47 @@ export async function GET(req: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+// PATCH /api/auth/me - Update profile settings
+export async function PATCH(req: NextRequest) {
+  const token = getTokenFromCookie(req.headers.get("cookie"));
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const payload = await verifyJWT(token);
+  if (!payload) {
+    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  }
+
+  let body: { allowDirectedConsult?: boolean };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  try {
+    if (isPrismaAvailable() && prisma) {
+      await prisma.profile.update({
+        where: { userId: payload.userId },
+        data: {
+          ...(body.allowDirectedConsult !== undefined && { allowDirectedConsult: body.allowDirectedConsult }),
+        },
+      });
+    } else {
+      const profile = memoryDB.profiles.get(payload.userId);
+      if (profile && body.allowDirectedConsult !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (profile as any).allowDirectedConsult = body.allowDirectedConsult;
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logger.error("Update profile error", {}, error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
