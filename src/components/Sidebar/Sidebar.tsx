@@ -42,7 +42,7 @@ function NavItem({
         aria-current={isActive ? "page" : undefined}
       >
         <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
-        <span className="text-[13px] font-medium flex-1">{label}</span>
+        <span className="text-[13px] font-medium flex-1 text-left">{label}</span>
         {indicator && (
           <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
         )}
