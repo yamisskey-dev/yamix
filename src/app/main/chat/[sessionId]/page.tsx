@@ -390,24 +390,12 @@ export default function ChatSessionPage({ params }: PageProps) {
 
           setMessages((prev) => [...prev, userMsg, aiMessage]);
         } else {
-          // Human response - get current user info for display
-          const meRes = await fetch("/api/auth/me");
-          const currentUser = meRes.ok ? await meRes.json() : null;
-
-          // Add the response as an assistant message with responder info
+          // Add the response as own message (right-aligned, no avatar)
           const responseMessage: LocalMessage = {
             id: data.message.id,
-            role: "assistant",
+            role: "user",
             content: responseContent,
             timestamp: new Date(),
-            responder: currentUser ? {
-              displayName: isAnonymousResponse
-                ? "あなた (匿名)"  // Show as "You (anonymous)" for current user
-                : currentUser.profile?.displayName || null,
-              avatarUrl: isAnonymousResponse ? null : currentUser.profile?.avatarUrl || null,
-              isAnonymous: isAnonymousResponse,
-              handle: isAnonymousResponse ? undefined : currentUser.handle,
-            } : null,
           };
 
           setMessages((prev) => [...prev, responseMessage]);
