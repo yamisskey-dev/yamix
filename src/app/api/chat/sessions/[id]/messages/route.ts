@@ -339,8 +339,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return { userMsg, assistantMsg, shouldHide };
       });
 
-      // Notify directed targets on first message
-      if (isFirstMessage && session.consultType === "DIRECTED" && db) {
+      // Notify directed targets on first message (skip if crisis-privatized)
+      if (isFirstMessage && session.consultType === "DIRECTED" && db && !result.shouldHide) {
         const targets = await db.chatSessionTarget.findMany({
           where: { sessionId },
           select: { userId: true },
@@ -353,6 +353,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             session.isAnonymous
           );
         }
+      }
+
+      // Crisis非公開化時: 非オーナーへの通知を削除
+      if (result.shouldHide && db) {
+        await db.notification.deleteMany({
+          where: {
+            linkUrl: { contains: `/main/chat/${sessionId}` },
+            userId: { not: payload.userId },
+          },
+        });
       }
 
       // Return decrypted content to client

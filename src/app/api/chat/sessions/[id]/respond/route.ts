@@ -336,6 +336,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           data: sessionUpdate,
         });
 
+        // Crisis非公開化時: 非オーナーへの通知を削除（サイドバーからも消えるため導線を断つ）
+        if (shouldHide) {
+          await tx.notification.deleteMany({
+            where: {
+              linkUrl: { contains: `/main/chat/${id}` },
+              userId: { not: sessionWithMessages.userId },
+            },
+          });
+        }
+
         // 5. Calculate today's reward total
         const todayRewards = await tx.transaction.findMany({
           where: {

@@ -115,6 +115,8 @@ export async function GET(req: NextRequest) {
         .map((t) => t.session)
         .filter((s) => {
           if (ownedIds.has(s.id)) return false;
+          // モデレーション非公開化されたセッションは指名先に表示しない
+          if (s.consultType === "PRIVATE" && (s._count?.messages ?? 0) > 0) return false;
           directedSessionIds.add(s.id);
           return true;
         });
