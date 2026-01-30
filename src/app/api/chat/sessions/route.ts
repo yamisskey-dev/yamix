@@ -227,10 +227,12 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        // 自分自身を除外
-        targetUserIds = targetUsers
-          .filter((u) => u.id !== payload.userId)
-          .map((u) => u.id);
+        // 自分自身を除外 + 重複排除
+        targetUserIds = [...new Set(
+          targetUsers
+            .filter((u) => u.id !== payload.userId)
+            .map((u) => u.id)
+        )];
 
         if (targetUserIds.length === 0) {
           return NextResponse.json(

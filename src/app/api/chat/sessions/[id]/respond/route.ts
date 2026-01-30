@@ -122,7 +122,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
         if (!isTarget) {
           return NextResponse.json(
-            { error: "この指名相談への回答権限がありません" },
+            { error: "この相談には回答できません" },
             { status: 403 }
           );
         }
@@ -385,8 +385,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
 
+      // DIRECTED: in-memory target check (limited - no target store in memory)
+      // In production this path is rarely used; deny non-PUBLIC/non-owner access for safety
+      if (session.consultType === "DIRECTED") {
+        return NextResponse.json(
+          { error: "この相談には回答できません" },
+          { status: 403 }
+        );
+      }
+
       // Check if responder is blocked by session owner
-      const blockKey = `${session.userId}_${payload.userId}`;
       const isBlocked = Array.from(memoryDB.userBlocks.values()).some(
         (block) => block.blockerId === session.userId && block.blockedId === payload.userId
       );

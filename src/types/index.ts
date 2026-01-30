@@ -381,6 +381,7 @@ export interface ChatSessionWithMessages extends ChatSession {
     avatarUrl: string | null;
   } | null;
   messages: ChatMessage[];
+  targets?: { userId: string; handle: string; displayName: string | null }[];
 }
 
 // サイドバー用の軽量セッション情報

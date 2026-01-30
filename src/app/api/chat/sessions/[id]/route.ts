@@ -9,7 +9,7 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   category: string | null;
   isPublic: boolean; // DEPRECATED
@@ -71,6 +71,15 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
               },
             },
           },
+          targets: {
+            include: {
+              user: {
+                include: {
+                  profile: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -78,12 +87,27 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      // Check authorization: owner can access any session, others can only access PUBLIC sessions
+      // Check authorization: owner, PUBLIC viewers, or DIRECTED targets
       const isOwner = session.userId === payload.userId;
       const isPublic = session.consultType === "PUBLIC";
 
       if (!isOwner && !isPublic) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+        // DIRECTED: allow target users
+        if (session.consultType === "DIRECTED") {
+          const isTarget = await db.chatSessionTarget.findUnique({
+            where: {
+              sessionId_userId: {
+                sessionId: id,
+                userId: payload.userId,
+              },
+            },
+          });
+          if (!isTarget) {
+            return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+          }
+        } else {
+          return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+        }
       }
 
       // Format response with user info (decrypt messages for client)
@@ -105,6 +129,11 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
             avatarUrl: m.responder.profile?.avatarUrl || null,
           } : null,
         })),
+        targets: session.consultType === "DIRECTED" ? session.targets.map((t) => ({
+          userId: t.userId,
+          handle: t.user.handle,
+          displayName: t.user.profile?.displayName || null,
+        })) : undefined,
       });
     } else {
       // In-memory fallback
@@ -114,11 +143,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Session not found" }, { status: 404 });
       }
 
-      // Check authorization: owner can access any session, others can only access PUBLIC sessions
+      // Check authorization: owner, PUBLIC viewers, or DIRECTED targets
       const isOwner = session.userId === payload.userId;
       const isPublic = session.consultType === "PUBLIC";
 
       if (!isOwner && !isPublic) {
+        // DIRECTED: in-memory target check not available, deny access
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
 

@@ -86,11 +86,14 @@ export default function NewChatPage() {
   };
 
   const removeTargetUser = (handle: string) => {
-    setTargetUsers((prev) => prev.filter((u) => u.handle !== handle));
-    if (targetUsers.length <= 1) {
-      setConsultType("PUBLIC");
-      setShowUserSearch(false);
-    }
+    setTargetUsers((prev) => {
+      const updated = prev.filter((u) => u.handle !== handle);
+      if (updated.length === 0) {
+        setConsultType("PUBLIC");
+        setShowUserSearch(false);
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -371,6 +374,11 @@ export default function NewChatPage() {
             </ul>
           )}
         </div>
+      )}
+      {consultType === "DIRECTED" && targetUsers.length === 0 && (
+        <p className="text-xs text-center text-warning mt-2">
+          指名先を1人以上選択してください
+        </p>
       )}
       <p className="text-xs text-center text-base-content/40 mt-2">
         Shift + Enter で改行

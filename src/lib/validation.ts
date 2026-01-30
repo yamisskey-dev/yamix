@@ -10,7 +10,7 @@ export const createChatSessionSchema = z.object({
   isAnonymous: z.boolean().default(false),
   allowAnonymousResponses: z.boolean().default(true),
   category: z.string().max(50).nullable().optional(),
-  targetUserHandles: z.array(z.string().min(1).max(100)).optional(),
+  targetUserHandles: z.array(z.string().min(1).max(100)).max(20).optional(),
 }).refine(
   (data) => data.consultType !== "DIRECTED" || (data.targetUserHandles && data.targetUserHandles.length > 0),
   { message: "指名相談には1人以上の指名先が必要です", path: ["targetUserHandles"] }

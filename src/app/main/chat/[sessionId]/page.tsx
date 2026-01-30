@@ -56,6 +56,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     currentUserId: string | null;
     title: string | null;
     responseCount: number;
+    targets?: { userId: string; handle: string; displayName: string | null }[];
   } | null>(null);
 
   // Fetch session data
@@ -94,6 +95,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           currentUserId,
           title: session.title,
           responseCount,
+          targets: session.targets,
         });
 
         // Build anonymous user map (User A, B, C, etc.)
@@ -272,9 +274,9 @@ export default function ChatSessionPage({ params }: PageProps) {
     if (!inputValue.trim() || isLoading || !sessionInfo) return;
 
     const isOwner = sessionInfo.isOwner;
-    const isPublic = sessionInfo.consultType === "PUBLIC";
+    const canRespond = sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED";
 
-    // For owner or when responding to public consultation
+    // For owner or when responding to public/directed consultation
     if (isOwner) {
       // Owner posting a message (could be question or follow-up)
       const userMessage: LocalMessage = {
@@ -326,8 +328,8 @@ export default function ChatSessionPage({ params }: PageProps) {
       } finally {
         setIsLoading(false);
       }
-    } else if (isPublic) {
-      // Non-owner responding to public consultation
+    } else if (canRespond) {
+      // Non-owner responding to public/directed consultation
       const responseContent = inputValue.trim();
       setInputValue("");
       setIsLoading(true);
@@ -461,7 +463,17 @@ export default function ChatSessionPage({ params }: PageProps) {
       {/* Header */}
       {sessionInfo && sessionInfo.title && (
         <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
-          <h1 className="text-sm font-medium truncate flex-1">{sessionInfo.title}</h1>
+          <div className="flex items-center gap-2 truncate flex-1">
+            <h1 className="text-sm font-medium truncate">{sessionInfo.title}</h1>
+            {sessionInfo.consultType === "DIRECTED" && sessionInfo.targets && (
+              <span className="badge badge-accent badge-xs gap-1 shrink-0" title={`指名先: ${sessionInfo.targets.map((t) => t.displayName || `@${t.handle}`).join(", ")}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                  <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
+                </svg>
+                {sessionInfo.targets.length}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <BookmarkButton sessionId={sessionId} />
             {sessionInfo.isOwner && (
@@ -568,7 +580,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
               {/* Left side: Options (anonymous response for non-owners in public consultations) */}
               <div className="flex items-center gap-1">
-                {sessionInfo && !sessionInfo.isOwner && sessionInfo.consultType === "PUBLIC" && (
+                {sessionInfo && !sessionInfo.isOwner && (sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED") && (
                   <button
                     type="button"
                     className={`btn btn-xs gap-1 ${
@@ -630,8 +642,8 @@ export default function ChatSessionPage({ params }: PageProps) {
         ref={deleteModalRef}
         title="相談を削除"
         body={
-          sessionInfo?.consultType === "PUBLIC" && sessionInfo.responseCount > 0
-            ? `この公開相談には${sessionInfo.responseCount}件の回答があります。\n削除すると他のユーザーの回答も消えます。\n\nこの操作は取り消せません。\n\n本当に削除しますか？`
+          sessionInfo && (sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED") && sessionInfo.responseCount > 0
+            ? `この相談には${sessionInfo.responseCount}件の回答があります。\n削除すると他のユーザーの回答も消えます。\n\nこの操作は取り消せません。\n\n本当に削除しますか？`
             : `この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`
         }
         confirmText={isDeleting ? "削除中..." : "削除する"}
