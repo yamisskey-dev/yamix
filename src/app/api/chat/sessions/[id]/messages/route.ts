@@ -53,6 +53,17 @@ function generateTitle(message: string): string {
   return title.slice(0, 50) + (title.length > 50 ? "..." : "");
 }
 
+// Simple crisis keyword check for messages without AI response
+const CRISIS_KEYWORDS = [
+  "死にたい", "死のう", "自殺", "殺して", "消えたい",
+  "生きていたくない", "もう終わり", "飛び降り", "首を吊",
+  "リストカット", "ODした", "薬を大量",
+];
+function checkCrisisKeywords(message: string): boolean {
+  const lower = message.toLowerCase();
+  return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 // Check if message starts with @yamii mention
 function hasMentionYamii(message: string): boolean {
   return /^@yamii(\s|$)/i.test(message.trim());
@@ -210,6 +221,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       ((session.consultType === "PUBLIC" || session.consultType === "DIRECTED") && hasYamiiMention);
 
     let yamiiResponse = null;
+    // For PUBLIC/DIRECTED without @yamii mention, run moderation-only check
+    let moderationCrisis = false;
     if (shouldCallYamii) {
       try {
         // Remove @yamii mention before sending to Yamii (keep it in stored message)
@@ -231,6 +244,19 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
           { status: 503 }
         );
+      }
+    } else if (session.consultType === "PUBLIC" || session.consultType === "DIRECTED") {
+      // Auto-moderation: check for crisis content via Yamii without generating a visible response
+      try {
+        const moderationResult = await yamiiClient.sendCounselingMessage(
+          userMessage,
+          payload.userId,
+          { sessionId }
+        );
+        moderationCrisis = moderationResult.is_crisis;
+      } catch {
+        // Moderation failure is non-blocking; fall back to keyword check
+        moderationCrisis = checkCrisisKeywords(userMessage);
       }
     }
 
@@ -271,7 +297,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             sessionId,
             role: "USER",
             content: encryptedUserContent,
-            isCrisis: false,
+            isCrisis: moderationCrisis,
           },
         });
 
@@ -331,7 +357,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           ? { ...result.assistantMsg, content: yamiiResponse?.response || "" }
           : null,
         response: yamiiResponse?.response || null,
-        isCrisis: yamiiResponse?.is_crisis || false,
+        isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
       });
     } else {
@@ -354,7 +380,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         sessionId,
         role: "USER" as const,
         content: encryptedUserContent,
-        isCrisis: false,
+        isCrisis: moderationCrisis,
         createdAt: now,
       };
       chatMessagesStore.set(userMsg.id, userMsg);
@@ -389,7 +415,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           ? { ...assistantMsg, content: yamiiResponse?.response || "" }
           : null,
         response: yamiiResponse?.response || null,
-        isCrisis: yamiiResponse?.is_crisis || false,
+        isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
       });
     }

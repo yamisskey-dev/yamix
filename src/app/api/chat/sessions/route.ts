@@ -282,6 +282,27 @@ export async function POST(req: NextRequest) {
             { status: 400 }
           );
         }
+
+        // ブロックチェック: targetが自分をブロックしていないか確認
+        const blocks = await db.userBlock.findMany({
+          where: {
+            blockerId: { in: targetUserIds },
+            blockedId: payload.userId,
+          },
+          select: { blockerId: true },
+        });
+        if (blocks.length > 0) {
+          // ブロックしているユーザーを除外
+          const blockedByIds = new Set(blocks.map((b) => b.blockerId));
+          targetUserIds = targetUserIds.filter((id) => !blockedByIds.has(id));
+          if (targetUserIds.length === 0) {
+            return NextResponse.json(
+              { error: "指名先のユーザーに相談を送れません" },
+              { status: 400 }
+            );
+          }
+        }
+
       }
 
       const session = await db.chatSession.create({
