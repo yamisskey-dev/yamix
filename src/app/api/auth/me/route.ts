@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       displayName: profile?.displayName,
       avatarUrl: profile?.avatarUrl,
       ethAddress: user.ethAddress,
-      allowDirectedConsult: (profile as { allowDirectedConsult?: boolean })?.allowDirectedConsult ?? true,
+      allowDirectedConsult: (profile as { allowDirectedConsult?: boolean })?.allowDirectedConsult ?? false,
     });
   } catch (error) {
     console.error("Get profile error:", error);

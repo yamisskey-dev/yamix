@@ -51,12 +51,7 @@ export async function GET(req: NextRequest) {
             ],
           },
           // 指名相談を受け付けないユーザーを除外
-          {
-            OR: [
-              { profile: { allowDirectedConsult: true } },
-              { profile: null }, // プロフィール未作成はデフォルトで許可
-            ],
-          },
+          { profile: { allowDirectedConsult: true } },
         ],
       },
       take: 10,

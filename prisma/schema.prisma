@@ -63,7 +63,7 @@ model Profile {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   displayName          String?
   avatarUrl            String?
-  allowDirectedConsult Boolean  @default(true) // 指名相談を受け付けるか
+  allowDirectedConsult Boolean  @default(false) // 指名相談を受け付けるか（デフォルト: 拒否）
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

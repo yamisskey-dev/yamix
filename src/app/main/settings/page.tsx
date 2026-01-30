@@ -36,7 +36,7 @@ export default function SettingsPage() {
     } | null;
   }>>([]);
   const [isLoadingBlocks, setIsLoadingBlocks] = useState(true);
-  const [allowDirectedConsult, setAllowDirectedConsult] = useState(true);
+  const [allowDirectedConsult, setAllowDirectedConsult] = useState(false);
   const [isSavingDirected, setIsSavingDirected] = useState(false);
 
   useEffect(() => {
