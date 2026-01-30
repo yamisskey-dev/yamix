@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
+import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { decryptMessage } from "@/lib/encryption";
@@ -13,7 +14,7 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   createdAt: Date;
 }
@@ -37,15 +38,33 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get("limit") || "20");
   const cursor = searchParams.get("cursor");
 
+  // Optional auth - if logged in, also show DIRECTED sessions targeting this user
+  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const payload = token ? await verifyJWT(token) : null;
+
   try {
     const db = getPrismaClient();
 
     if (db) {
-      // Get all messages from public sessions, ordered by creation time
+      // Build session filter: PUBLIC + DIRECTED sessions targeting this user
+      const sessionFilter: Record<string, unknown>[] = [{ consultType: "PUBLIC" }];
+      if (payload) {
+        sessionFilter.push({
+          consultType: "DIRECTED",
+          targets: { some: { userId: payload.userId } },
+        });
+        // Also show DIRECTED sessions owned by this user
+        sessionFilter.push({
+          consultType: "DIRECTED",
+          userId: payload.userId,
+        });
+      }
+
+      // Get all messages from visible sessions, ordered by creation time
       const messages = await db.chatMessage.findMany({
         where: {
           session: {
-            consultType: "PUBLIC",
+            OR: sessionFilter,
           },
         },
         orderBy: { createdAt: "desc" },

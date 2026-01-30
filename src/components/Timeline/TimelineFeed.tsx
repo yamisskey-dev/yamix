@@ -119,7 +119,7 @@ export function TimelineFeed() {
           draggable={false}
         />
         <h3 className="text-lg font-medium text-base-content/70 mb-2">
-          公開相談がありません
+          相談がありません
         </h3>
       </div>
     );
