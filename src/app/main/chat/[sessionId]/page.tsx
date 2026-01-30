@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, use } from "react";
+import { useState, useRef, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
@@ -30,6 +30,7 @@ interface LocalMessage {
   timestamp: Date;
   responder?: ResponderInfo | null;
   gasAmount?: number; // 受け取った灯の合計
+  isNew?: boolean; // 新着メッセージ（タイプライター表示用）
 }
 
 export default function ChatSessionPage({ params }: PageProps) {
@@ -110,6 +111,8 @@ export default function ChatSessionPage({ params }: PageProps) {
             }
           }
         });
+        // Sync to ref for polling
+        anonymousUserMapRef.current = new Map(anonymousUserMap);
 
         setMessages(
           session.messages.map((m: ChatMessage) => {
@@ -181,6 +184,126 @@ export default function ChatSessionPage({ params }: PageProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Poll for new messages (PUBLIC/DIRECTED sessions only)
+  const lastPollTimeRef = useRef<string | null>(null);
+  const messageIdsRef = useRef<Set<string>>(new Set());
+  const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
+
+  // Keep messageIds ref in sync
+  useEffect(() => {
+    messageIdsRef.current = new Set(messages.map((m) => m.id));
+    // Update last poll time to latest message timestamp
+    if (messages.length > 0) {
+      const latest = messages[messages.length - 1].timestamp.toISOString();
+      if (!lastPollTimeRef.current || latest > lastPollTimeRef.current) {
+        lastPollTimeRef.current = latest;
+      }
+    }
+  }, [messages]);
+
+  const transformPolledMessage = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (m: any): LocalMessage | null => {
+      if (!sessionInfo) return null;
+      const isOwner = sessionInfo.isOwner;
+      const currentUserId = sessionInfo.currentUserId;
+
+      // Skip if already displayed
+      if (messageIdsRef.current.has(m.id)) return null;
+
+      // Check if this is current user's message
+      const isMyMessage =
+        currentUserId &&
+        ((m.role === "USER" && isOwner) ||
+          (m.role === "ASSISTANT" && m.responderId === currentUserId));
+
+      if (isMyMessage) {
+        return {
+          id: m.id,
+          role: "user",
+          content: m.content,
+          timestamp: new Date(m.createdAt),
+          gasAmount: m.gasAmount,
+        };
+      }
+
+      if (!isOwner && m.role === "USER") {
+        return {
+          id: m.id,
+          role: "assistant",
+          content: m.content,
+          timestamp: new Date(m.createdAt),
+          gasAmount: m.gasAmount,
+          responder: {
+            displayName: sessionInfo.isAnonymous ? null : null,
+            avatarUrl: null,
+            isAnonymous: sessionInfo.isAnonymous,
+          },
+        };
+      }
+
+      // Build anonymous label for new anonymous responders
+      if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
+        if (!anonymousUserMapRef.current.has(m.responderId)) {
+          const label = String.fromCharCode(65 + anonymousUserMapRef.current.size);
+          anonymousUserMapRef.current.set(m.responderId, label);
+        }
+      }
+
+      return {
+        id: m.id,
+        role: "assistant",
+        content: m.content,
+        timestamp: new Date(m.createdAt),
+        gasAmount: m.gasAmount,
+        isNew: !m.responderId, // Typewriter for AI responses only
+        responder: m.responder
+          ? {
+              displayName: m.isAnonymous
+                ? `User ${anonymousUserMapRef.current.get(m.responderId)}`
+                : m.responder.displayName,
+              avatarUrl: m.isAnonymous ? null : m.responder.avatarUrl,
+              isAnonymous: m.isAnonymous,
+              handle: m.isAnonymous ? undefined : m.responder.handle,
+              responderId: m.responderId || undefined,
+            }
+          : undefined,
+      };
+    },
+    [sessionInfo]
+  );
+
+  useEffect(() => {
+    if (!sessionInfo) return;
+    // Only poll for PUBLIC/DIRECTED (other users might respond)
+    if (sessionInfo.consultType === "PRIVATE") return;
+
+    const poll = async () => {
+      if (document.hidden) return;
+      const after = lastPollTimeRef.current || new Date(0).toISOString();
+      try {
+        const res = await fetch(
+          `/api/chat/sessions/${sessionId}/poll?after=${encodeURIComponent(after)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.messages && data.messages.length > 0) {
+          const newMsgs = data.messages
+            .map(transformPolledMessage)
+            .filter((m: LocalMessage | null): m is LocalMessage => m !== null);
+          if (newMsgs.length > 0) {
+            setMessages((prev) => [...prev, ...newMsgs]);
+          }
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    };
+
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
+  }, [sessionId, sessionInfo, transformPolledMessage]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -328,6 +451,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             role: "assistant",
             content: data.response,
             timestamp: new Date(),
+            isNew: true,
           };
 
           setMessages((prev) => [...prev, assistantMessage]);
@@ -386,6 +510,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             content: data.message.content,
             timestamp: new Date(),
             responder: null, // AI response
+            isNew: true,
           };
 
           setMessages((prev) => [...prev, userMsg, aiMessage]);
@@ -555,6 +680,14 @@ export default function ChatSessionPage({ params }: PageProps) {
               messageId={msg.id}
               gasAmount={msg.gasAmount}
               onSendGas={handleSendGas}
+              typewriter={msg.isNew && msg.role === "assistant"}
+              onTypewriterComplete={() => {
+                if (msg.isNew) {
+                  setMessages((prev) =>
+                    prev.map((m) => m.id === msg.id ? { ...m, isNew: false } : m)
+                  );
+                }
+              }}
             />
           ))}
 
