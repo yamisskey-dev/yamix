@@ -119,16 +119,18 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           displayName: session.user.profile?.displayName || null,
           avatarUrl: session.user.profile?.avatarUrl || null,
         },
-        messages: session.messages.map((m) => ({
-          ...m,
-          content: decryptMessage(m.content, session.userId), // Decrypt with owner's key
-          responder: m.responder ? {
-            id: m.responder.id,
-            handle: m.responder.handle,
-            displayName: m.responder.profile?.displayName || null,
-            avatarUrl: m.responder.profile?.avatarUrl || null,
-          } : null,
-        })),
+        messages: session.messages
+          .filter((m) => isOwner || !m.isHidden) // Hide moderated messages from non-owners
+          .map((m) => ({
+            ...m,
+            content: decryptMessage(m.content, session.userId), // Decrypt with owner's key
+            responder: m.responder ? {
+              id: m.responder.id,
+              handle: m.responder.handle,
+              displayName: m.responder.profile?.displayName || null,
+              avatarUrl: m.responder.profile?.avatarUrl || null,
+            } : null,
+          })),
         targets: session.consultType === "DIRECTED" ? session.targets.map((t) => ({
           userId: t.userId,
           handle: t.user.handle,

@@ -305,15 +305,22 @@ export default function ChatSessionPage({ params }: PageProps) {
 
         const data = await res.json();
 
+        // Handle crisis-triggered privatization
+        if (data.sessionPrivatized && sessionInfo) {
+          setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
+          toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+        }
+
+        // Show crisis alert if detected (from AI or moderation)
+        if (data.isCrisis && typeof window !== "undefined") {
+          const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+          if (!disabled) {
+            setShowCrisisAlert(true);
+          }
+        }
+
         // If we got an AI response (PRIVATE always, PUBLIC with @yamii mention)
         if (data.assistantMessage) {
-          if (data.isCrisis && typeof window !== "undefined") {
-            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-            if (!disabled) {
-              setShowCrisisAlert(true);
-            }
-          }
-
           const assistantMessage: LocalMessage = {
             id: data.assistantMessage.id,
             role: "assistant",

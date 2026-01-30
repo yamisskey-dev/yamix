@@ -363,6 +363,7 @@ model ChatMessage {
   role        MessageRole @default(USER)
   content     String      @db.Text
   isCrisis    Boolean     @default(false) // 危機検出フラグ
+  isHidden    Boolean     @default(false) // モデレーションにより非表示
   responderId String?     // 人間が回答した場合の回答者ID
   isAnonymous Boolean     @default(false) // 匿名回答
   gasAmount   Int         @default(0)     // 受け取った灯（ともしび）の合計

@@ -290,6 +290,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           },
         });
 
+        // Determine if any crisis was detected (moderation or AI response)
+        const anyCrisis = moderationCrisis || (yamiiResponse?.is_crisis ?? false);
+        // Hide message from non-owners if crisis detected in PUBLIC/DIRECTED
+        const shouldHide = anyCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
+
         // Create user message (encrypt content for privacy)
         const encryptedUserContent = encryptMessage(userMessage, payload.userId);
         const userMsg = await tx.chatMessage.create({
@@ -297,7 +302,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             sessionId,
             role: "USER",
             content: encryptedUserContent,
-            isCrisis: moderationCrisis,
+            isCrisis: anyCrisis,
+            isHidden: shouldHide,
           },
         });
 
@@ -311,27 +317,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
               role: "ASSISTANT",
               content: encryptedAssistantContent,
               isCrisis: yamiiResponse.is_crisis,
+              isHidden: shouldHide,
             },
           });
         }
 
         // Update session title if first message
+        // If crisis detected in PUBLIC/DIRECTED, auto-switch to PRIVATE
+        const sessionUpdate: Record<string, unknown> = { updatedAt: now };
         if (isFirstMessage) {
-          await tx.chatSession.update({
-            where: { id: sessionId },
-            data: {
-              title: generateTitle(userMessage),
-              updatedAt: now,
-            },
-          });
-        } else {
-          await tx.chatSession.update({
-            where: { id: sessionId },
-            data: { updatedAt: now },
-          });
+          sessionUpdate.title = generateTitle(userMessage);
         }
+        if (shouldHide) {
+          sessionUpdate.consultType = "PRIVATE";
+          sessionUpdate.isPublic = false;
+        }
+        await tx.chatSession.update({
+          where: { id: sessionId },
+          data: sessionUpdate,
+        });
 
-        return { userMsg, assistantMsg };
+        return { userMsg, assistantMsg, shouldHide };
       });
 
       // Notify directed targets on first message
@@ -359,6 +365,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
+        sessionPrivatized: result.shouldHide || false,
       });
     } else {
       // In-memory fallback
@@ -373,6 +380,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Deduct consult cost
       wallet.balance -= consultCost;
 
+      // Determine crisis flags
+      const anyCrisis = moderationCrisis || (yamiiResponse?.is_crisis ?? false);
+      const shouldHide = anyCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
+
       // Encrypt messages for privacy
       const encryptedUserContent = encryptMessage(userMessage, payload.userId);
       const userMsg = {
@@ -380,7 +391,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         sessionId,
         role: "USER" as const,
         content: encryptedUserContent,
-        isCrisis: moderationCrisis,
+        isCrisis: anyCrisis,
         createdAt: now,
       };
       chatMessagesStore.set(userMsg.id, userMsg);
@@ -405,6 +416,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       if (isFirstMessage) {
         sessionData.title = generateTitle(userMessage);
       }
+      if (shouldHide) {
+        sessionData.consultType = "PRIVATE";
+        sessionData.isPublic = false;
+      }
       sessionData.updatedAt = now;
       chatSessionsStore.set(sessionId, sessionData);
 
@@ -417,6 +432,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
         sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
+        sessionPrivatized: shouldHide,
       });
     }
   } catch (error) {
