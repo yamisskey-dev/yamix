@@ -48,6 +48,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       }
     };
     fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // パスが変わったらドロワーを閉じる
@@ -89,7 +91,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
         <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-300/80" role="navigation" aria-label="メインナビゲーション">
-          <Sidebar user={user} />
+          <Sidebar user={user} unreadNotificationCount={unreadNotificationCount} />
         </aside>
 
         {/* Main Content */}
@@ -115,7 +117,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         {/* Mobile Drawer */}
         <MobileDrawer isOpen={sidebarOpen} onClose={handleCloseDrawer}>
           <nav aria-label="メインナビゲーション" className="h-full">
-            <Sidebar user={user} onClose={handleCloseDrawer} />
+            <Sidebar user={user} onClose={handleCloseDrawer} unreadNotificationCount={unreadNotificationCount} />
           </nav>
         </MobileDrawer>
       </div>

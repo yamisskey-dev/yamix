@@ -11,6 +11,7 @@ import { encodeHandle } from "@/lib/encode-handle";
 interface Props {
   user?: UserProfile | null;
   onClose?: () => void;
+  unreadNotificationCount?: number;
 }
 
 // Misskey-style navigation item component
@@ -19,11 +20,13 @@ function NavItem({
   label,
   isActive,
   onClick,
+  indicator,
 }: {
   icon: React.ReactNode;
   label: string;
   isActive?: boolean;
   onClick: () => void;
+  indicator?: boolean;
 }) {
   return (
     <div className="px-4 mb-1.5">
@@ -38,14 +41,19 @@ function NavItem({
         `}
         aria-current={isActive ? "page" : undefined}
       >
-        <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
+        <span className="relative w-5 h-5 flex items-center justify-center">
+          {icon}
+          {indicator && (
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-error animate-pulse" />
+          )}
+        </span>
         <span className="text-[13px] font-medium">{label}</span>
       </button>
     </div>
   );
 }
 
-export function Sidebar({ user, onClose }: Props) {
+export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,6 +130,7 @@ export function Sidebar({ user, onClose }: Props) {
           }
           label="通知"
           isActive={pathname === "/main/notifications"}
+          indicator={unreadNotificationCount > 0}
           onClick={() => {
             router.push("/main/notifications");
             onClose?.();

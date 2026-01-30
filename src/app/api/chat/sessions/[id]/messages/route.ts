@@ -46,13 +46,6 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// Generate title from first message
-function generateTitle(message: string): string {
-  const firstSentence = message.match(/^[^。！？.!?\n]+[。！？.!?]?/);
-  const title = firstSentence?.[0] || message;
-  return title.slice(0, 50) + (title.length > 50 ? "..." : "");
-}
-
 // Simple crisis keyword check for messages without AI response
 const CRISIS_KEYWORDS = [
   "死にたい", "死のう", "自殺", "殺して", "消えたい",
@@ -260,6 +253,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Generate AI title for first message
+    let generatedTitle: string | null = null;
+    if (isFirstMessage) {
+      generatedTitle = await yamiiClient.generateTitle(userMessage);
+    }
+
     // Save messages to database
     const now = new Date();
 
@@ -326,7 +325,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         // If crisis detected in PUBLIC/DIRECTED, auto-switch to PRIVATE
         const sessionUpdate: Record<string, unknown> = { updatedAt: now };
         if (isFirstMessage) {
-          sessionUpdate.title = generateTitle(userMessage);
+          sessionUpdate.title = generatedTitle!;
         }
         if (shouldHide) {
           sessionUpdate.consultType = "PRIVATE";
@@ -364,7 +363,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           : null,
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
-        sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
+        sessionTitle: generatedTitle,
         sessionPrivatized: result.shouldHide || false,
       });
     } else {
@@ -414,7 +413,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Update session
       const sessionData = chatSessionsStore.get(sessionId)!;
       if (isFirstMessage) {
-        sessionData.title = generateTitle(userMessage);
+        sessionData.title = generatedTitle!;
       }
       if (shouldHide) {
         sessionData.consultType = "PRIVATE";
@@ -431,7 +430,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           : null,
         response: yamiiResponse?.response || null,
         isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
-        sessionTitle: isFirstMessage ? generateTitle(userMessage) : null,
+        sessionTitle: generatedTitle,
         sessionPrivatized: shouldHide,
       });
     }

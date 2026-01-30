@@ -64,6 +64,21 @@ export class YamiiClient {
     });
   }
 
+  async generateTitle(message: string): Promise<string> {
+    try {
+      const result = await this.request<{ title: string }>("/v1/summarize-title", {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      return result.title;
+    } catch {
+      // Fallback: truncate first sentence
+      const firstSentence = message.match(/^[^。！？.!?\n]+[。！？.!?]?/);
+      const title = firstSentence?.[0] || message;
+      return title.slice(0, 50) + (title.length > 50 ? "..." : "");
+    }
+  }
+
   async healthCheck(): Promise<{ status: string; version: string }> {
     return this.request<{ status: string; version: string }>("/v1/health");
   }
