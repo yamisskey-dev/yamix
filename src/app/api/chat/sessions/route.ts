@@ -37,6 +37,7 @@ interface PrismaSessionResult {
   consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   isPublic: boolean; // DEPRECATED
+  userId: string;
   updatedAt: Date;
   messages: { content: string; role: string }[];
 }
@@ -65,35 +66,75 @@ export async function GET(req: NextRequest) {
     const db = getPrismaClient();
 
     if (db) {
-      const sessions = await db.chatSession.findMany({
-        where: { userId: payload.userId },
-        orderBy: { updatedAt: "desc" },
-        take: limit + 1,
-        ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-        select: {
-          id: true,
-          title: true,
-          consultType: true,
-          isAnonymous: true,
-          isPublic: true, // DEPRECATED
-          updatedAt: true,
-          messages: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: { content: true, role: true },
-          },
-          _count: { select: { targets: true } },
+      // Fetch owned sessions AND sessions where user is a DIRECTED target
+      const sessionSelect = {
+        id: true,
+        title: true,
+        consultType: true,
+        isAnonymous: true,
+        isPublic: true, // DEPRECATED
+        userId: true,
+        updatedAt: true,
+        messages: {
+          orderBy: { createdAt: "desc" as const },
+          take: 1,
+          select: { content: true, role: true },
         },
-      });
+        _count: { select: { targets: true } },
+      };
 
-      const hasMore = sessions.length > limit;
-      const items: ChatSessionListItem[] = sessions
+      const [ownedSessions, directedTargets] = await Promise.all([
+        db.chatSession.findMany({
+          where: { userId: payload.userId },
+          orderBy: { updatedAt: "desc" },
+          take: limit + 1,
+          ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+          select: sessionSelect,
+        }),
+        // Sessions where current user is a target
+        db.chatSessionTarget.findMany({
+          where: { userId: payload.userId },
+          select: {
+            session: {
+              select: sessionSelect,
+            },
+          },
+        }),
+      ]);
+
+      // Merge and deduplicate (owned sessions take priority)
+      const ownedIds = new Set(ownedSessions.map((s) => s.id));
+      const directedSessionIds = new Set<string>();
+      const directedSessions = directedTargets
+        .map((t) => t.session)
+        .filter((s) => {
+          if (ownedIds.has(s.id)) return false;
+          directedSessionIds.add(s.id);
+          return true;
+        });
+
+      const allSessions = [...ownedSessions, ...directedSessions]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+      // Apply cursor-based pagination on merged result
+      let startIndex = 0;
+      if (cursor) {
+        const cursorIndex = allSessions.findIndex((s) => s.id === cursor);
+        if (cursorIndex !== -1) {
+          startIndex = cursorIndex + 1;
+        }
+      }
+
+      const paginated = allSessions.slice(startIndex, startIndex + limit + 1);
+      const hasMore = paginated.length > limit;
+      const items: ChatSessionListItem[] = paginated
         .slice(0, limit)
-        .map((s: PrismaSessionResult & { _count?: { targets: number } }) => {
-          // Decrypt message content for preview (backwards compatible)
+        .map((s: PrismaSessionResult & { _count?: { targets: number }; userId?: string }) => {
+          // Decrypt message content for preview (use session owner's key)
           const rawContent = s.messages[0]?.content;
+          const ownerId = s.userId || payload.userId;
           const decryptedContent = rawContent
-            ? decryptMessage(rawContent, payload.userId)
+            ? decryptMessage(rawContent, ownerId)
             : null;
           return {
             id: s.id,
@@ -103,6 +144,7 @@ export async function GET(req: NextRequest) {
             isAnonymous: s.isAnonymous,
             isPublic: s.isPublic, // DEPRECATED
             targetCount: s._count?.targets ?? 0,
+            isReceived: directedSessionIds.has(s.id),
             updatedAt: s.updatedAt,
           };
         });
