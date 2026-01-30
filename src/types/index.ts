@@ -18,6 +18,7 @@ export const TOKEN_ECONOMY = {
   // 相談コスト（相談者が支払う）
   PRIVATE_CONSULT_COST: 1,       // プライベート相談（AI専用、非公開）
   PUBLIC_CONSULT_COST: 3,        // 公開相談（誰でも回答可能、タイムライン表示）
+  DIRECTED_CONSULT_COST: 3,      // 指名相談（指名ユーザーのみ回答可能）
   AI_CONSULT_COST: 1,            // AI相談コスト（安い）- 後方互換
   HUMAN_CONSULT_COST: 5,         // 人間相談コスト（高い）- 後方互換
   ANY_CONSULT_COST: 3,           // どちらでも可（中間）- 後方互換
@@ -329,7 +330,7 @@ export interface UserBlock {
 // Chat Session types (二層構造の相談セッション)
 // ============================================
 export type MessageRole = "USER" | "ASSISTANT";
-export type ConsultType = "PRIVATE" | "PUBLIC";
+export type ConsultType = "PRIVATE" | "PUBLIC" | "DIRECTED";
 
 export interface ChatSession {
   id: string;
@@ -340,6 +341,7 @@ export interface ChatSession {
   allowAnonymousResponses: boolean; // 匿名回答を許可するか
   category: string | null;        // Phase 2用: カテゴリ
   isPublic: boolean;              // DEPRECATED: consultType=PUBLIC と同義
+  targetCount?: number;           // 指名相談の対象ユーザー数
   createdAt: Date;
   updatedAt: Date;
 }
@@ -389,6 +391,7 @@ export interface ChatSessionListItem {
   consultType: ConsultType; // 相談タイプ
   isAnonymous: boolean;     // 匿名投稿
   isPublic: boolean;        // DEPRECATED
+  targetCount?: number;     // 指名相談の対象ユーザー数
   updatedAt: Date;
 }
 

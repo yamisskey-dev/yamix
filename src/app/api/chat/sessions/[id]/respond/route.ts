@@ -13,7 +13,7 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   allowAnonymousResponses: boolean;
   category: string | null;
@@ -101,12 +101,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         },
       });
 
-      // Check session exists AND is public (combined check prevents enumeration)
-      if (!sessionWithMessages || sessionWithMessages.consultType !== "PUBLIC") {
+      // Check session exists AND is public or directed (combined check prevents enumeration)
+      if (!sessionWithMessages || (sessionWithMessages.consultType !== "PUBLIC" && sessionWithMessages.consultType !== "DIRECTED")) {
         return NextResponse.json(
-          { error: "Session not found or not public" },
+          { error: "Session not found or not accessible" },
           { status: 404 }
         );
+      }
+
+      // DIRECTED: check if responder is a target
+      if (sessionWithMessages.consultType === "DIRECTED") {
+        const isTarget = await db.chatSessionTarget.findUnique({
+          where: {
+            sessionId_userId: {
+              sessionId: id,
+              userId: payload.userId,
+            },
+          },
+        });
+
+        if (!isTarget) {
+          return NextResponse.json(
+            { error: "この指名相談への回答権限がありません" },
+            { status: 403 }
+          );
+        }
       }
 
       // Cannot respond to own session
@@ -351,10 +370,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // In-memory fallback
       const session = chatSessionsStore.get(id);
 
-      // Check session exists AND is public (combined check prevents enumeration)
-      if (!session || session.consultType !== "PUBLIC") {
+      // Check session exists AND is public or directed (combined check prevents enumeration)
+      if (!session || (session.consultType !== "PUBLIC" && session.consultType !== "DIRECTED")) {
         return NextResponse.json(
-          { error: "Session not found or not public" },
+          { error: "Session not found or not accessible" },
           { status: 404 }
         );
       }

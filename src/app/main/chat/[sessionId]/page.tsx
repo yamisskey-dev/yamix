@@ -49,7 +49,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
-    consultType: "PRIVATE" | "PUBLIC";
+    consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
     userId: string;
     isOwner: boolean;
     isAnonymous: boolean;

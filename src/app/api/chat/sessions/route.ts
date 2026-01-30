@@ -12,7 +12,7 @@ interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   allowAnonymousResponses: boolean;
   category: string | null;
@@ -34,7 +34,7 @@ interface MemoryChatMessage {
 interface PrismaSessionResult {
   id: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   isPublic: boolean; // DEPRECATED
   updatedAt: Date;
@@ -82,13 +82,14 @@ export async function GET(req: NextRequest) {
             take: 1,
             select: { content: true, role: true },
           },
+          _count: { select: { targets: true } },
         },
       });
 
       const hasMore = sessions.length > limit;
       const items: ChatSessionListItem[] = sessions
         .slice(0, limit)
-        .map((s: PrismaSessionResult) => {
+        .map((s: PrismaSessionResult & { _count?: { targets: number } }) => {
           // Decrypt message content for preview (backwards compatible)
           const rawContent = s.messages[0]?.content;
           const decryptedContent = rawContent
@@ -101,6 +102,7 @@ export async function GET(req: NextRequest) {
             consultType: s.consultType,
             isAnonymous: s.isAnonymous,
             isPublic: s.isPublic, // DEPRECATED
+            targetCount: s._count?.targets ?? 0,
             updatedAt: s.updatedAt,
           };
         });
@@ -205,11 +207,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const { consultType, isAnonymous, allowAnonymousResponses, category } = validation.data;
+    const { consultType, isAnonymous, allowAnonymousResponses, category, targetUserHandles } = validation.data;
 
     const db = getPrismaClient();
 
     if (db) {
+      // DIRECTED: 指名先ユーザーを検索
+      let targetUserIds: string[] = [];
+      if (consultType === "DIRECTED" && targetUserHandles && targetUserHandles.length > 0) {
+        const targetUsers = await db.user.findMany({
+          where: { handle: { in: targetUserHandles } },
+          select: { id: true, handle: true },
+        });
+
+        if (targetUsers.length === 0) {
+          return NextResponse.json(
+            { error: "指名先のユーザーが見つかりません" },
+            { status: 400 }
+          );
+        }
+
+        // 自分自身を除外
+        targetUserIds = targetUsers
+          .filter((u) => u.id !== payload.userId)
+          .map((u) => u.id);
+
+        if (targetUserIds.length === 0) {
+          return NextResponse.json(
+            { error: "自分以外のユーザーを指名してください" },
+            { status: 400 }
+          );
+        }
+      }
+
       const session = await db.chatSession.create({
         data: {
           userId: payload.userId,
@@ -218,6 +248,11 @@ export async function POST(req: NextRequest) {
           allowAnonymousResponses,
           category,
           isPublic: consultType === "PUBLIC", // 後方互換性
+          ...(consultType === "DIRECTED" && targetUserIds.length > 0 && {
+            targets: {
+              create: targetUserIds.map((uid) => ({ userId: uid })),
+            },
+          }),
         },
         select: {
           id: true,
@@ -228,10 +263,14 @@ export async function POST(req: NextRequest) {
           isPublic: true,
           createdAt: true,
           updatedAt: true,
+          _count: { select: { targets: true } },
         },
       });
 
-      return NextResponse.json(session, { status: 201 });
+      return NextResponse.json(
+        { ...session, targetCount: session._count.targets },
+        { status: 201 }
+      );
     } else {
       // In-memory fallback
       const now = new Date();
@@ -258,6 +297,7 @@ export async function POST(req: NextRequest) {
           isAnonymous: session.isAnonymous,
           category: session.category,
           isPublic: session.isPublic,
+          targetCount: 0,
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
         },

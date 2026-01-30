@@ -263,6 +263,17 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
               />
             </svg>
           </div>
+        ) : session.consultType === "DIRECTED" ? (
+          <div className={`${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title="指名相談">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-3.5 w-3.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
+            </svg>
+          </div>
         ) : (
           <div className={`${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title="公開相談">
             <svg

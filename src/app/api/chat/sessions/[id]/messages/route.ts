@@ -8,13 +8,14 @@ import type { ConversationMessage } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { sendMessageSchema, validateBody } from "@/lib/validation";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
+import { notifyDirectedRequest } from "@/lib/notifications";
 
 // In-memory types
 interface MemoryChatSession {
   id: string;
   userId: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
   category: string | null;
   isPublic: boolean; // DEPRECATED
@@ -163,7 +164,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // Determine consult cost based on consultType
     const consultCost = session.consultType === "PUBLIC"
       ? TOKEN_ECONOMY.PUBLIC_CONSULT_COST
-      : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
+      : session.consultType === "DIRECTED"
+        ? TOKEN_ECONOMY.DIRECTED_CONSULT_COST
+        : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
 
     if (db) {
       const wallet = await db.wallet.findUnique({
@@ -201,9 +204,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // - PRIVATE consultations: Always call
     // - PUBLIC consultations: Only if message starts with @yamii
     const hasYamiiMention = hasMentionYamii(userMessage);
+    // PRIVATE: always call AI, PUBLIC/DIRECTED: only if @yamii mentioned
     const shouldCallYamii =
       session.consultType === "PRIVATE" ||
-      (session.consultType === "PUBLIC" && hasYamiiMention);
+      ((session.consultType === "PUBLIC" || session.consultType === "DIRECTED") && hasYamiiMention);
 
     let yamiiResponse = null;
     if (shouldCallYamii) {
@@ -303,6 +307,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
         return { userMsg, assistantMsg };
       });
+
+      // Notify directed targets on first message
+      if (isFirstMessage && session.consultType === "DIRECTED" && db) {
+        const targets = await db.chatSessionTarget.findMany({
+          where: { sessionId },
+          select: { userId: true },
+        });
+        if (targets.length > 0) {
+          await notifyDirectedRequest(
+            targets.map((t) => t.userId),
+            payload.sub, // handle
+            sessionId,
+            session.isAnonymous
+          );
+        }
+      }
 
       // Return decrypted content to client
       return NextResponse.json({

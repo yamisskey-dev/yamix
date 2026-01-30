@@ -7,7 +7,7 @@ import { useToast } from "@/components/Toast";
 interface SessionLike {
   id: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
 }
 
 interface Props {

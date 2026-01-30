@@ -78,6 +78,30 @@ export async function notifyResponse(
 }
 
 /**
+ * 指名相談の通知を作成（指名先全員に送信）
+ */
+export async function notifyDirectedRequest(
+  targetUserIds: string[],
+  senderHandle: string,
+  sessionId: string,
+  isAnonymous: boolean
+): Promise<void> {
+  const displayName = isAnonymous ? "匿名ユーザー" : `@${senderHandle}さん`;
+
+  await Promise.all(
+    targetUserIds.map((userId) =>
+      createNotification({
+        userId,
+        type: "MENTION",
+        title: "相談が届きました",
+        message: `${displayName}からあなた宛の相談が届きました`,
+        linkUrl: `/main/chat/${sessionId}`,
+      })
+    )
+  );
+}
+
+/**
  * メンション通知を作成
  */
 export async function notifyMention(

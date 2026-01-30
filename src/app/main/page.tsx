@@ -19,9 +19,15 @@ export default function NewChatPage() {
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
-  const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
+  const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC" | "DIRECTED">("PRIVATE");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [allowAnonymousResponses, setAllowAnonymousResponses] = useState(true);
+  const [targetUsers, setTargetUsers] = useState<{ handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -37,6 +43,55 @@ export default function NewChatPage() {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   }, [inputValue]);
+
+  // User search with debounce
+  useEffect(() => {
+    if (!userSearchQuery || userSearchQuery.length < 1) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(userSearchQuery)}`);
+        if (res.ok) {
+          const data = await res.json();
+          // Filter out already selected users
+          const selectedHandles = new Set(targetUsers.map((u) => u.handle));
+          setUserSearchResults(data.users.filter((u: { handle: string }) => !selectedHandles.has(u.handle)));
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [userSearchQuery, targetUsers]);
+
+  const addTargetUser = (user: { handle: string; displayName: string | null; avatarUrl: string | null }) => {
+    setTargetUsers((prev) => [...prev, user]);
+    setUserSearchQuery("");
+    setUserSearchResults([]);
+  };
+
+  const removeTargetUser = (handle: string) => {
+    setTargetUsers((prev) => prev.filter((u) => u.handle !== handle));
+    if (targetUsers.length <= 1) {
+      setConsultType("PUBLIC");
+      setShowUserSearch(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +116,11 @@ export default function NewChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           consultType,
-          isAnonymous: consultType === "PUBLIC" ? isAnonymous : false,
-          allowAnonymousResponses: consultType === "PUBLIC" ? allowAnonymousResponses : true,
+          isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
+          allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
+          ...(consultType === "DIRECTED" && {
+            targetUserHandles: targetUsers.map((u) => u.handle),
+          }),
         }),
       });
 
@@ -134,58 +192,64 @@ export default function NewChatPage() {
         <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
           {/* Left side: Options */}
           <div className="flex items-center gap-1">
-            {/* Consult Type Toggle - Single button that switches between modes */}
+            {/* Three independent mode buttons */}
             <button
               type="button"
-              className={`btn btn-xs gap-1 ${
-                consultType === "PRIVATE"
-                  ? "btn-ghost"
-                  : "btn-primary btn-outline"
-              }`}
+              className={`btn btn-xs gap-1 ${consultType === "PRIVATE" ? "btn-ghost border-base-content/20" : "btn-ghost opacity-50"}`}
               onClick={() => {
-                if (consultType === "PRIVATE") {
-                  setConsultType("PUBLIC");
+                setConsultType("PRIVATE");
+                setIsAnonymous(false);
+                setTargetUsers([]);
+                setShowUserSearch(false);
+              }}
+              disabled={isLoading}
+              aria-label="非公開相談"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+              </svg>
+              <span className="text-xs">非公開</span>
+            </button>
+
+            <button
+              type="button"
+              className={`btn btn-xs gap-1 ${consultType === "PUBLIC" ? "btn-primary btn-outline" : "btn-ghost opacity-50"}`}
+              onClick={() => {
+                setConsultType("PUBLIC");
+                setTargetUsers([]);
+                setShowUserSearch(false);
+              }}
+              disabled={isLoading}
+              aria-label="公開相談"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
+              </svg>
+              <span className="text-xs">公開</span>
+            </button>
+
+            <button
+              type="button"
+              className={`btn btn-xs gap-1 ${consultType === "DIRECTED" ? "btn-accent btn-outline" : "btn-ghost opacity-50"}`}
+              onClick={() => {
+                if (consultType === "DIRECTED") {
+                  setShowUserSearch(!showUserSearch);
                 } else {
-                  setConsultType("PRIVATE");
-                  setIsAnonymous(false);
+                  setConsultType("DIRECTED");
+                  setShowUserSearch(true);
                 }
               }}
               disabled={isLoading}
-              aria-label={consultType === "PRIVATE" ? "プライベート相談" : "公開相談"}
+              aria-label="指名相談"
             >
-              {consultType === "PRIVATE" ? (
-                <>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-3.5 h-3.5"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span className="text-xs">非公開</span>
-                </>
-              ) : (
-                <>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-3.5 h-3.5"
-                  >
-                    <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
-                  </svg>
-                  <span className="text-xs">公開</span>
-                </>
-              )}
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
+              </svg>
+              <span className="text-xs">指名{consultType === "DIRECTED" && targetUsers.length > 0 ? ` (${targetUsers.length})` : ""}</span>
             </button>
 
-            {/* Public options */}
-            {consultType === "PUBLIC" && (
+            {/* Anonymous/response options for PUBLIC and DIRECTED */}
+            {(consultType === "PUBLIC" || consultType === "DIRECTED") && (
               <>
                 <div className="w-px h-4 bg-base-300 mx-1" />
                 {/* Anonymous toggle */}
@@ -200,17 +264,8 @@ export default function NewChatPage() {
                   disabled={isLoading}
                   aria-label="匿名で相談"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-3.5 h-3.5"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"
-                      clipRule="evenodd"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
                   </svg>
                   <span className="text-xs">匿名</span>
                 </button>
@@ -226,12 +281,7 @@ export default function NewChatPage() {
                   disabled={isLoading}
                   aria-label={allowAnonymousResponses ? "匿名回答を許可中" : "匿名回答を拒否中"}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                    className="w-3.5 h-3.5"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
                     <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
                   </svg>
                   <span className="text-xs">{allowAnonymousResponses ? "匿名回答OK" : "匿名NG"}</span>
@@ -244,7 +294,7 @@ export default function NewChatPage() {
           <button
             onClick={handleSubmit}
             className="btn btn-primary btn-circle btn-sm"
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || !inputValue.trim() || (consultType === "DIRECTED" && targetUsers.length === 0)}
             aria-label="送信"
           >
             {isLoading ? (
@@ -262,6 +312,66 @@ export default function NewChatPage() {
           </button>
         </div>
       </div>
+      {/* User search for DIRECTED mode */}
+      {consultType === "DIRECTED" && showUserSearch && (
+        <div className="mt-2 bg-base-200/50 rounded-xl border border-base-300/50 p-3">
+          {/* Selected users chips */}
+          {targetUsers.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {targetUsers.map((user) => (
+                <span
+                  key={user.handle}
+                  className="badge badge-accent badge-sm gap-1"
+                >
+                  {user.displayName || user.handle}
+                  <button
+                    type="button"
+                    onClick={() => removeTargetUser(user.handle)}
+                    className="hover:text-error"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Search input */}
+          <input
+            type="text"
+            value={userSearchQuery}
+            onChange={(e) => setUserSearchQuery(e.target.value)}
+            placeholder="ユーザーを検索..."
+            className="input input-sm input-bordered w-full"
+          />
+
+          {/* Search results */}
+          {isSearching && (
+            <div className="text-xs text-base-content/50 mt-1 px-1">検索中...</div>
+          )}
+          {userSearchResults.length > 0 && (
+            <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto">
+              {userSearchResults.map((user) => (
+                <li key={user.id}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs w-full justify-start gap-2"
+                    onClick={() => addTargetUser(user)}
+                  >
+                    {user.avatarUrl && (
+                      <img src={user.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+                    )}
+                    <span className="truncate">
+                      {user.displayName && <span className="font-medium">{user.displayName} </span>}
+                      <span className="opacity-60">@{user.handle}</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       <p className="text-xs text-center text-base-content/40 mt-2">
         Shift + Enter で改行
       </p>

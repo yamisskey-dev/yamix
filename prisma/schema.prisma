@@ -49,6 +49,7 @@ model User {
   blocking      UserBlock[]     @relation("BlockingUser") // このユーザーがブロックしている人
   notifications Notification[]  // 通知
   bookmarks     Bookmark[]      // ブックマーク
+  directedTargets ChatSessionTarget[] @relation("DirectedTargets") // 指名相談の対象
 
   @@map("users")
 }
@@ -275,10 +276,11 @@ model EconomyConfig {
   @@map("economy_config")
 }
 
-// 相談タイプ（二層構造）
+// 相談タイプ（三層構造）
 enum ConsultType {
-  PRIVATE  // プライベート相談（AI専用、非公開、1 YAMI）
-  PUBLIC   // 公開相談（誰でも回答可能、タイムライン表示、3 YAMI）
+  PRIVATE   // プライベート相談（AI専用、非公開、1 YAMI）
+  PUBLIC    // 公開相談（誰でも回答可能、タイムライン表示、3 YAMI）
+  DIRECTED  // 指名相談（指名されたユーザーのみ回答可能、3 YAMI）
 }
 
 // ============================================
@@ -324,11 +326,31 @@ model ChatSession {
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages  ChatMessage[]
   bookmarks Bookmark[]    // このセッションをブックマークしているユーザー
+  targets   ChatSessionTarget[] // 指名相談の対象ユーザー
 
   @@index([userId, updatedAt])
   @@index([consultType, createdAt])
   @@index([category])
   @@map("chat_sessions")
+}
+
+// ============================================
+// ChatSessionTarget - 指名相談の対象ユーザー（多対多）
+// DIRECTED相談で指名されたユーザーを管理
+// ============================================
+model ChatSessionTarget {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation("DirectedTargets", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+  @@map("chat_session_targets")
 }
 
 // ============================================
