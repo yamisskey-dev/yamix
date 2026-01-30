@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { parseMentions } from "@/lib/mention-parser";
@@ -36,13 +36,10 @@ export const ChatBubble = memo(function ChatBubble({
   isSessionOwner,
   onBlock,
   messageId,
-  gasAmount,
   onSendGas,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
-  const isAI = !isUser && !isHuman; // 右側でなく、人間でもない場合はAI
-
   // Show block button if: session owner, this is a human response (not owner's message), and has responderId
   const canBlock = isSessionOwner && !isUser && isHuman && responder!.responderId && onBlock;
 
