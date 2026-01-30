@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
@@ -35,7 +35,9 @@ interface LocalMessage {
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
+  const initialMessageRef = useRef<string | null>(null);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -178,6 +180,131 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     fetchSession();
   }, [sessionId, router]);
+
+  // Auto-send initial message from new chat creation page
+  useEffect(() => {
+    const initialMessage = searchParams.get("initialMessage");
+    if (!initialMessage || initialMessageRef.current || !sessionInfo || isFetching) return;
+    initialMessageRef.current = "sent";
+
+    // Remove query param from URL
+    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+
+    const content = decodeURIComponent(initialMessage);
+    const userMessage: LocalMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+    setError(undefined);
+
+    // Notify sidebar
+    window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+
+    // Send message and handle SSE stream
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: content }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "メッセージの送信に失敗しました");
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("text/event-stream") && res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          const streamingMsgId = crypto.randomUUID();
+          let streamStarted = false;
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith("data: ")) continue;
+                const dataStr = trimmed.slice(6).trim();
+                if (!dataStr || !dataStr.startsWith("{")) continue;
+                try {
+                  const event = JSON.parse(dataStr);
+
+                  if (event.type === "init") {
+                    if (event.userMessageId) {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === userMessage.id ? { ...m, id: event.userMessageId } : m
+                        )
+                      );
+                    }
+                    if (event.sessionTitle && sessionInfo) {
+                      setSessionInfo({ ...sessionInfo, title: event.sessionTitle });
+                    }
+                  } else if (event.type === "chunk") {
+                    if (!streamStarted) {
+                      streamStarted = true;
+                      setIsLoading(false);
+                      const assistantMsg: LocalMessage = {
+                        id: streamingMsgId,
+                        role: "assistant",
+                        content: event.chunk,
+                        timestamp: new Date(),
+                      };
+                      setMessages((prev) => [...prev, assistantMsg]);
+                    } else {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === streamingMsgId
+                            ? { ...m, content: m.content + event.chunk }
+                            : m
+                        )
+                      );
+                    }
+                  } else if (event.type === "done") {
+                    const realMsgId = event.assistantMessageId || streamingMsgId;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === streamingMsgId ? { ...m, id: realMsgId } : m
+                      )
+                    );
+                    if (event.isCrisis && typeof window !== "undefined") {
+                      const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+                      if (!disabled) setShowCrisisAlert(true);
+                    }
+                  } else if (event.type === "error") {
+                    throw new Error(event.error);
+                  }
+                } catch (parseErr) {
+                  if (parseErr instanceof Error && parseErr.message !== "error") {
+                    if (dataStr.includes('"type":"error"')) throw parseErr;
+                  }
+                }
+              }
+            }
+          } finally {
+            setIsLoading(false);
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+        setIsLoading(false);
+      }
+    })();
+  }, [searchParams, sessionInfo, isFetching, sessionId]);
 
   // Auto-scroll to bottom
   useEffect(() => {

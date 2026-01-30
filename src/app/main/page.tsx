@@ -133,43 +133,10 @@ export default function NewChatPage() {
 
       const session = await createRes.json();
 
-      // Notify sidebar about new session
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
-      }
-
-      // Send message
-      const msgRes = await fetch(`/api/chat/sessions/${session.id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.content }),
-      });
-
-      if (!msgRes.ok) {
-        throw new Error("メッセージの送信に失敗しました");
-      }
-
-      // Response may be SSE stream or JSON depending on consultType.
-      // We don't need to process the stream here — just navigate to the session page.
-      // The session page will handle displaying the streamed response.
-      const contentType = msgRes.headers.get("content-type") || "";
-      if (!contentType.includes("text/event-stream")) {
-        // Non-streaming JSON response (PUBLIC/DIRECTED without @yamii)
-        try {
-          const data = await msgRes.json();
-          if (data.isCrisis && typeof window !== "undefined") {
-            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-            if (!disabled) {
-              setShowCrisisAlert(true);
-            }
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-
-      // Navigate to the session page
-      router.push(`/main/chat/${session.id}`);
+      // Navigate to the session page with the initial message.
+      // The chat page will handle sending the message and streaming the response.
+      const encodedMessage = encodeURIComponent(userMessage.content);
+      router.push(`/main/chat/${session.id}?initialMessage=${encodedMessage}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
