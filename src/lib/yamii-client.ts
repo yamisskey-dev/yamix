@@ -64,6 +64,45 @@ export class YamiiClient {
     });
   }
 
+  async sendCounselingMessageStream(
+    message: string,
+    userId: string,
+    options?: {
+      userName?: string;
+      sessionId?: string;
+      conversationHistory?: ConversationMessage[];
+    }
+  ): Promise<Response> {
+    const body: YamiiCounselingRequest = {
+      message,
+      user_id: userId,
+      user_name: options?.userName,
+      session_id: options?.sessionId,
+      conversation_history: options?.conversationHistory,
+    };
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (this.apiKey) {
+      headers["X-API-Key"] = this.apiKey;
+    }
+
+    const response = await fetch(`${this.baseUrl}/v1/counseling/stream`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Yamii API Error: ${response.status} - ${error}`);
+    }
+
+    return response;
+  }
+
   async generateTitle(message: string): Promise<string> {
     try {
       const result = await this.request<{ title: string }>("/v1/summarize-title", {

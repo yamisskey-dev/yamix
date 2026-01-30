@@ -5,25 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { parseMentions } from "@/lib/mention-parser";
 import { encodeHandle } from "@/lib/encode-handle";
-import { useTypewriter } from "@/hooks/useTypewriter";
-
-function TypewriterText({ text, onComplete }: { text: string; onComplete?: () => void }) {
-  const { displayed, isTyping } = useTypewriter(text);
-  const completeCalled = { current: false };
-
-  if (!isTyping && !completeCalled.current && onComplete) {
-    completeCalled.current = true;
-    // Defer to avoid setState during render
-    setTimeout(onComplete, 0);
-  }
-
-  return (
-    <span>
-      {displayed}
-      {isTyping && <span className="animate-pulse">|</span>}
-    </span>
-  );
-}
 
 interface ResponderInfo {
   displayName: string | null;
@@ -44,8 +25,6 @@ interface ChatBubbleProps {
   messageId?: string; // メッセージID（灯を送るため）
   gasAmount?: number; // 受け取った灯の合計
   onSendGas?: (messageId: string) => void; // 灯を送るコールバック
-  typewriter?: boolean; // タイプライター表示
-  onTypewriterComplete?: () => void; // タイプライター完了時コールバック
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -58,8 +37,6 @@ export const ChatBubble = memo(function ChatBubble({
   onBlock,
   messageId,
   onSendGas,
-  typewriter,
-  onTypewriterComplete,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
@@ -169,9 +146,7 @@ export const ChatBubble = memo(function ChatBubble({
 
       <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-sm`}>
         <p className="whitespace-pre-wrap break-words leading-relaxed">
-          {typewriter
-            ? <TypewriterText text={content} onComplete={onTypewriterComplete} />
-            : parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
+          {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
         </p>
       </div>
 

@@ -213,45 +213,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       session.consultType === "PRIVATE" ||
       ((session.consultType === "PUBLIC" || session.consultType === "DIRECTED") && hasYamiiMention);
 
-    let yamiiResponse = null;
     // For PUBLIC/DIRECTED without @yamii mention, run moderation-only check
     let moderationCrisis = false;
-    if (shouldCallYamii) {
-      try {
-        // Remove @yamii mention before sending to Yamii (keep it in stored message)
-        const messageForYamii = hasMentionYamii(userMessage)
-          ? removeMentionYamii(userMessage)
-          : userMessage;
-
-        yamiiResponse = await yamiiClient.sendCounselingMessage(
-          messageForYamii,
-          payload.userId,
-          {
-            sessionId: sessionId,
-            conversationHistory: existingMessages,
-          }
-        );
-      } catch (error) {
-        logger.error("Yamii API error", { sessionId }, error);
-        return NextResponse.json(
-          { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
-          { status: 503 }
-        );
-      }
-    } else if (session.consultType === "PUBLIC" || session.consultType === "DIRECTED") {
-      // Auto-moderation: check for crisis content via Yamii without generating a visible response
-      try {
-        const moderationResult = await yamiiClient.sendCounselingMessage(
-          userMessage,
-          payload.userId,
-          { sessionId }
-        );
-        moderationCrisis = moderationResult.is_crisis;
-      } catch {
-        // Moderation failure is non-blocking; fall back to keyword check
-        moderationCrisis = checkCrisisKeywords(userMessage);
-      }
-    }
 
     // Generate AI title for first message
     let generatedTitle: string | null = null;
@@ -259,187 +222,281 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       generatedTitle = await yamiiClient.generateTitle(userMessage);
     }
 
-    // Save messages to database
     const now = new Date();
 
-    if (db) {
-      // Execute all operations in a transaction
-      const result = await db.$transaction(async (tx) => {
-        // Get wallet and deduct cost
-        const wallet = await tx.wallet.findUnique({
-          where: { userId: payload.userId },
-        });
+    // === STREAMING PATH: When AI response is needed ===
+    if (shouldCallYamii) {
+      const messageForYamii = hasMentionYamii(userMessage)
+        ? removeMentionYamii(userMessage)
+        : userMessage;
 
-        if (!wallet) {
-          throw new Error("Wallet not found");
-        }
+      // Pre-stream: save user message and deduct wallet
+      let userMsgId: string;
+      if (db) {
+        const preResult = await db.$transaction(async (tx) => {
+          const wallet = await tx.wallet.findUnique({ where: { userId: payload.userId } });
+          if (!wallet) throw new Error("Wallet not found");
 
-        // Deduct consult cost
-        await tx.wallet.update({
-          where: { id: wallet.id },
-          data: { balance: { decrement: consultCost } },
-        });
-
-        // Create transaction record
-        await tx.transaction.create({
-          data: {
-            senderId: wallet.id,
-            amount: -consultCost,
-            txType: shouldCallYamii ? "CONSULT_AI" : "CONSULT_HUMAN",
-          },
-        });
-
-        // Determine if any crisis was detected (moderation or AI response)
-        const anyCrisis = moderationCrisis || (yamiiResponse?.is_crisis ?? false);
-        // Hide message from non-owners if crisis detected in PUBLIC/DIRECTED
-        const shouldHide = anyCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
-
-        // Create user message (encrypt content for privacy)
-        const encryptedUserContent = encryptMessage(userMessage, payload.userId);
-        const userMsg = await tx.chatMessage.create({
-          data: {
-            sessionId,
-            role: "USER",
-            content: encryptedUserContent,
-            isCrisis: anyCrisis,
-            isHidden: shouldHide,
-          },
-        });
-
-        // Create assistant message if we got a response from Yamii
-        let assistantMsg = null;
-        if (shouldCallYamii && yamiiResponse) {
-          const encryptedAssistantContent = encryptMessage(yamiiResponse.response, payload.userId);
-          assistantMsg = await tx.chatMessage.create({
-            data: {
-              sessionId,
-              role: "ASSISTANT",
-              content: encryptedAssistantContent,
-              isCrisis: yamiiResponse.is_crisis,
-              isHidden: shouldHide,
-            },
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { decrement: consultCost } },
           });
-        }
+          await tx.transaction.create({
+            data: { senderId: wallet.id, amount: -consultCost, txType: "CONSULT_AI" },
+          });
 
-        // Update session title if first message
-        // If crisis detected in PUBLIC/DIRECTED, auto-switch to PRIVATE
-        const sessionUpdate: Record<string, unknown> = { updatedAt: now };
-        if (isFirstMessage) {
-          sessionUpdate.title = generatedTitle!;
-        }
-        if (shouldHide) {
-          sessionUpdate.consultType = "PRIVATE";
-          sessionUpdate.isPublic = false;
-        }
-        await tx.chatSession.update({
-          where: { id: sessionId },
-          data: sessionUpdate,
+          const encryptedUserContent = encryptMessage(userMessage, payload.userId);
+          const userMsg = await tx.chatMessage.create({
+            data: { sessionId, role: "USER", content: encryptedUserContent, isCrisis: false },
+          });
+
+          if (isFirstMessage && generatedTitle) {
+            await tx.chatSession.update({ where: { id: sessionId }, data: { title: generatedTitle, updatedAt: now } });
+          } else {
+            await tx.chatSession.update({ where: { id: sessionId }, data: { updatedAt: now } });
+          }
+
+          return { userMsgId: userMsg.id };
         });
+        userMsgId = preResult.userMsgId;
+      } else {
+        const wallet = Array.from(memoryDB.wallets.values()).find((w) => w.userId === payload.userId);
+        if (!wallet) return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+        wallet.balance -= consultCost;
 
-        return { userMsg, assistantMsg, shouldHide };
+        const encryptedUserContent = encryptMessage(userMessage, payload.userId);
+        const userMsg = { id: generateId(), sessionId, role: "USER" as const, content: encryptedUserContent, isCrisis: false, createdAt: now };
+        chatMessagesStore.set(userMsg.id, userMsg);
+        userMsgId = userMsg.id;
+
+        const sessionData = chatSessionsStore.get(sessionId)!;
+        if (isFirstMessage && generatedTitle) sessionData.title = generatedTitle;
+        sessionData.updatedAt = now;
+        chatSessionsStore.set(sessionId, sessionData);
+      }
+
+      // Notify directed targets on first message
+      if (isFirstMessage && session.consultType === "DIRECTED" && db) {
+        const targets = await db.chatSessionTarget.findMany({ where: { sessionId }, select: { userId: true } });
+        if (targets.length > 0) {
+          await notifyDirectedRequest(targets.map((t) => t.userId), payload.sub, sessionId, session.isAnonymous);
+        }
+      }
+
+      // Start SSE stream
+      let yamiiStreamResponse: Response;
+      try {
+        yamiiStreamResponse = await yamiiClient.sendCounselingMessageStream(
+          messageForYamii,
+          payload.userId,
+          { sessionId, conversationHistory: existingMessages }
+        );
+      } catch (error) {
+        logger.error("Yamii API stream error", { sessionId }, error);
+        return NextResponse.json(
+          { error: "AIサーバーに接続できません。しばらくしてからもう一度お試しください。" },
+          { status: 503 }
+        );
+      }
+
+      const yamiiBody = yamiiStreamResponse.body;
+      if (!yamiiBody) {
+        return NextResponse.json({ error: "No stream body from Yamii" }, { status: 503 });
+      }
+
+      // Create a TransformStream to proxy SSE and handle post-stream DB saves
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      let fullResponse = "";
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          // Send initial metadata (userMessage info + title)
+          const initEvent = JSON.stringify({
+            type: "init",
+            userMessageId: userMsgId,
+            sessionTitle: generatedTitle,
+          });
+          controller.enqueue(encoder.encode(`data: ${initEvent}\n\n`));
+
+          const reader = yamiiBody.getReader();
+          let buffer = "";
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith("data: ")) continue;
+
+                const dataStr = trimmed.slice(6);
+                try {
+                  const data = JSON.parse(dataStr);
+
+                  if (data.chunk) {
+                    fullResponse += data.chunk;
+                    const chunkEvent = JSON.stringify({ type: "chunk", chunk: data.chunk });
+                    controller.enqueue(encoder.encode(`data: ${chunkEvent}\n\n`));
+                  } else if (data.done) {
+                    // Stream complete - save assistant message to DB
+                    const isCrisis = data.is_crisis || false;
+                    const shouldHide = isCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
+
+                    let assistantMsgId: string | undefined;
+                    if (db) {
+                      const encryptedContent = encryptMessage(fullResponse, payload.userId);
+                      const assistantMsg = await db.chatMessage.create({
+                        data: { sessionId, role: "ASSISTANT", content: encryptedContent, isCrisis, isHidden: shouldHide },
+                      });
+                      assistantMsgId = assistantMsg.id;
+
+                      // Update user message crisis flag if needed
+                      if (isCrisis) {
+                        await db.chatMessage.update({ where: { id: userMsgId }, data: { isCrisis: true, isHidden: shouldHide } });
+                      }
+
+                      if (shouldHide) {
+                        await db.chatSession.update({ where: { id: sessionId }, data: { consultType: "PRIVATE", isPublic: false } });
+                        await db.notification.deleteMany({
+                          where: { linkUrl: { contains: `/main/chat/${sessionId}` }, userId: { not: payload.userId } },
+                        });
+                      }
+                    } else {
+                      const encryptedContent = encryptMessage(fullResponse, payload.userId);
+                      const aMsg = { id: generateId(), sessionId, role: "ASSISTANT" as const, content: encryptedContent, isCrisis, createdAt: new Date() };
+                      chatMessagesStore.set(aMsg.id, aMsg);
+                      assistantMsgId = aMsg.id;
+
+                      if (shouldHide) {
+                        const sd = chatSessionsStore.get(sessionId)!;
+                        sd.consultType = "PRIVATE";
+                        sd.isPublic = false;
+                        chatSessionsStore.set(sessionId, sd);
+                      }
+                    }
+
+                    const doneEvent = JSON.stringify({
+                      type: "done",
+                      assistantMessageId: assistantMsgId,
+                      isCrisis,
+                      sessionPrivatized: isCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED"),
+                    });
+                    controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
+                  } else if (data.error) {
+                    const errorEvent = JSON.stringify({ type: "error", error: data.error });
+                    controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
+                  }
+                } catch {
+                  // Skip unparseable lines
+                }
+              }
+            }
+          } catch (error) {
+            logger.error("Stream processing error", { sessionId }, error);
+            const errorEvent = JSON.stringify({ type: "error", error: "ストリーム処理中にエラーが発生しました" });
+            controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
+          } finally {
+            controller.close();
+          }
+        },
       });
 
-      // Notify directed targets on first message (skip if crisis-privatized)
-      if (isFirstMessage && session.consultType === "DIRECTED" && db && !result.shouldHide) {
-        const targets = await db.chatSessionTarget.findMany({
-          where: { sessionId },
-          select: { userId: true },
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    // === NON-STREAMING PATH: PUBLIC/DIRECTED without @yamii ===
+    if (session.consultType === "PUBLIC" || session.consultType === "DIRECTED") {
+      try {
+        const moderationResult = await yamiiClient.sendCounselingMessage(
+          userMessage, payload.userId, { sessionId }
+        );
+        moderationCrisis = moderationResult.is_crisis;
+      } catch {
+        moderationCrisis = checkCrisisKeywords(userMessage);
+      }
+    }
+
+    if (db) {
+      const result = await db.$transaction(async (tx) => {
+        const wallet = await tx.wallet.findUnique({ where: { userId: payload.userId } });
+        if (!wallet) throw new Error("Wallet not found");
+
+        await tx.wallet.update({ where: { id: wallet.id }, data: { balance: { decrement: consultCost } } });
+        await tx.transaction.create({ data: { senderId: wallet.id, amount: -consultCost, txType: "CONSULT_HUMAN" } });
+
+        const anyCrisis = moderationCrisis;
+        const shouldHide = anyCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
+
+        const encryptedUserContent = encryptMessage(userMessage, payload.userId);
+        const userMsg = await tx.chatMessage.create({
+          data: { sessionId, role: "USER", content: encryptedUserContent, isCrisis: anyCrisis, isHidden: shouldHide },
         });
+
+        const sessionUpdate: Record<string, unknown> = { updatedAt: now };
+        if (isFirstMessage) sessionUpdate.title = generatedTitle!;
+        if (shouldHide) { sessionUpdate.consultType = "PRIVATE"; sessionUpdate.isPublic = false; }
+        await tx.chatSession.update({ where: { id: sessionId }, data: sessionUpdate });
+
+        return { userMsg, shouldHide };
+      });
+
+      if (isFirstMessage && session.consultType === "DIRECTED" && db && !result.shouldHide) {
+        const targets = await db.chatSessionTarget.findMany({ where: { sessionId }, select: { userId: true } });
         if (targets.length > 0) {
-          await notifyDirectedRequest(
-            targets.map((t) => t.userId),
-            payload.sub, // handle
-            sessionId,
-            session.isAnonymous
-          );
+          await notifyDirectedRequest(targets.map((t) => t.userId), payload.sub, sessionId, session.isAnonymous);
         }
       }
 
-      // Crisis非公開化時: 非オーナーへの通知を削除
       if (result.shouldHide && db) {
         await db.notification.deleteMany({
-          where: {
-            linkUrl: { contains: `/main/chat/${sessionId}` },
-            userId: { not: payload.userId },
-          },
+          where: { linkUrl: { contains: `/main/chat/${sessionId}` }, userId: { not: payload.userId } },
         });
       }
 
-      // Return decrypted content to client
       return NextResponse.json({
         userMessage: { ...result.userMsg, content: userMessage },
-        assistantMessage: result.assistantMsg
-          ? { ...result.assistantMsg, content: yamiiResponse?.response || "" }
-          : null,
-        response: yamiiResponse?.response || null,
-        isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
+        assistantMessage: null,
+        response: null,
+        isCrisis: moderationCrisis,
         sessionTitle: generatedTitle,
         sessionPrivatized: result.shouldHide || false,
       });
     } else {
-      // In-memory fallback
-      const wallet = Array.from(memoryDB.wallets.values()).find(
-        (w) => w.userId === payload.userId
-      );
-
-      if (!wallet) {
-        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
-      }
-
-      // Deduct consult cost
+      const wallet = Array.from(memoryDB.wallets.values()).find((w) => w.userId === payload.userId);
+      if (!wallet) return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
       wallet.balance -= consultCost;
 
-      // Determine crisis flags
-      const anyCrisis = moderationCrisis || (yamiiResponse?.is_crisis ?? false);
+      const anyCrisis = moderationCrisis;
       const shouldHide = anyCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
 
-      // Encrypt messages for privacy
       const encryptedUserContent = encryptMessage(userMessage, payload.userId);
-      const userMsg = {
-        id: generateId(),
-        sessionId,
-        role: "USER" as const,
-        content: encryptedUserContent,
-        isCrisis: anyCrisis,
-        createdAt: now,
-      };
+      const userMsg = { id: generateId(), sessionId, role: "USER" as const, content: encryptedUserContent, isCrisis: anyCrisis, createdAt: now };
       chatMessagesStore.set(userMsg.id, userMsg);
 
-      // Create assistant message if we got a response from Yamii
-      let assistantMsg = null;
-      if (shouldCallYamii && yamiiResponse) {
-        const encryptedAssistantContent = encryptMessage(yamiiResponse.response, payload.userId);
-        assistantMsg = {
-          id: generateId(),
-          sessionId,
-          role: "ASSISTANT" as const,
-          content: encryptedAssistantContent,
-          isCrisis: yamiiResponse.is_crisis,
-          createdAt: new Date(now.getTime() + 1),
-        };
-        chatMessagesStore.set(assistantMsg.id, assistantMsg);
-      }
-
-      // Update session
       const sessionData = chatSessionsStore.get(sessionId)!;
-      if (isFirstMessage) {
-        sessionData.title = generatedTitle!;
-      }
-      if (shouldHide) {
-        sessionData.consultType = "PRIVATE";
-        sessionData.isPublic = false;
-      }
+      if (isFirstMessage) sessionData.title = generatedTitle!;
+      if (shouldHide) { sessionData.consultType = "PRIVATE"; sessionData.isPublic = false; }
       sessionData.updatedAt = now;
       chatSessionsStore.set(sessionId, sessionData);
 
-      // Return decrypted content to client
       return NextResponse.json({
         userMessage: { ...userMsg, content: userMessage },
-        assistantMessage: assistantMsg
-          ? { ...assistantMsg, content: yamiiResponse?.response || "" }
-          : null,
-        response: yamiiResponse?.response || null,
-        isCrisis: yamiiResponse?.is_crisis || moderationCrisis,
+        assistantMessage: null,
+        response: null,
+        isCrisis: moderationCrisis,
         sessionTitle: generatedTitle,
         sessionPrivatized: shouldHide,
       });

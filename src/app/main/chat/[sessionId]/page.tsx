@@ -30,7 +30,6 @@ interface LocalMessage {
   timestamp: Date;
   responder?: ResponderInfo | null;
   gasAmount?: number; // 受け取った灯の合計
-  isNew?: boolean; // 新着メッセージ（タイプライター表示用）
 }
 
 export default function ChatSessionPage({ params }: PageProps) {
@@ -257,7 +256,6 @@ export default function ChatSessionPage({ params }: PageProps) {
         content: m.content,
         timestamp: new Date(m.createdAt),
         gasAmount: m.gasAmount,
-        isNew: !m.responderId, // Typewriter for AI responses only
         responder: m.responder
           ? {
               displayName: m.isAnonymous
@@ -428,37 +426,126 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
-        const data = await res.json();
+        const contentType = res.headers.get("content-type") || "";
 
-        // Handle crisis-triggered privatization
-        if (data.sessionPrivatized && sessionInfo) {
-          setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
-          toast.showToast("この相談は安全のため非公開に変更されました", "warning");
-        }
+        if (contentType.includes("text/event-stream") && res.body) {
+          // SSE streaming response
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          const streamingMsgId = crypto.randomUUID();
+          let realMsgId = streamingMsgId;
+          let streamStarted = false;
 
-        // Show crisis alert if detected (from AI or moderation)
-        if (data.isCrisis && typeof window !== "undefined") {
-          const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-          if (!disabled) {
-            setShowCrisisAlert(true);
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith("data: ")) continue;
+                const dataStr = trimmed.slice(6);
+                try {
+                  const event = JSON.parse(dataStr);
+
+                  if (event.type === "init") {
+                    // Update user message with real ID from server
+                    if (event.userMessageId) {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === userMessage.id ? { ...m, id: event.userMessageId } : m
+                        )
+                      );
+                    }
+                    if (event.sessionTitle && sessionInfo) {
+                      setSessionInfo({ ...sessionInfo, title: event.sessionTitle });
+                      window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+                    }
+                  } else if (event.type === "chunk") {
+                    if (!streamStarted) {
+                      // Create the assistant message placeholder
+                      streamStarted = true;
+                      setIsLoading(false);
+                      const assistantMsg: LocalMessage = {
+                        id: streamingMsgId,
+                        role: "assistant",
+                        content: event.chunk,
+                        timestamp: new Date(),
+                      };
+                      setMessages((prev) => [...prev, assistantMsg]);
+                    } else {
+                      // Append chunk to existing message
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === streamingMsgId
+                            ? { ...m, content: m.content + event.chunk }
+                            : m
+                        )
+                      );
+                    }
+                  } else if (event.type === "done") {
+                    realMsgId = event.assistantMessageId || streamingMsgId;
+                    // Update message with real ID
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === streamingMsgId ? { ...m, id: realMsgId } : m
+                      )
+                    );
+
+                    if (event.sessionPrivatized && sessionInfo) {
+                      setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
+                      toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+                    }
+                    if (event.isCrisis && typeof window !== "undefined") {
+                      const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+                      if (!disabled) setShowCrisisAlert(true);
+                    }
+                  } else if (event.type === "error") {
+                    throw new Error(event.error);
+                  }
+                } catch (parseErr) {
+                  if (parseErr instanceof Error && parseErr.message !== "error") {
+                    // Re-throw actual errors, skip JSON parse errors
+                    if (dataStr.includes('"type":"error"')) throw parseErr;
+                  }
+                }
+              }
+            }
+          } finally {
+            setIsLoading(false);
           }
-        }
+        } else {
+          // Non-streaming JSON response (PUBLIC/DIRECTED without @yamii)
+          const data = await res.json();
 
-        // If we got an AI response (PRIVATE always, PUBLIC with @yamii mention)
-        if (data.assistantMessage) {
-          const assistantMessage: LocalMessage = {
-            id: data.assistantMessage.id,
-            role: "assistant",
-            content: data.response,
-            timestamp: new Date(),
-            isNew: true,
-          };
+          if (data.sessionPrivatized && sessionInfo) {
+            setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
+            toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+          }
 
-          setMessages((prev) => [...prev, assistantMessage]);
+          if (data.isCrisis && typeof window !== "undefined") {
+            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+            if (!disabled) setShowCrisisAlert(true);
+          }
+
+          if (data.assistantMessage) {
+            const assistantMessage: LocalMessage = {
+              id: data.assistantMessage.id,
+              role: "assistant",
+              content: data.response,
+              timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+          }
+          setIsLoading(false);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
-      } finally {
         setIsLoading(false);
       }
     } else if (canRespond) {
@@ -510,7 +597,6 @@ export default function ChatSessionPage({ params }: PageProps) {
             content: data.message.content,
             timestamp: new Date(),
             responder: null, // AI response
-            isNew: true,
           };
 
           setMessages((prev) => [...prev, userMsg, aiMessage]);
@@ -680,14 +766,6 @@ export default function ChatSessionPage({ params }: PageProps) {
               messageId={msg.id}
               gasAmount={msg.gasAmount}
               onSendGas={handleSendGas}
-              typewriter={msg.isNew && msg.role === "assistant"}
-              onTypewriterComplete={() => {
-                if (msg.isNew) {
-                  setMessages((prev) =>
-                    prev.map((m) => m.id === msg.id ? { ...m, isNew: false } : m)
-                  );
-                }
-              }}
             />
           ))}
 
