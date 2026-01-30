@@ -39,23 +39,63 @@ export async function GET(req: NextRequest) {
     const db = getPrismaClient();
 
     if (db) {
-      // Database mode
-      const notifications = await db.notification.findMany({
+      // Database mode - fetch extra to account for filtered-out notifications
+      const rawNotifications = await db.notification.findMany({
         where: {
           userId: payload.userId,
           ...(unreadOnly && { isRead: false }),
         },
         orderBy: { createdAt: "desc" },
-        take: limit,
+        take: limit + 50, // 余分に取得してフィルタ後にlimit適用
       });
 
-      // 未読数も返す
-      const unreadCount = await db.notification.count({
+      // モデレーション非公開化されたセッションの通知を除外
+      // linkUrlからセッションIDを抽出し、自分がオーナーでないcrisis非公開化セッションを除外
+      const sessionIdPattern = /\/main\/chat\/([a-zA-Z0-9_-]+)/;
+      const sessionIdsInNotifs = new Set<string>();
+      for (const n of rawNotifications) {
+        const match = n.linkUrl?.match(sessionIdPattern);
+        if (match) sessionIdsInNotifs.add(match[1]);
+      }
+
+      // crisis非公開化された、自分がオーナーでないセッションを特定
+      let hiddenSessionIds = new Set<string>();
+      if (sessionIdsInNotifs.size > 0) {
+        const crisisSessions = await db.chatSession.findMany({
+          where: {
+            id: { in: Array.from(sessionIdsInNotifs) },
+            consultType: "PRIVATE",
+            userId: { not: payload.userId },
+            messages: { some: { isCrisis: true } },
+          },
+          select: { id: true },
+        });
+        hiddenSessionIds = new Set(crisisSessions.map((s) => s.id));
+      }
+
+      const notifications = rawNotifications
+        .filter((n) => {
+          if (hiddenSessionIds.size === 0) return true;
+          const match = n.linkUrl?.match(sessionIdPattern);
+          if (!match) return true;
+          return !hiddenSessionIds.has(match[1]);
+        })
+        .slice(0, limit);
+
+      // 未読数も同様にフィルタ
+      const allUnread = await db.notification.findMany({
         where: {
           userId: payload.userId,
           isRead: false,
         },
+        select: { id: true, linkUrl: true },
       });
+      const unreadCount = allUnread.filter((n) => {
+        if (hiddenSessionIds.size === 0) return true;
+        const match = n.linkUrl?.match(sessionIdPattern);
+        if (!match) return true;
+        return !hiddenSessionIds.has(match[1]);
+      }).length;
 
       return NextResponse.json({
         notifications,
