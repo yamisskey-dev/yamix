@@ -63,6 +63,24 @@ export const userHandleSchema = z.object({
 });
 
 /**
+ * Parse pagination limit from query params (NaN-safe, capped)
+ */
+export function parseLimit(value: string | null, defaultLimit = 20, maxLimit = 100): number {
+  const parsed = parseInt(value || String(defaultLimit), 10);
+  if (isNaN(parsed) || parsed < 1) return defaultLimit;
+  return Math.min(parsed, maxLimit);
+}
+
+/**
+ * Parse page number from query params (NaN-safe)
+ */
+export function parsePage(value: string | null, defaultPage = 1): number {
+  const parsed = parseInt(value || String(defaultPage), 10);
+  if (isNaN(parsed) || parsed < 1) return defaultPage;
+  return parsed;
+}
+
+/**
  * Helper to validate request body
  */
 export function validateBody<T extends z.ZodType>(

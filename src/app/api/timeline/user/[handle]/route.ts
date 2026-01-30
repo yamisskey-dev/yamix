@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { decryptMessage } from "@/lib/encryption";
+import { parseLimit } from "@/lib/validation";
 
 // In-memory types
 interface MemoryChatSession {
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   const decodedHandle = decodeURIComponent(handle);
 
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
   const cursor = searchParams.get("cursor");
 
   try {

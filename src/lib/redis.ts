@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import { logger } from "@/lib/logger";
 
 const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
@@ -15,7 +16,7 @@ function createRedisClient(): Redis | null {
   const redisUrl = process.env.REDIS_URL;
 
   if (!redisUrl) {
-    console.warn("REDIS_URL not set, using in-memory cache");
+    logger.warn("REDIS_URL not set, using in-memory cache");
     globalForRedis.redisAvailable = false;
     return null;
   }
@@ -25,7 +26,7 @@ function createRedisClient(): Redis | null {
       maxRetriesPerRequest: 1,
       retryStrategy(times) {
         if (times > 2) {
-          console.warn("Redis connection failed, falling back to in-memory cache");
+          logger.warn("Redis connection failed, falling back to in-memory cache");
           globalForRedis.redisAvailable = false;
           return null; // Stop retrying
         }
@@ -35,7 +36,7 @@ function createRedisClient(): Redis | null {
     });
 
     client.on("error", (err) => {
-      console.warn("Redis error:", err.message);
+      logger.warn("Redis error", { detail: err.message });
       globalForRedis.redisAvailable = false;
     });
 
@@ -45,7 +46,7 @@ function createRedisClient(): Redis | null {
 
     return client;
   } catch {
-    console.warn("Failed to create Redis client, using in-memory cache");
+    logger.warn("Failed to create Redis client, using in-memory cache");
     globalForRedis.redisAvailable = false;
     return null;
   }
@@ -88,7 +89,7 @@ export class RedisService {
         await redis.setex(key, ttlSeconds, value);
         return;
       } catch (err) {
-        console.warn("Redis setex failed, using memory cache:", err);
+        logger.warn("Redis setex failed, using memory cache", {}, err);
         globalForRedis.redisAvailable = false;
       }
     }
@@ -106,7 +107,7 @@ export class RedisService {
       try {
         return await redis.get(key);
       } catch (err) {
-        console.warn("Redis get failed, using memory cache:", err);
+        logger.warn("Redis get failed, using memory cache", {}, err);
         globalForRedis.redisAvailable = false;
       }
     }
@@ -128,7 +129,7 @@ export class RedisService {
       try {
         await redis.del(key);
       } catch (err) {
-        console.warn("Redis del failed:", err);
+        logger.warn("Redis del failed", {}, err);
         globalForRedis.redisAvailable = false;
       }
     }

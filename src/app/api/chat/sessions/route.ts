@@ -4,7 +4,7 @@ import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
-import { createChatSessionSchema, validateBody } from "@/lib/validation";
+import { createChatSessionSchema, validateBody, parseLimit } from "@/lib/validation";
 import { decryptMessage } from "@/lib/encryption";
 
 // In-memory chat sessions store
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
   const cursor = searchParams.get("cursor");
 
   try {

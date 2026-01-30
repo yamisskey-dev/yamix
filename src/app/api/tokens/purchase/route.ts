@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
           chainId: TOKEN_ECONOMY.CHAIN_ID,
           ethAmount,
           // In production, this would be the YAMI DAO treasury address on Optimism
-          recipientAddress: process.env.YAMI_DAO_TREASURY_ADDRESS || "0x...",
+          recipientAddress: process.env.YAMI_DAO_TREASURY_ADDRESS || (() => { throw new Error("YAMI_DAO_TREASURY_ADDRESS must be set"); })(),
           memo: `Purchase ${amount} YAMI for wallet ${walletId}`,
         },
       }, { status: 201 });

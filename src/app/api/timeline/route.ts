@@ -4,6 +4,7 @@ import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { decryptMessage } from "@/lib/encryption";
+import { parseLimit } from "@/lib/validation";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,7 @@ const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage
 // GET /api/timeline - Get individual posts (questions + answers) chronologically
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
   const cursor = searchParams.get("cursor");
 
   // Optional auth - if logged in, also show DIRECTED sessions targeting this user

@@ -3,12 +3,13 @@ import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
+import { parseLimit, parsePage } from "@/lib/validation";
 
 // GET /api/posts - Get all posts (with pagination)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "20", 10);
+  const page = parsePage(searchParams.get("page"));
+  const limit = parseLimit(searchParams.get("limit"));
 
   try {
     if (isPrismaAvailable() && prisma) {

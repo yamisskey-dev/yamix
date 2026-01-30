@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import type { WalletType, PostType, ConsultTarget, TransactionType } from "@/types";
+import { logger } from "@/lib/logger";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | null;
@@ -171,7 +172,7 @@ if (!globalForPrisma.memoryDB) {
 
 function createPrismaClient(): PrismaClient | null {
   if (!process.env.DATABASE_URL) {
-    console.warn("DATABASE_URL not set, using in-memory database");
+    logger.warn("DATABASE_URL not set, using in-memory database");
     globalForPrisma.prismaAvailable = false;
     return null;
   }
@@ -183,7 +184,7 @@ function createPrismaClient(): PrismaClient | null {
     globalForPrisma.prismaAvailable = true;
     return client;
   } catch (error) {
-    console.warn("Failed to create Prisma client:", error);
+    logger.warn("Failed to create Prisma client", {}, error);
     globalForPrisma.prismaAvailable = false;
     return null;
   }

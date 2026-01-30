@@ -5,11 +5,12 @@
 
 import { getPrismaClient } from "@/lib/prisma";
 import { encryptMessage, isEncrypted } from "@/lib/encryption";
+import { logger } from "@/lib/logger";
 
 export async function migrateUnencryptedMessages(): Promise<void> {
   const db = getPrismaClient();
   if (!db) {
-    console.log("[auto-migrate] Database not available, skipping");
+    logger.info("[auto-migrate] Database not available, skipping");
     return;
   }
 
@@ -26,11 +27,11 @@ export async function migrateUnencryptedMessages(): Promise<void> {
     });
 
     if (plaintextCount === 0) {
-      console.log("[auto-migrate] All messages already encrypted");
+      logger.info("[auto-migrate] All messages already encrypted");
       return;
     }
 
-    console.log(`[auto-migrate] Found ${plaintextCount} unencrypted messages, migrating...`);
+    logger.info(`[auto-migrate] Found ${plaintextCount} unencrypted messages, migrating...`);
 
     // 平文メッセージを取得
     const messages = await db.chatMessage.findMany({
@@ -70,13 +71,13 @@ export async function migrateUnencryptedMessages(): Promise<void> {
         successCount++;
       } catch (error) {
         errorCount++;
-        console.error(`[auto-migrate] Failed to encrypt message ${message.id}:`, error);
+        logger.error(`[auto-migrate] Failed to encrypt message ${message.id}`, {}, error);
       }
     }
 
-    console.log(`[auto-migrate] Migration complete: ${successCount} success, ${errorCount} errors`);
+    logger.info(`[auto-migrate] Migration complete: ${successCount} success, ${errorCount} errors`);
   } catch (error) {
-    console.error("[auto-migrate] Migration failed:", error);
+    logger.error("[auto-migrate] Migration failed", {}, error);
     // エラーでもアプリは起動する（後方互換性があるので）
   }
 }

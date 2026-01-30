@@ -3,6 +3,7 @@ import { getPrismaClient } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { decryptMessage } from "@/lib/encryption";
+import { parseLimit } from "@/lib/validation";
 
 /**
  * GET /api/bookmarks
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
 
   try {
     const db = getPrismaClient();

@@ -1,4 +1,5 @@
 import type { InstanceType } from "@/types";
+import { logger } from "@/lib/logger";
 
 interface NodeInfo {
   software?: {
@@ -30,7 +31,7 @@ export async function detectInstance(host: string): Promise<InstanceType | null>
 
     return null;
   } catch (error) {
-    console.error(`Failed to detect instance type for ${host}:`, error);
+    logger.error(`Failed to detect instance type for ${host}`, {}, error);
     return null;
   }
 }

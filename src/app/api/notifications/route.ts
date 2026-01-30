@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { parseLimit } from "@/lib/validation";
 
 // In-memory notification type
 interface MemoryNotification {
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
   const unreadOnly = searchParams.get("unreadOnly") === "true";
 
   try {

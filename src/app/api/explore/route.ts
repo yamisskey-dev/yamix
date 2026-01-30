@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrismaClient, memoryDB } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
+import { parseLimit } from "@/lib/validation";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -59,7 +60,7 @@ const chatMessagesStore = memoryDB.chatMessages as Map<string, MemoryChatMessage
 // GET /api/timeline - Get public consultations for timeline
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = parseLimit(searchParams.get("limit"));
   const cursor = searchParams.get("cursor");
 
   try {

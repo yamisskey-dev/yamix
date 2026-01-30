@@ -7,6 +7,7 @@
  */
 
 import crypto from "crypto";
+import { logger } from "@/lib/logger";
 
 // 暗号化されたメッセージのプレフィックス
 const ENCRYPTED_PREFIX = "$enc$";
@@ -17,6 +18,7 @@ const IV_LENGTH = 12; // GCM推奨
 const AUTH_TAG_LENGTH = 16;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32; // 256ビット
+let _encKeyWarned = false;
 
 /**
  * マスターキーを取得
@@ -29,10 +31,9 @@ function getMasterKey(): Buffer {
   }
 
   // フォールバック: JWT_SECRETからキーを派生（既存データとの互換性のため維持）
-  if (process.env.NODE_ENV === "production") {
-    console.warn(
-      "WARNING: MESSAGE_ENCRYPTION_KEY not set in production. Using derived key from JWT_SECRET. Set MESSAGE_ENCRYPTION_KEY for better security."
-    );
+  if (process.env.NODE_ENV === "production" && !_encKeyWarned) {
+    _encKeyWarned = true;
+    logger.warn("MESSAGE_ENCRYPTION_KEY not set in production. Using derived key from JWT_SECRET.");
   }
   const jwtSecret = process.env.JWT_SECRET || "development-secret";
   return crypto.pbkdf2Sync(jwtSecret, "yamix-fallback-salt", 100000, KEY_LENGTH, "sha256");
