@@ -28,14 +28,12 @@ function getMasterKey(): Buffer {
     return Buffer.from(envKey, "base64");
   }
 
+  // フォールバック: JWT_SECRETからキーを派生（既存データとの互換性のため維持）
   if (process.env.NODE_ENV === "production") {
-    throw new Error("MESSAGE_ENCRYPTION_KEY must be set in production");
+    console.warn(
+      "WARNING: MESSAGE_ENCRYPTION_KEY not set in production. Using derived key from JWT_SECRET. Set MESSAGE_ENCRYPTION_KEY for better security."
+    );
   }
-
-  // 開発環境用のフォールバック
-  console.warn(
-    "WARNING: MESSAGE_ENCRYPTION_KEY not set. Using derived key from JWT_SECRET."
-  );
   const jwtSecret = process.env.JWT_SECRET || "development-secret";
   return crypto.pbkdf2Sync(jwtSecret, "yamix-fallback-salt", 100000, KEY_LENGTH, "sha256");
 }
