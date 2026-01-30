@@ -11,6 +11,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       WEB_URL: ${WEB_URL:-http://localhost:3000}
       YAMII_API_URL: http://yamii:8000
+      YAMII_API_KEY: ${YAMII_API_KEY}
     networks:
       - internal_network
       - external_network
@@ -39,6 +40,7 @@ services:
       - '8000'
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      YAMII_API_KEYS: ${YAMII_API_KEY}
       YAMII_DATA_DIR: /app/data
     networks:
       - internal_network
