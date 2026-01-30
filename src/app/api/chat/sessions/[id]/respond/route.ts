@@ -8,6 +8,17 @@ import type { ConversationMessage } from "@/types";
 import { notifyResponse } from "@/lib/notifications";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
+// Simple crisis keyword check (fallback when AI moderation fails)
+const CRISIS_KEYWORDS = [
+  "死にたい", "死のう", "自殺", "殺して", "消えたい",
+  "生きていたくない", "もう終わり", "飛び降り", "首を吊",
+  "リストカット", "ODした", "薬を大量",
+];
+function checkCrisisKeywords(message: string): boolean {
+  const lower = message.toLowerCase();
+  return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 // In-memory types
 interface MemoryChatSession {
   id: string;
@@ -242,6 +253,23 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         });
       }
 
+      // Crisis moderation for responder messages
+      let moderationCrisis = false;
+      try {
+        const moderationResult = await yamiiClient.sendCounselingMessage(
+          body.content.trim(),
+          payload.userId,
+          { sessionId: id }
+        );
+        moderationCrisis = moderationResult.is_crisis;
+      } catch {
+        // Moderation failure is non-blocking; fall back to keyword check
+        moderationCrisis = checkCrisisKeywords(body.content.trim());
+      }
+
+      // If crisis detected in PUBLIC/DIRECTED, auto-privatize
+      const shouldHide = moderationCrisis && (sessionWithMessages.consultType === "PUBLIC" || sessionWithMessages.consultType === "DIRECTED");
+
       // Get responder wallet and check balance for response cost
       const responderWallet = await db.wallet.findUnique({
         where: { userId: payload.userId },
@@ -292,14 +320,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             content: encryptedContent,
             responderId: payload.userId,
             isAnonymous,
-            isCrisis: false,
+            isCrisis: moderationCrisis,
+            isHidden: shouldHide,
           },
         });
 
-        // 4. Update session timestamp
+        // 4. Update session timestamp (and auto-privatize if crisis)
+        const sessionUpdate: Record<string, unknown> = { updatedAt: new Date() };
+        if (shouldHide) {
+          sessionUpdate.consultType = "PRIVATE";
+          sessionUpdate.isPublic = false;
+        }
         await tx.chatSession.update({
           where: { id },
-          data: { updatedAt: new Date() },
+          data: sessionUpdate,
         });
 
         // 5. Calculate today's reward total
@@ -365,6 +399,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         netGain: result.netGain,
         rewardCapped: result.rewardCapped,
         capRemaining: result.capRemaining,
+        isCrisis: moderationCrisis,
+        sessionPrivatized: shouldHide,
       });
     } else {
       // In-memory fallback
@@ -413,6 +449,20 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           { status: 403 }
         );
       }
+
+      // Crisis moderation for responder messages (in-memory path)
+      let memModCrisis = false;
+      try {
+        const moderationResult = await yamiiClient.sendCounselingMessage(
+          body.content.trim(),
+          payload.userId,
+          { sessionId: id }
+        );
+        memModCrisis = moderationResult.is_crisis;
+      } catch {
+        memModCrisis = checkCrisisKeywords(body.content.trim());
+      }
+      const memShouldHide = memModCrisis && (session.consultType === "PUBLIC" || session.consultType === "DIRECTED");
 
       // Check if user is mentioning @yamii to call AI
       const hasYamiiMention = hasMentionYamii(body.content);
@@ -532,12 +582,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         content: encryptedContent,
         responderId: payload.userId,
         isAnonymous,
-        isCrisis: false,
+        isCrisis: memModCrisis,
         createdAt: new Date(),
       };
 
       chatMessagesStore.set(messageId, message);
       session.updatedAt = new Date();
+      if (memShouldHide) {
+        session.consultType = "PRIVATE";
+        session.isPublic = false;
+      }
       chatSessionsStore.set(id, session);
 
       // Grant reward (simplified - no daily cap tracking in memory mode)
@@ -554,6 +608,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         reward: rewardAmount,
         netGain,
         rewardCapped: false,
+        isCrisis: memModCrisis,
+        sessionPrivatized: memShouldHide,
       });
     }
   } catch (error) {
