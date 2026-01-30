@@ -40,6 +40,7 @@ interface PrismaSessionResult {
   userId: string;
   updatedAt: Date;
   messages: { content: string; role: string }[];
+  _count?: { targets: number; messages?: number };
 }
 
 const chatSessionsStore = memoryDB.chatSessions as Map<string, MemoryChatSession>;
@@ -80,7 +81,12 @@ export async function GET(req: NextRequest) {
           take: 1,
           select: { content: true, role: true },
         },
-        _count: { select: { targets: true } },
+        _count: {
+          select: {
+            targets: true,
+            messages: { where: { isCrisis: true } },
+          },
+        },
       };
 
       const [ownedSessions, directedTargets] = await Promise.all([
@@ -129,7 +135,7 @@ export async function GET(req: NextRequest) {
       const hasMore = paginated.length > limit;
       const items: ChatSessionListItem[] = paginated
         .slice(0, limit)
-        .map((s: PrismaSessionResult & { _count?: { targets: number }; userId?: string }) => {
+        .map((s: PrismaSessionResult & { _count?: { targets: number; messages?: number }; userId?: string }) => {
           // Decrypt message content for preview (use session owner's key)
           const rawContent = s.messages[0]?.content;
           const ownerId = s.userId || payload.userId;
@@ -145,6 +151,7 @@ export async function GET(req: NextRequest) {
             isPublic: s.isPublic, // DEPRECATED
             targetCount: s._count?.targets ?? 0,
             isReceived: directedSessionIds.has(s.id),
+            isCrisisPrivatized: (s._count?.messages ?? 0) > 0,
             updatedAt: s.updatedAt,
           };
         });
@@ -184,6 +191,7 @@ export async function GET(req: NextRequest) {
           ? decryptMessage(lastMessage.content, payload.userId)
           : null;
 
+        const hasCrisis = sessionMessages.some((m) => m.isCrisis);
         return {
           id: s.id,
           title: s.title,
@@ -191,6 +199,7 @@ export async function GET(req: NextRequest) {
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
           isPublic: s.isPublic, // DEPRECATED
+          isCrisisPrivatized: hasCrisis,
           updatedAt: s.updatedAt,
         };
       });

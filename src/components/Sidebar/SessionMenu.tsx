@@ -8,6 +8,7 @@ interface SessionLike {
   id: string;
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
+  isCrisisPrivatized?: boolean;
 }
 
 interface Props {
@@ -225,7 +226,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
                 disabled={loading}
               />
 
-              {isOwner && session.consultType === "PRIVATE" && (
+              {isOwner && session.consultType === "PRIVATE" && !session.isCrisisPrivatized && (
                 <MenuItem
                   icon={
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

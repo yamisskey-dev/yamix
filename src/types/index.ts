@@ -394,6 +394,7 @@ export interface ChatSessionListItem {
   isPublic: boolean;        // DEPRECATED
   targetCount?: number;     // 指名相談の対象ユーザー数
   isReceived?: boolean;     // 指名相談で自分がtargetの場合true
+  isCrisisPrivatized?: boolean; // モデレーションにより非公開化された場合true
   updatedAt: Date;
 }
 
