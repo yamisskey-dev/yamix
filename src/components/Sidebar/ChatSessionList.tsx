@@ -267,6 +267,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
           }}
           isBookmarked={isBookmarked}
           onUnbookmark={isBookmarked ? () => removeBookmark(session.id) : undefined}
+          isOwner={!session.isReceived}
         />
       </div>
     </div>
