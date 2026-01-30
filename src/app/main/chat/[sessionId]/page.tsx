@@ -472,13 +472,15 @@ export default function ChatSessionPage({ params }: PageProps) {
         <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
           <div className="flex items-center gap-2 truncate flex-1">
             <h1 className="text-sm font-medium truncate">{sessionInfo.title}</h1>
-            {sessionInfo.consultType === "DIRECTED" && sessionInfo.targets && (
-              <span className="badge badge-accent badge-xs gap-1 shrink-0" title={`指名先: ${sessionInfo.targets.map((t) => t.displayName || `@${t.handle}`).join(", ")}`}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+            {sessionInfo.consultType === "DIRECTED" && sessionInfo.targets && sessionInfo.targets.length > 0 && (
+              <div className="flex items-center gap-1 shrink-0 text-[11px] text-base-content/50">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3 text-accent">
                   <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
                 </svg>
-                {sessionInfo.targets.length}
-              </span>
+                <span className="truncate max-w-[200px]">
+                  {sessionInfo.targets.map((t) => t.displayName || `@${t.handle}`).join(", ")}
+                </span>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
