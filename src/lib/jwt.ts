@@ -1,9 +1,14 @@
 import * as jose from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET ||
-  (process.env.NODE_ENV === "production"
-    ? (() => { throw new Error("JWT_SECRET must be set in production"); })()
-    : "yamix-dev-secret-key");
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET must be set in production");
+  }
+  return "yamix-dev-secret-key";
+}
+
 const JWT_ISSUER = "yamix";
 const JWT_AUDIENCE = "yamix-users";
 const JWT_EXPIRY = "7d"; // 7 days
@@ -17,7 +22,9 @@ export interface JWTPayload {
   exp?: number;
 }
 
-const secret = new TextEncoder().encode(JWT_SECRET);
+function getSecret() {
+  return new TextEncoder().encode(getJwtSecret());
+}
 
 export async function createJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promise<string> {
   return new jose.SignJWT(payload)
@@ -26,12 +33,12 @@ export async function createJWT(payload: Omit<JWTPayload, "iat" | "exp">): Promi
     .setIssuer(JWT_ISSUER)
     .setAudience(JWT_AUDIENCE)
     .setExpirationTime(JWT_EXPIRY)
-    .sign(secret);
+    .sign(getSecret());
 }
 
 export async function verifyJWT(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jose.jwtVerify(token, secret, {
+    const { payload } = await jose.jwtVerify(token, getSecret(), {
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
     });
