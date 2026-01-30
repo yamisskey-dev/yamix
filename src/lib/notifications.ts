@@ -52,7 +52,7 @@ export async function notifyGasReceived(
     userId: recipientId,
     type: "GAS_RECEIVED",
     title: "💜を受け取りました",
-    message: `@${senderHandle}さんからあなたの回答に💜が送られました`,
+    message: `${senderHandle}さんからあなたの回答に💜が送られました`,
     linkUrl: `/main/chat/${sessionId}`,
   });
 }
@@ -66,7 +66,7 @@ export async function notifyResponse(
   sessionId: string,
   isAnonymous: boolean
 ): Promise<void> {
-  const displayName = isAnonymous ? "匿名ユーザー" : `@${responderHandle}さん`;
+  const displayName = isAnonymous ? "匿名ユーザー" : `${responderHandle}さん`;
 
   await createNotification({
     userId: consultationOwnerId,
@@ -86,7 +86,7 @@ export async function notifyDirectedRequest(
   sessionId: string,
   isAnonymous: boolean
 ): Promise<void> {
-  const displayName = isAnonymous ? "匿名ユーザー" : `@${senderHandle}さん`;
+  const displayName = isAnonymous ? "匿名ユーザー" : `${senderHandle}さん`;
 
   await Promise.all(
     targetUserIds.map((userId) =>
@@ -113,7 +113,7 @@ export async function notifyMention(
     userId: mentionedUserId,
     type: "MENTION",
     title: "メンションされました",
-    message: `@${mentionerHandle}さんがあなたに言及しました`,
+    message: `${mentionerHandle}さんがあなたに言及しました`,
     linkUrl: `/main/chat/${sessionId}`,
   });
 }
