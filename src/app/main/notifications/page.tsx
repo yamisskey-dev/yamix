@@ -88,8 +88,8 @@ export default function NotificationsPage() {
         );
       case "MENTION":
         return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`${iconClass} text-secondary`}>
-            <path fillRule="evenodd" d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z" clipRule="evenodd" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`${iconClass} text-accent`}>
+            <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
           </svg>
         );
       case "GAS_RECEIVED":
@@ -105,11 +105,7 @@ export default function NotificationsPage() {
           </svg>
         );
       default:
-        return (
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`${iconClass} text-base-content/60`}>
-            <path fillRule="evenodd" d="M5.25 9a6.75 6.75 0 0 1 13.5 0v.75c0 2.123.8 4.057 2.118 5.52a.75.75 0 0 1-.297 1.206c-1.544.57-3.16.99-4.831 1.243a3.75 3.75 0 1 1-7.48 0 24.585 24.585 0 0 1-4.831-1.244.75.75 0 0 1-.298-1.205A8.217 8.217 0 0 0 5.25 9.75V9Zm4.502 8.9a2.25 2.25 0 1 0 4.496 0 25.057 25.057 0 0 1-4.496 0Z" clipRule="evenodd" />
-          </svg>
-        );
+        return null;
     }
   };
 
@@ -130,83 +126,79 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  const renderNotificationCard = (notification: Notification) => {
+    const content = (
+      <div
+        className={`flex items-start gap-3 p-4 transition-colors ${
+          !notification.isRead ? "bg-primary/5" : ""
+        } ${notification.linkUrl ? "hover:bg-base-200/50 cursor-pointer" : ""}`}
+      >
+        <div className="flex-shrink-0 mt-0.5">
+          {getNotificationIcon(notification.type)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${!notification.isRead ? "font-medium" : "text-base-content/80"}`}>
+            {notification.message}
+          </p>
+          <p className="text-xs text-base-content/40 mt-1">{getRelativeTime(notification.createdAt)}</p>
+        </div>
+        {!notification.isRead && (
+          <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
+        )}
+      </div>
+    );
+
+    if (notification.linkUrl) {
+      return (
+        <Link
+          key={notification.id}
+          href={notification.linkUrl}
+          onClick={() => handleNotificationClick(notification)}
+          className="block"
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return <div key={notification.id}>{content}</div>;
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-base-100/95 backdrop-blur-sm border-b border-base-300">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-bold">通知</h1>
-          {unreadCount > 0 && (
+    <div className="flex-1 overflow-y-auto h-full">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 pt-4 pb-3">
+        {/* Mark all read */}
+        {unreadCount > 0 && (
+          <div className="flex justify-end mb-2">
             <button
               onClick={markAllAsRead}
-              className="text-sm text-primary hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               全て既読にする
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {loading ? (
-          <div className="flex items-center justify-center p-8">
-            <LoadingSpinner size="md" />
           </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
+        )}
+
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16">
             <div className="w-16 h-16 rounded-full bg-base-200 flex items-center justify-center mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-base-content/30">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
               </svg>
             </div>
-            <p className="text-base-content/50">通知はありません</p>
+            <p className="text-base-content/50 text-sm">通知はありません</p>
           </div>
         ) : (
-          <div className="divide-y divide-base-200">
-            {notifications.map((notification) => (
-              <div key={notification.id}>
-                {notification.linkUrl ? (
-                  <Link
-                    href={notification.linkUrl}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`flex items-start gap-3 px-4 py-3 hover:bg-base-200/50 transition-colors ${
-                      !notification.isRead ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="text-xs text-base-content/60 line-clamp-2 mt-0.5">{notification.message}</p>
-                      <p className="text-xs text-base-content/40 mt-1">{getRelativeTime(notification.createdAt)}</p>
-                    </div>
-                    {!notification.isRead && (
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
-                    )}
-                  </Link>
-                ) : (
-                  <div
-                    className={`flex items-start gap-3 px-4 py-3 ${
-                      !notification.isRead ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="text-xs text-base-content/60 line-clamp-2 mt-0.5">{notification.message}</p>
-                      <p className="text-xs text-base-content/40 mt-1">{getRelativeTime(notification.createdAt)}</p>
-                    </div>
-                    {!notification.isRead && (
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-primary mt-2" />
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="bg-base-100/50 backdrop-blur-sm rounded-xl border border-base-content/10 overflow-hidden divide-y divide-base-content/5">
+            {notifications.map(renderNotificationCard)}
           </div>
         )}
       </div>

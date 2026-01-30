@@ -41,13 +41,11 @@ function NavItem({
         `}
         aria-current={isActive ? "page" : undefined}
       >
-        <span className="relative w-5 h-5 flex items-center justify-center">
-          {icon}
-          {indicator && (
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-error animate-pulse" />
-          )}
-        </span>
-        <span className="text-[13px] font-medium">{label}</span>
+        <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
+        <span className="text-[13px] font-medium flex-1">{label}</span>
+        {indicator && (
+          <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+        )}
       </button>
     </div>
   );
