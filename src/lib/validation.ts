@@ -58,11 +58,6 @@ export const createPostSchema = z.object({
 });
 
 // Query parameter schemas
-export const paginationSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  cursor: z.string().optional(),
-});
-
 export const userHandleSchema = z.object({
   handle: z.string().min(1).max(50).regex(/^[a-zA-Z0-9_-]+$/),
 });

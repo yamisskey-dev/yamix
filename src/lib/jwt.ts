@@ -1,6 +1,9 @@
 import * as jose from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET || "yamix-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET ||
+  (process.env.NODE_ENV === "production"
+    ? (() => { throw new Error("JWT_SECRET must be set in production"); })()
+    : "yamix-dev-secret-key");
 const JWT_ISSUER = "yamix";
 const JWT_AUDIENCE = "yamix-users";
 const JWT_EXPIRY = "30d"; // 30 days
