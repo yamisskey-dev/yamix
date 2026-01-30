@@ -46,8 +46,8 @@ export const ChatBubble = memo(function ChatBubble({
   // Show block button if: session owner, this is a human response (not owner's message), and has responderId
   const canBlock = isSessionOwner && !isUser && isHuman && responder!.responderId && onBlock;
 
-  // Show gas button if: this is a human response (not your own), has messageId and callback
-  const canSendGas = !isUser && isHuman && messageId && onSendGas;
+  // Show gas button if: this is a human response (not the consultation question), has messageId and callback
+  const canSendGas = !isUser && isHuman && responder!.responderId && messageId && onSendGas;
 
   if (isLoading) {
     return (
