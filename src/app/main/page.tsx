@@ -147,14 +147,17 @@ export default function NewChatPage() {
         // Store initial message in sessionStorage for the chat page to pick up
         sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
 
-        // Try native HTML navigation instead of JS navigation
-        // Create a temporary anchor element and click it programmatically
-        const anchor = document.createElement('a');
-        anchor.href = `/main/chat/${session.id}`;
-        anchor.style.display = 'none';
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
+        // Wait a tiny bit to ensure DB transaction is committed (race condition fix for mobile)
+        setTimeout(() => {
+          // Try native HTML navigation instead of JS navigation
+          // Create a temporary anchor element and click it programmatically
+          const anchor = document.createElement('a');
+          anchor.href = `/main/chat/${session.id}`;
+          anchor.style.display = 'none';
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+        }, 100); // 100ms delay to ensure DB commit
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
