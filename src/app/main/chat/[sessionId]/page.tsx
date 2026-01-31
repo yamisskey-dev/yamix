@@ -343,7 +343,8 @@ export default function ChatSessionPage({ params }: PageProps) {
       console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
     };
-  }, [sessionId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
 
   // Auto-send message from sessionStorage
   useEffect(() => {
