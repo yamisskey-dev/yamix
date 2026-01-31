@@ -386,11 +386,17 @@ export default function ChatSessionPage({ params }: PageProps) {
         });
         anonymousUserMapRef.current = new Map(anonymousUserMap);
 
-        setMessages(
-          session.messages.map((m: ChatMessage) =>
+        // Only update messages if we don't have any messages yet (to avoid race condition with message sending)
+        setMessages((prev) => {
+          // If there are already messages (e.g., user just sent a message), don't overwrite them
+          if (prev.length > 0 && session.messages.length === 0) {
+            console.log('[CHAT DEBUG] Skipping setMessages: prev has messages but session is empty (race condition)');
+            return prev;
+          }
+          return session.messages.map((m: ChatMessage) =>
             transformMessage(m, isOwner, currentUserId, session.isAnonymous, session.user, anonymousUserMap)
-          )
-        );
+          );
+        });
         console.log('[CHAT DEBUG] All state set successfully, setting isFetching to false');
       } catch (err) {
         clientLogger.error("Error fetching session:", err);
