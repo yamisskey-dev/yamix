@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { bookmarkApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 
 interface BookmarkContextType {
@@ -26,14 +27,11 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/bookmarks?limit=100");
-        if (res.ok) {
-          const data = await res.json();
-          const ids = new Set<string>(
-            (data.bookmarks || []).map((b: { sessionId: string }) => b.sessionId)
-          );
-          setBookmarkedIds(ids);
-        }
+        const data = await bookmarkApi.getBookmarks();
+        const ids = new Set<string>(
+          (data.bookmarks || []).map((b) => b.sessionId)
+        );
+        setBookmarkedIds(ids);
       } catch (error) {
         clientLogger.error("Failed to fetch bookmarks:", error);
       }
@@ -45,27 +43,19 @@ export function BookmarkProvider({ children }: { children: ReactNode }) {
 
     try {
       if (isCurrentlyBookmarked) {
-        const res = await fetch(`/api/bookmarks?sessionId=${sessionId}`, { method: "DELETE" });
-        if (res.ok) {
-          setBookmarkedIds((prev) => {
-            const next = new Set(prev);
-            next.delete(sessionId);
-            return next;
-          });
-          setRevision((r) => r + 1);
-          return false;
-        }
-      } else {
-        const res = await fetch("/api/bookmarks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
+        await bookmarkApi.removeBookmark(sessionId);
+        setBookmarkedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(sessionId);
+          return next;
         });
-        if (res.ok) {
-          setBookmarkedIds((prev) => new Set(prev).add(sessionId));
-          setRevision((r) => r + 1);
-          return true;
-        }
+        setRevision((r) => r + 1);
+        return false;
+      } else {
+        await bookmarkApi.addBookmark(sessionId);
+        setBookmarkedIds((prev) => new Set(prev).add(sessionId));
+        setRevision((r) => r + 1);
+        return true;
       }
     } catch (error) {
       clientLogger.error("Bookmark toggle error:", error);

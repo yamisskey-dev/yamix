@@ -8,6 +8,9 @@ import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ConfirmModal } from "@/components/Modal";
+import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
+import { chatApi, userApi, messageApi, api } from "@/lib/api-client";
+import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
 import { useToast } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
@@ -30,7 +33,189 @@ interface LocalMessage {
   content: string;
   timestamp: Date;
   responder?: ResponderInfo | null;
-  gasAmount?: number; // 受け取った灯の合計
+  gasAmount?: number;
+}
+
+interface SessionInfo {
+  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
+  userId: string;
+  isOwner: boolean;
+  isAnonymous: boolean;
+  currentUserId: string | null;
+  title: string | null;
+  responseCount: number;
+  targets?: { userId: string; handle: string; displayName: string | null }[];
+}
+
+/**
+ * サーバーメッセージをローカル表示用に変換
+ */
+function transformMessage(
+  m: ChatMessage,
+  isOwner: boolean,
+  currentUserId: string | null,
+  sessionIsAnonymous: boolean,
+  sessionUser: ChatSessionWithMessages["user"],
+  anonymousUserMap: Map<string, string>
+): LocalMessage {
+  const isMyMessage = currentUserId && (
+    (m.role === "USER" && isOwner) ||
+    (m.role === "ASSISTANT" && m.responderId === currentUserId)
+  );
+
+  if (isMyMessage) {
+    return {
+      id: m.id,
+      role: "user",
+      content: m.content,
+      timestamp: new Date(m.createdAt),
+      gasAmount: m.gasAmount,
+    };
+  }
+
+  if (!isOwner && m.role === "USER") {
+    return {
+      id: m.id,
+      role: "assistant",
+      content: m.content,
+      timestamp: new Date(m.createdAt),
+      gasAmount: m.gasAmount,
+      responder: {
+        displayName: sessionIsAnonymous ? null : (sessionUser?.displayName || null),
+        avatarUrl: sessionIsAnonymous ? null : (sessionUser?.avatarUrl || null),
+        isAnonymous: sessionIsAnonymous,
+        handle: sessionIsAnonymous ? undefined : sessionUser?.handle,
+      },
+    };
+  }
+
+  return {
+    id: m.id,
+    role: "assistant",
+    content: m.content,
+    timestamp: new Date(m.createdAt),
+    gasAmount: m.gasAmount,
+    responder: m.responder ? {
+      displayName: m.isAnonymous
+        ? `User ${anonymousUserMap.get(m.responderId!)}`
+        : m.responder.displayName,
+      avatarUrl: m.isAnonymous ? null : m.responder.avatarUrl,
+      isAnonymous: m.isAnonymous,
+      handle: m.isAnonymous ? undefined : m.responder.handle,
+      responderId: m.responderId || undefined,
+    } : undefined,
+  };
+}
+
+/**
+ * 危機アラートのチェックと表示
+ */
+function checkCrisisAlert(isCrisis: boolean | undefined): boolean {
+  if (!isCrisis) return false;
+  const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
+  return !disabled;
+}
+
+/**
+ * SSEストリーミングレスポンスの処理
+ * 初回メッセージ送信とチャット送信で共通化
+ */
+async function handleSSEResponse(
+  res: Response,
+  userMessageId: string,
+  callbacks: {
+    setMessages: React.Dispatch<React.SetStateAction<LocalMessage[]>>;
+    setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+    setSessionInfo: React.Dispatch<React.SetStateAction<SessionInfo | null>>;
+    setShowCrisisAlert: React.Dispatch<React.SetStateAction<boolean>>;
+    sessionInfo: SessionInfo | null;
+    toast: ReturnType<typeof useToast>;
+  }
+): Promise<void> {
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("text/event-stream") && res.body) {
+    const streamingMsgId = crypto.randomUUID();
+    let streamStarted = false;
+
+    try {
+      await processSSEStream(res, {
+        onInit(event) {
+          if (event.userMessageId) {
+            callbacks.setMessages((prev) =>
+              prev.map((m) =>
+                m.id === userMessageId ? { ...m, id: event.userMessageId! } : m
+              )
+            );
+          }
+          if (event.sessionTitle && callbacks.sessionInfo) {
+            callbacks.setSessionInfo({ ...callbacks.sessionInfo, title: event.sessionTitle });
+            window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+          }
+        },
+        onChunk(chunk) {
+          if (!streamStarted) {
+            streamStarted = true;
+            callbacks.setIsLoading(false);
+            callbacks.setMessages((prev) => [...prev, {
+              id: streamingMsgId,
+              role: "assistant",
+              content: chunk,
+              timestamp: new Date(),
+            }]);
+          } else {
+            callbacks.setMessages((prev) =>
+              prev.map((m) =>
+                m.id === streamingMsgId
+                  ? { ...m, content: m.content + chunk }
+                  : m
+              )
+            );
+          }
+        },
+        onDone(event) {
+          const realMsgId = event.assistantMessageId || streamingMsgId;
+          callbacks.setMessages((prev) =>
+            prev.map((m) =>
+              m.id === streamingMsgId ? { ...m, id: realMsgId } : m
+            )
+          );
+          if (event.sessionPrivatized && callbacks.sessionInfo) {
+            callbacks.setSessionInfo({ ...callbacks.sessionInfo, consultType: "PRIVATE" });
+            callbacks.toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+          }
+          if (checkCrisisAlert(event.isCrisis)) {
+            callbacks.setShowCrisisAlert(true);
+          }
+        },
+        onError(error) {
+          throw new Error(error);
+        },
+      });
+    } finally {
+      callbacks.setIsLoading(false);
+    }
+  } else {
+    // Non-streaming JSON response
+    const data = await res.json();
+
+    if (data.sessionPrivatized && callbacks.sessionInfo) {
+      callbacks.setSessionInfo({ ...callbacks.sessionInfo, consultType: "PRIVATE" });
+      callbacks.toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+    }
+    if (checkCrisisAlert(data.isCrisis)) {
+      callbacks.setShowCrisisAlert(true);
+    }
+    if (data.assistantMessage) {
+      callbacks.setMessages((prev) => [...prev, {
+        id: data.assistantMessage.id,
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date(),
+      }]);
+    }
+    callbacks.setIsLoading(false);
+  }
 }
 
 export default function ChatSessionPage({ params }: PageProps) {
@@ -45,7 +230,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
-  const [isAnonymousResponse, setIsAnonymousResponse] = useState(false); // 匿名で回答するか
+  const [isAnonymousResponse, setIsAnonymousResponse] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const deleteModalRef = useRef<HTMLDialogElement>(null);
@@ -53,24 +238,28 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
-  const [sessionInfo, setSessionInfo] = useState<{
-    consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
-    userId: string;
-    isOwner: boolean;
-    isAnonymous: boolean;
-    currentUserId: string | null;
-    title: string | null;
-    responseCount: number;
-    targets?: { userId: string; handle: string; displayName: string | null }[];
-  } | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+
+  // Polling refs
+  const lastPollTimeRef = useRef<string | null>(null);
+  const messageIdsRef = useRef<Set<string>>(new Set());
+  const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
+
+  // SSE callback refs (stable across renders)
+  const sseCallbacks = {
+    setMessages,
+    setIsLoading,
+    setSessionInfo,
+    setShowCrisisAlert,
+    sessionInfo,
+    toast,
+  };
 
   // Fetch session data
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        // Get current user
-        const meRes = await fetch("/api/auth/me");
-        const currentUser = meRes.ok ? await meRes.json() : null;
+        const currentUser = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
 
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) {
@@ -82,16 +271,13 @@ export default function ChatSessionPage({ params }: PageProps) {
         }
 
         const session: ChatSessionWithMessages = await res.json();
-
         const isOwner = currentUser ? session.userId === currentUser.id : false;
         const currentUserId = currentUser?.id || null;
 
-        // Count responses from humans (not AI)
         const responseCount = session.messages.filter(
           (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
         ).length;
 
-        // Store session info
         setSessionInfo({
           consultType: session.consultType,
           userId: session.userId,
@@ -103,73 +289,21 @@ export default function ChatSessionPage({ params }: PageProps) {
           targets: session.targets,
         });
 
-        // Build anonymous user map (User A, B, C, etc.)
+        // Build anonymous user map
         const anonymousUserMap = new Map<string, string>();
         session.messages.forEach((m: ChatMessage) => {
           if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
             if (!anonymousUserMap.has(m.responderId)) {
-              const label = String.fromCharCode(65 + anonymousUserMap.size); // A, B, C...
-              anonymousUserMap.set(m.responderId, label);
+              anonymousUserMap.set(m.responderId, String.fromCharCode(65 + anonymousUserMap.size));
             }
           }
         });
-        // Sync to ref for polling
         anonymousUserMapRef.current = new Map(anonymousUserMap);
 
         setMessages(
-          session.messages.map((m: ChatMessage) => {
-            // Check if this is current user's message
-            const isMyMessage = currentUserId && (
-              (m.role === "USER" && isOwner) || // My question (if I'm the owner)
-              (m.role === "ASSISTANT" && m.responderId === currentUserId) // My response
-            );
-
-            // My messages go to the right without avatar/name
-            if (isMyMessage) {
-              return {
-                id: m.id,
-                role: "user" as const,
-                content: m.content,
-                timestamp: new Date(m.createdAt),
-                gasAmount: m.gasAmount,
-              };
-            }
-
-            // If viewing someone else's chat, show their USER messages on the left with avatar
-            if (!isOwner && m.role === "USER") {
-              return {
-                id: m.id,
-                role: "assistant" as const,
-                content: m.content,
-                timestamp: new Date(m.createdAt),
-                gasAmount: m.gasAmount,
-                responder: {
-                  displayName: session.isAnonymous ? null : (session.user?.displayName || null),
-                  avatarUrl: session.isAnonymous ? null : (session.user?.avatarUrl || null),
-                  isAnonymous: session.isAnonymous,
-                  handle: session.isAnonymous ? undefined : session.user?.handle,
-                },
-              };
-            }
-
-            // Other ASSISTANT messages (AI or others' responses) on the left
-            return {
-              id: m.id,
-              role: "assistant" as const,
-              content: m.content,
-              timestamp: new Date(m.createdAt),
-              gasAmount: m.gasAmount,
-              responder: m.responder ? {
-                displayName: m.isAnonymous
-                  ? `User ${anonymousUserMap.get(m.responderId!)}`
-                  : m.responder.displayName,
-                avatarUrl: m.isAnonymous ? null : m.responder.avatarUrl,
-                isAnonymous: m.isAnonymous,
-                handle: m.isAnonymous ? undefined : m.responder.handle,
-                responderId: m.responderId || undefined,
-              } : undefined, // undefined = AI
-            };
-          })
+          session.messages.map((m: ChatMessage) =>
+            transformMessage(m, isOwner, currentUserId, session.isAnonymous, session.user, anonymousUserMap)
+          )
         );
       } catch (err) {
         clientLogger.error("Error fetching session:", err);
@@ -182,13 +316,12 @@ export default function ChatSessionPage({ params }: PageProps) {
     fetchSession();
   }, [sessionId, router]);
 
-  // Auto-send initial message from new chat creation page
+  // Auto-send initial message
   useEffect(() => {
     const initialMessage = searchParams.get("initialMessage");
     if (!initialMessage || initialMessageRef.current || !sessionInfo || isFetching) return;
     initialMessageRef.current = "sent";
 
-    // Remove query param from URL
     window.history.replaceState({}, "", `/main/chat/${sessionId}`);
 
     const content = decodeURIComponent(initialMessage);
@@ -201,11 +334,8 @@ export default function ChatSessionPage({ params }: PageProps) {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
     setError(undefined);
-
-    // Notify sidebar
     window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
 
-    // Send message and handle SSE stream
     (async () => {
       try {
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
@@ -219,87 +349,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
-        const contentType = res.headers.get("content-type") || "";
-        if (contentType.includes("text/event-stream") && res.body) {
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          const streamingMsgId = crypto.randomUUID();
-          let streamStarted = false;
-
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split("\n");
-              buffer = lines.pop() || "";
-
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith("data: ")) continue;
-                const dataStr = trimmed.slice(6).trim();
-                if (!dataStr || !dataStr.startsWith("{")) continue;
-                try {
-                  const event = JSON.parse(dataStr);
-
-                  if (event.type === "init") {
-                    if (event.userMessageId) {
-                      setMessages((prev) =>
-                        prev.map((m) =>
-                          m.id === userMessage.id ? { ...m, id: event.userMessageId } : m
-                        )
-                      );
-                    }
-                    if (event.sessionTitle && sessionInfo) {
-                      setSessionInfo({ ...sessionInfo, title: event.sessionTitle });
-                    }
-                  } else if (event.type === "chunk") {
-                    if (!streamStarted) {
-                      streamStarted = true;
-                      setIsLoading(false);
-                      const assistantMsg: LocalMessage = {
-                        id: streamingMsgId,
-                        role: "assistant",
-                        content: event.chunk,
-                        timestamp: new Date(),
-                      };
-                      setMessages((prev) => [...prev, assistantMsg]);
-                    } else {
-                      setMessages((prev) =>
-                        prev.map((m) =>
-                          m.id === streamingMsgId
-                            ? { ...m, content: m.content + event.chunk }
-                            : m
-                        )
-                      );
-                    }
-                  } else if (event.type === "done") {
-                    const realMsgId = event.assistantMessageId || streamingMsgId;
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === streamingMsgId ? { ...m, id: realMsgId } : m
-                      )
-                    );
-                    if (event.isCrisis && typeof window !== "undefined") {
-                      const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-                      if (!disabled) setShowCrisisAlert(true);
-                    }
-                  } else if (event.type === "error") {
-                    throw new Error(event.error);
-                  }
-                } catch (parseErr) {
-                  if (parseErr instanceof Error && parseErr.message !== "error") {
-                    if (dataStr.includes('"type":"error"')) throw parseErr;
-                  }
-                }
-              }
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        }
+        await handleSSEResponse(res, userMessage.id, sseCallbacks);
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
@@ -307,20 +357,14 @@ export default function ChatSessionPage({ params }: PageProps) {
     })();
   }, [searchParams, sessionInfo, isFetching, sessionId]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Poll for new messages (PUBLIC/DIRECTED sessions only)
-  const lastPollTimeRef = useRef<string | null>(null);
-  const messageIdsRef = useRef<Set<string>>(new Set());
-  const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
-
   // Keep messageIds ref in sync
   useEffect(() => {
     messageIdsRef.current = new Set(messages.map((m) => m.id));
-    // Update last poll time to latest message timestamp
     if (messages.length > 0) {
       const latest = messages[messages.length - 1].timestamp.toISOString();
       if (!lastPollTimeRef.current || latest > lastPollTimeRef.current) {
@@ -329,17 +373,15 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
   }, [messages]);
 
+  // Transform polled messages
   const transformPolledMessage = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (m: any): LocalMessage | null => {
       if (!sessionInfo) return null;
-      const isOwner = sessionInfo.isOwner;
-      const currentUserId = sessionInfo.currentUserId;
-
-      // Skip if already displayed
       if (messageIdsRef.current.has(m.id)) return null;
 
-      // Check if this is current user's message
+      const { isOwner, currentUserId, isAnonymous } = sessionInfo;
+
       const isMyMessage =
         currentUserId &&
         ((m.role === "USER" && isOwner) ||
@@ -363,18 +405,20 @@ export default function ChatSessionPage({ params }: PageProps) {
           timestamp: new Date(m.createdAt),
           gasAmount: m.gasAmount,
           responder: {
-            displayName: sessionInfo.isAnonymous ? null : null,
+            displayName: null,
             avatarUrl: null,
-            isAnonymous: sessionInfo.isAnonymous,
+            isAnonymous,
           },
         };
       }
 
-      // Build anonymous label for new anonymous responders
+      // Build anonymous label for new responders
       if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
         if (!anonymousUserMapRef.current.has(m.responderId)) {
-          const label = String.fromCharCode(65 + anonymousUserMapRef.current.size);
-          anonymousUserMapRef.current.set(m.responderId, label);
+          anonymousUserMapRef.current.set(
+            m.responderId,
+            String.fromCharCode(65 + anonymousUserMapRef.current.size)
+          );
         }
       }
 
@@ -400,24 +444,22 @@ export default function ChatSessionPage({ params }: PageProps) {
     [sessionInfo]
   );
 
+  // Poll for new messages
   useEffect(() => {
-    if (!sessionInfo) return;
-    // Only poll for PUBLIC/DIRECTED (other users might respond)
-    if (sessionInfo.consultType === "PRIVATE") return;
+    if (!sessionInfo || sessionInfo.consultType === "PRIVATE") return;
 
     const poll = async () => {
       if (document.hidden) return;
       const after = lastPollTimeRef.current || new Date(0).toISOString();
       try {
-        const res = await fetch(
-          `/api/chat/sessions/${sessionId}/poll?after=${encodeURIComponent(after)}`
+        const data = await api.get<{ messages: unknown[] }>(
+          `/api/chat/sessions/${sessionId}/poll`,
+          { params: { after } }
         );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.messages && data.messages.length > 0) {
+        if (data.messages?.length > 0) {
           const newMsgs = data.messages
             .map(transformPolledMessage)
-            .filter((m: LocalMessage | null): m is LocalMessage => m !== null);
+            .filter((m): m is LocalMessage => m !== null);
           if (newMsgs.length > 0) {
             setMessages((prev) => [...prev, ...newMsgs]);
           }
@@ -449,23 +491,12 @@ export default function ChatSessionPage({ params }: PageProps) {
     setIsBlocking(true);
 
     try {
-      const res = await fetch("/api/users/block", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockedUserId: blockTargetId }),
-      });
-
-      if (res.ok) {
-        toast.success("ユーザーをブロックしました");
-        // Reload to reflect the block
-        window.location.reload();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "ブロックに失敗しました");
-      }
+      await userApi.blockUser(blockTargetId);
+      toast.success("ユーザーをブロックしました");
+      window.location.reload();
     } catch (error) {
       clientLogger.error("Block error:", error);
-      toast.error("ブロックに失敗しました");
+      toast.error(error instanceof Error ? error.message : "ブロックに失敗しました");
     } finally {
       setIsBlocking(false);
       setBlockTargetId(null);
@@ -474,47 +505,28 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   const handleSendGas = async (messageId: string) => {
     try {
-      const res = await fetch(`/api/messages/${messageId}/gas`, {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Update local message state to reflect new gasAmount
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
-          )
-        );
-        toast.success("💜を送りました（3 YAMI）");
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "💜の送信に失敗しました");
-      }
+      const data = await messageApi.sendGas(messageId);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
+        )
+      );
+      toast.success("💜を送りました（3 YAMI）");
     } catch (error) {
       clientLogger.error("Send gas error:", error);
-      toast.error("💜の送信に失敗しました");
+      toast.error(error instanceof Error ? error.message : "💜の送信に失敗しました");
     }
   };
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        // Notify sidebar to remove the session
-        window.dispatchEvent(new CustomEvent("chatSessionDeleted", { detail: { sessionId } }));
-        router.push("/main");
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "削除に失敗しました");
-      }
+      await chatApi.deleteSession(sessionId);
+      window.dispatchEvent(new CustomEvent("chatSessionDeleted", { detail: { sessionId } }));
+      router.push("/main");
     } catch (error) {
       clientLogger.error("Delete session error:", error);
-      toast.error("削除に失敗しました");
+      toast.error(error instanceof Error ? error.message : "削除に失敗しました");
     } finally {
       setIsDeleting(false);
     }
@@ -524,12 +536,10 @@ export default function ChatSessionPage({ params }: PageProps) {
     e.preventDefault();
     if (!inputValue.trim() || isLoading || !sessionInfo) return;
 
-    const isOwner = sessionInfo.isOwner;
+    const { isOwner } = sessionInfo;
     const canRespond = sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED";
 
-    // For owner or when responding to public/directed consultation
     if (isOwner) {
-      // Owner posting a message (could be question or follow-up)
       const userMessage: LocalMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -554,198 +564,60 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
-        const contentType = res.headers.get("content-type") || "";
-
-        if (contentType.includes("text/event-stream") && res.body) {
-          // SSE streaming response
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          const streamingMsgId = crypto.randomUUID();
-          let realMsgId = streamingMsgId;
-          let streamStarted = false;
-
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split("\n");
-              buffer = lines.pop() || "";
-
-              for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || !trimmed.startsWith("data: ")) continue;
-                const dataStr = trimmed.slice(6).trim();
-                if (!dataStr || !dataStr.startsWith("{")) continue;
-                try {
-                  const event = JSON.parse(dataStr);
-
-                  if (event.type === "init") {
-                    // Update user message with real ID from server
-                    if (event.userMessageId) {
-                      setMessages((prev) =>
-                        prev.map((m) =>
-                          m.id === userMessage.id ? { ...m, id: event.userMessageId } : m
-                        )
-                      );
-                    }
-                    if (event.sessionTitle && sessionInfo) {
-                      setSessionInfo({ ...sessionInfo, title: event.sessionTitle });
-                      window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
-                    }
-                  } else if (event.type === "chunk") {
-                    if (!streamStarted) {
-                      // Create the assistant message placeholder
-                      streamStarted = true;
-                      setIsLoading(false);
-                      const assistantMsg: LocalMessage = {
-                        id: streamingMsgId,
-                        role: "assistant",
-                        content: event.chunk,
-                        timestamp: new Date(),
-                      };
-                      setMessages((prev) => [...prev, assistantMsg]);
-                    } else {
-                      // Append chunk to existing message
-                      setMessages((prev) =>
-                        prev.map((m) =>
-                          m.id === streamingMsgId
-                            ? { ...m, content: m.content + event.chunk }
-                            : m
-                        )
-                      );
-                    }
-                  } else if (event.type === "done") {
-                    realMsgId = event.assistantMessageId || streamingMsgId;
-                    // Update message with real ID
-                    setMessages((prev) =>
-                      prev.map((m) =>
-                        m.id === streamingMsgId ? { ...m, id: realMsgId } : m
-                      )
-                    );
-
-                    if (event.sessionPrivatized && sessionInfo) {
-                      setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
-                      toast.showToast("この相談は安全のため非公開に変更されました", "warning");
-                    }
-                    if (event.isCrisis && typeof window !== "undefined") {
-                      const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-                      if (!disabled) setShowCrisisAlert(true);
-                    }
-                  } else if (event.type === "error") {
-                    throw new Error(event.error);
-                  }
-                } catch (parseErr) {
-                  if (parseErr instanceof Error && parseErr.message !== "error") {
-                    // Re-throw actual errors, skip JSON parse errors
-                    if (dataStr.includes('"type":"error"')) throw parseErr;
-                  }
-                }
-              }
-            }
-          } finally {
-            setIsLoading(false);
-          }
-        } else {
-          // Non-streaming JSON response (PUBLIC/DIRECTED without @yamii)
-          const data = await res.json();
-
-          if (data.sessionPrivatized && sessionInfo) {
-            setSessionInfo({ ...sessionInfo, consultType: "PRIVATE" });
-            toast.showToast("この相談は安全のため非公開に変更されました", "warning");
-          }
-
-          if (data.isCrisis && typeof window !== "undefined") {
-            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-            if (!disabled) setShowCrisisAlert(true);
-          }
-
-          if (data.assistantMessage) {
-            const assistantMessage: LocalMessage = {
-              id: data.assistantMessage.id,
-              role: "assistant",
-              content: data.response,
-              timestamp: new Date(),
-            };
-            setMessages((prev) => [...prev, assistantMessage]);
-          }
-          setIsLoading(false);
-        }
+        await handleSSEResponse(res, userMessage.id, sseCallbacks);
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
       }
     } else if (canRespond) {
-      // Non-owner responding to public/directed consultation
       const responseContent = inputValue.trim();
       setInputValue("");
       setIsLoading(true);
       setError(undefined);
 
       try {
-        const res = await fetch(`/api/chat/sessions/${sessionId}/respond`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            content: responseContent,
-            isAnonymous: isAnonymousResponse,
-          }),
+        const data = await api.post<{
+          message: { id: string; content: string };
+          isAIResponse?: boolean;
+          isCrisis?: boolean;
+          userMessage?: { id: string };
+          reward?: number;
+          rewardCapped?: boolean;
+        }>(`/api/chat/sessions/${sessionId}/respond`, {
+          content: responseContent,
+          isAnonymous: isAnonymousResponse,
         });
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "回答の送信に失敗しました");
-        }
-
-        const data = await res.json();
-
-        // Check if this is an AI response (when @yamii was mentioned)
         if (data.isAIResponse) {
-          // AI response - display crisis alert if needed
-          if (data.isCrisis && typeof window !== "undefined") {
-            const disabled = localStorage.getItem("yamix_crisis_alert_disabled");
-            if (!disabled) {
-              setShowCrisisAlert(true);
-            }
+          if (checkCrisisAlert(data.isCrisis)) {
+            setShowCrisisAlert(true);
           }
 
-          // Add user's message first (the message with @yamii)
           const userMsg: LocalMessage = {
-            id: data.userMessage.id,
+            id: data.userMessage!.id,
             role: "user",
             content: responseContent,
             timestamp: new Date(),
           };
-
-          // Add AI response as assistant message (no responder = AI)
           const aiMessage: LocalMessage = {
             id: data.message.id,
             role: "assistant",
             content: data.message.content,
             timestamp: new Date(),
-            responder: null, // AI response
+            responder: null,
           };
-
           setMessages((prev) => [...prev, userMsg, aiMessage]);
         } else {
-          // Add the response as own message (right-aligned, no avatar)
           const responseMessage: LocalMessage = {
             id: data.message.id,
             role: "user",
             content: responseContent,
             timestamp: new Date(),
           };
-
           setMessages((prev) => [...prev, responseMessage]);
 
-          // Show reward message if applicable
           if (data.reward && data.reward > 0) {
-            // Could add a toast notification here
             clientLogger.info(`+${data.reward} YAMI を獲得しました！`);
-          } else if (data.rewardCapped) {
-            clientLogger.info("本日の報酬上限に達しています");
           }
         }
       } catch (err) {
@@ -766,7 +638,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   if (isFetching) {
     return (
       <div className="flex-1 flex flex-col h-full p-4 space-y-4">
-        {/* Skeleton loading for chat messages */}
         <div className="chat chat-start">
           <div className="chat-image avatar">
             <div className="w-8 h-8 rounded-full skeleton" />
@@ -801,21 +672,8 @@ export default function ChatSessionPage({ params }: PageProps) {
       {sessionInfo && sessionInfo.title && (
         <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
           <div className="flex items-center gap-2 truncate flex-1">
-            {/* Consult type icon */}
-            <div className="shrink-0 text-base-content/40" title={sessionInfo.consultType === "PRIVATE" ? "プライベート相談" : sessionInfo.consultType === "DIRECTED" ? "指名相談" : "公開相談"}>
-              {sessionInfo.consultType === "PRIVATE" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              ) : sessionInfo.consultType === "DIRECTED" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
-                </svg>
-              )}
+            <div className="shrink-0 text-base-content/40" title={getConsultTypeLabel(sessionInfo.consultType)}>
+              <ConsultTypeIcon type={sessionInfo.consultType} />
             </div>
             <h1 className="text-sm font-medium truncate">{sessionInfo.title}</h1>
             {sessionInfo.consultType === "DIRECTED" && sessionInfo.targets && sessionInfo.targets.length > 0 && (
@@ -841,19 +699,8 @@ export default function ChatSessionPage({ params }: PageProps) {
                 onClick={() => deleteModalRef.current?.showModal()}
                 title="この相談を削除"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-4 h-4"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                  />
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                 </svg>
               </button>
             )}
@@ -864,7 +711,6 @@ export default function ChatSessionPage({ params }: PageProps) {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="max-w-6xl mx-auto">
-          {/* Crisis Alert - shown as first message */}
           {showCrisisAlert && (
             <CrisisAlert
               onClose={() => setShowCrisisAlert(false)}
@@ -917,7 +763,6 @@ export default function ChatSessionPage({ params }: PageProps) {
       <div className="p-4">
         <div className="max-w-6xl mx-auto">
           <div className="bg-base-200/50 rounded-2xl border border-base-300/50">
-            {/* Textarea */}
             <textarea
               ref={textareaRef}
               value={inputValue}
@@ -935,9 +780,7 @@ export default function ChatSessionPage({ params }: PageProps) {
               disabled={isLoading}
             />
 
-            {/* Footer with options and submit button */}
             <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
-              {/* Left side: Options (anonymous response for non-owners in public consultations) */}
               <div className="flex items-center gap-1">
                 {sessionInfo && !sessionInfo.isOwner && (sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED") && (
                   <button
@@ -951,24 +794,14 @@ export default function ChatSessionPage({ params }: PageProps) {
                     disabled={isLoading}
                     aria-label="匿名で回答"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="w-3.5 h-3.5"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"
-                        clipRule="evenodd"
-                      />
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
                     </svg>
                     <span className="text-xs">匿名</span>
                   </button>
                 )}
               </div>
 
-              {/* Right side: Submit button */}
               <button
                 onClick={handleSubmit}
                 className="btn btn-primary btn-circle btn-sm"
@@ -978,12 +811,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 {isLoading ? (
                   <LoadingSpinner size="xs" inline />
                 ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-4 h-4"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                   </svg>
                 )}

@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
+import type { ChatSessionListItem } from "@/types";
 import { SessionMenu } from "./SessionMenu";
 import { ConfirmModal } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
+import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
+import { useBookmarks } from "@/contexts/BookmarkContext";
+import { chatApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 
 // Group sessions by date
@@ -50,8 +53,8 @@ interface Props {
 export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const { bookmarkedIds, toggle: toggleBookmark } = useBookmarks();
   const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
-  const [bookmarkedSessionIds, setBookmarkedSessionIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -72,31 +75,9 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     );
   }, [sessions, searchQuery]);
 
-  const fetchBookmarks = useCallback(async () => {
-    try {
-      const res = await fetch("/api/bookmarks?limit=100");
-      if (res.ok) {
-        const data = await res.json();
-        const ids = new Set<string>(data.bookmarks.map((b: { sessionId: string }) => b.sessionId));
-        setBookmarkedSessionIds(ids);
-      }
-    } catch (error) {
-      clientLogger.error("Error fetching bookmarks:", error);
-    }
-  }, []);
-
   const fetchSessions = useCallback(async (cursorId?: string | null) => {
     try {
-      const url = new URL("/api/chat/sessions", window.location.origin);
-      url.searchParams.set("limit", "20");
-      if (cursorId) {
-        url.searchParams.set("cursor", cursorId);
-      }
-
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch sessions");
-
-      const data: ChatSessionsResponse = await res.json();
+      const data = await chatApi.getSessions(cursorId);
 
       if (cursorId) {
         setSessions((prev) => [...prev, ...data.sessions]);
@@ -114,14 +95,11 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
 
   useEffect(() => {
     fetchSessions();
-    fetchBookmarks();
 
-    // Listen for new session created event
     const handleNewSession = () => {
       fetchSessions();
     };
 
-    // Listen for session deleted event (from chat page header)
     const handleSessionDeleted = (e: Event) => {
       const detail = (e as CustomEvent<{ sessionId: string }>).detail;
       setSessions((prev) => prev.filter((s) => s.id !== detail.sessionId));
@@ -134,7 +112,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       window.removeEventListener("newChatSessionCreated", handleNewSession);
       window.removeEventListener("chatSessionDeleted", handleSessionDeleted);
     };
-  }, [fetchSessions, fetchBookmarks]);
+  }, [fetchSessions]);
 
   const handleSessionClick = (sessionId: string) => {
     router.push(`/main/chat/${sessionId}`);
@@ -151,14 +129,9 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     setIsDeleting(true);
 
     try {
-      const res = await fetch(`/api/chat/sessions/${deleteTargetId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete session");
-
+      await chatApi.deleteSession(deleteTargetId);
       setSessions((prev) => prev.filter((s) => s.id !== deleteTargetId));
 
-      // If we deleted the current session, navigate to new chat
       if (currentSessionId === deleteTargetId) {
         router.push("/main");
       }
@@ -170,34 +143,19 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     }
   };
 
-  const removeBookmark = async (sessionId: string) => {
-    try {
-      const res = await fetch(`/api/bookmarks?sessionId=${sessionId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to remove bookmark");
-
-      setBookmarkedSessionIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(sessionId);
-        return newSet;
-      });
-    } catch (error) {
-      clientLogger.error("Error removing bookmark:", error);
-    }
+  const handleUnbookmark = async (sessionId: string) => {
+    await toggleBookmark(sessionId);
   };
 
-
   // ブックマーク済みセッションと通常セッションを分離
-  const bookmarkedSessions = filteredSessions.filter((s) => bookmarkedSessionIds.has(s.id));
-  const unbookmarkedSessions = filteredSessions.filter((s) => !bookmarkedSessionIds.has(s.id));
+  const bookmarkedSessions = filteredSessions.filter((s) => bookmarkedIds.has(s.id));
+  const unbookmarkedSessions = filteredSessions.filter((s) => !bookmarkedIds.has(s.id));
 
   const groupedSessions = groupSessionsByDate(unbookmarkedSessions);
 
   if (loading) {
     return (
       <div className="flex flex-col gap-2 p-2">
-        {/* Skeleton loading for session list */}
         {[1, 2, 3].map((i) => (
           <div key={i} className="flex items-start gap-2 px-3 py-2.5 rounded-xl">
             <div className="skeleton w-4 h-4 rounded-full shrink-0 mt-0.5" />
@@ -233,20 +191,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       }`}
     >
       {/* Consult type indicator */}
-      <div className={`shrink-0 mt-0.5 ${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title={session.consultType === "PRIVATE" ? "プライベート相談" : session.consultType === "DIRECTED" ? "指名相談" : "公開相談"}>
-        {session.consultType === "PRIVATE" ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        ) : session.consultType === "DIRECTED" ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" />
-          </svg>
-        )}
+      <div className={`shrink-0 mt-0.5 ${currentSessionId === session.id ? "text-primary" : "text-base-content/40"}`} title={getConsultTypeLabel(session.consultType)}>
+        <ConsultTypeIcon type={session.consultType} className="h-3.5 w-3.5" />
       </div>
 
       {/* Title */}
@@ -258,16 +204,12 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
 
       {/* Action buttons */}
       <div className="flex items-center gap-0.5 shrink-0">
-        {/* Session menu */}
         <SessionMenu
           session={session}
           onDelete={() => openDeleteModal(session.id)}
-          onUpdate={() => {
-            fetchSessions();
-            fetchBookmarks();
-          }}
+          onUpdate={() => fetchSessions()}
           isBookmarked={isBookmarked}
-          onUnbookmark={isBookmarked ? () => removeBookmark(session.id) : undefined}
+          onUnbookmark={isBookmarked ? () => handleUnbookmark(session.id) : undefined}
           isOwner={!session.isReceived}
         />
       </div>
@@ -299,7 +241,6 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       {/* Regular sessions grouped by date */}
       {groupedSessions.map((group, index) => (
         <div key={group.label}>
-          {/* Date group header with subtle divider */}
           <div className={`flex items-center gap-2 px-3 py-1.5 ${index > 0 || bookmarkedSessions.length > 0 ? "mt-1.5" : ""}`}>
             <span className="text-[11px] font-medium text-base-content/40 uppercase tracking-wider">
               {group.label}

@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { ConsultationCard } from "./ConsultationCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import type { TimelineConsultation, TimelineResponse } from "@/types";
+import type { TimelineConsultation } from "@/types";
+import { timelineApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 
 export function TimelineFeed() {
@@ -27,16 +28,7 @@ export function TimelineFeed() {
         setLoading(true);
       }
 
-      const url = new URL("/api/timeline", window.location.origin);
-      url.searchParams.set("limit", "10");
-      if (cursorId) {
-        url.searchParams.set("cursor", cursorId);
-      }
-
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch timeline");
-
-      const data: TimelineResponse = await res.json();
+      const data = await timelineApi.getTimeline(cursorId);
 
       if (cursorId) {
         setConsultations((prev) => [...prev, ...data.consultations]);
@@ -71,12 +63,9 @@ export function TimelineFeed() {
   useEffect(() => {
     const checkNew = async () => {
       try {
-        const res = await fetch("/api/timeline?limit=1");
-        if (res.ok) {
-          const data: TimelineResponse = await res.json();
-          if (data.consultations.length > 0 && latestIdRef.current && data.consultations[0].id !== latestIdRef.current) {
-            setHasNew(true);
-          }
+        const data = await timelineApi.getTimeline(null, 1);
+        if (data.consultations.length > 0 && latestIdRef.current && data.consultations[0].id !== latestIdRef.current) {
+          setHasNew(true);
         }
       } catch {
         // ignore

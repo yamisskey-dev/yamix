@@ -5,23 +5,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { BookmarkButton } from "@/components/BookmarkButton";
-import type { TimelineConsultation, TimelineResponse } from "@/types";
+import type { TimelineConsultation } from "@/types";
+import { exploreApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
-
-function formatDate(date: Date): string {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "たった今";
-  if (minutes < 60) return `${minutes}分前`;
-  if (hours < 24) return `${hours}時間前`;
-  if (days < 7) return `${days}日前`;
-
-  return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
-}
 
 /** Phone-screen chat preview card */
 function PhoneChatCard({ consultation }: { consultation: TimelineConsultation }) {
@@ -195,16 +181,7 @@ export function ExploreFeed() {
         setLoading(true);
       }
 
-      const url = new URL("/api/explore", window.location.origin);
-      url.searchParams.set("limit", "10");
-      if (cursorId) {
-        url.searchParams.set("cursor", cursorId);
-      }
-
-      const res = await fetch(url.toString());
-      if (!res.ok) throw new Error("Failed to fetch explore");
-
-      const data: TimelineResponse = await res.json();
+      const data = await exploreApi.getExplore(cursorId);
 
       if (cursorId) {
         setConsultations((prev) => [...prev, ...data.consultations]);

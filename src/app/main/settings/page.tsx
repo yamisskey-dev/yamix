@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
+import { authApi, userApi, yamiiApi, api } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 
 export default function SettingsPage() {
@@ -41,51 +42,30 @@ export default function SettingsPage() {
   const [isSavingDirected, setIsSavingDirected] = useState(false);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await fetch("/api/yamii/user");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.explicit_profile) {
-            setCustomPrompt(data.explicit_profile);
-          }
+        const [profileData, meData] = await Promise.all([
+          yamiiApi.getUserProfile().catch(() => null),
+          authApi.getMe().catch(() => null),
+        ]);
+        if (profileData?.explicit_profile) {
+          setCustomPrompt(profileData.explicit_profile);
+        }
+        if (meData && "allowDirectedConsult" in meData) {
+          setAllowDirectedConsult((meData as { allowDirectedConsult?: boolean }).allowDirectedConsult ?? false);
         }
       } catch (error) {
-        clientLogger.error("Failed to fetch profile:", error);
+        clientLogger.error("Failed to fetch initial data:", error);
       }
     };
-    fetchProfile();
-  }, []);
-
-  // 指名相談設定を取得
-  useEffect(() => {
-    const fetchDirectedSetting = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.allowDirectedConsult !== undefined) {
-            setAllowDirectedConsult(data.allowDirectedConsult);
-          }
-        }
-      } catch (error) {
-        clientLogger.error("Failed to fetch directed setting:", error);
-      }
-    };
-    fetchDirectedSetting();
+    fetchInitialData();
   }, []);
 
   const handleToggleDirectedConsult = async (value: boolean) => {
     setIsSavingDirected(true);
     try {
-      const res = await fetch("/api/auth/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allowDirectedConsult: value }),
-      });
-      if (res.ok) {
-        setAllowDirectedConsult(value);
-      }
+      await api.patch("/api/auth/me", { allowDirectedConsult: value });
+      setAllowDirectedConsult(value);
     } catch (error) {
       clientLogger.error("Failed to update directed setting:", error);
     } finally {
@@ -96,11 +76,8 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchBlockedUsers = async () => {
       try {
-        const res = await fetch("/api/users/block");
-        if (res.ok) {
-          const data = await res.json();
-          setBlockedUsers(data.blocks);
-        }
+        const data = await userApi.getBlockedUsers();
+        setBlockedUsers(data.blocks);
       } catch (error) {
         clientLogger.error("Failed to fetch blocked users:", error);
       } finally {
@@ -114,21 +91,12 @@ export default function SettingsPage() {
     setIsSavingPrompt(true);
     setPromptError("");
     try {
-      const res = await fetch("/api/yamii/user", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ explicit_profile: customPrompt }),
-      });
-      if (res.ok) {
-        setPromptSaved(true);
-        setTimeout(() => setPromptSaved(false), 2000);
-      } else {
-        const data = await res.json();
-        setPromptError(data.error || "保存に失敗しました");
-      }
+      await yamiiApi.updateUserProfile({ explicit_profile: customPrompt });
+      setPromptSaved(true);
+      setTimeout(() => setPromptSaved(false), 2000);
     } catch (error) {
       clientLogger.error("Failed to save custom prompt:", error);
-      setPromptError("保存に失敗しました");
+      setPromptError(error instanceof Error ? error.message : "保存に失敗しました");
     } finally {
       setIsSavingPrompt(false);
     }
@@ -137,12 +105,9 @@ export default function SettingsPage() {
   const handleExportData = async () => {
     setIsExporting(true);
     try {
-      const res = await fetch("/api/yamii/user");
-      if (res.ok) {
-        const data = await res.json();
-        setExportData(JSON.stringify(data, null, 2));
-        exportModalRef.current?.showModal();
-      }
+      const data = await yamiiApi.getUserProfile();
+      setExportData(JSON.stringify(data, null, 2));
+      exportModalRef.current?.showModal();
     } catch (error) {
       clientLogger.error("Export error:", error);
     } finally {
@@ -153,11 +118,9 @@ export default function SettingsPage() {
   const handleDeleteData = async () => {
     setIsDeleting(true);
     try {
-      const res = await fetch("/api/yamii/user", { method: "DELETE" });
-      if (res.ok) {
-        setSuccessMessage("データを削除しました。またいつでも戻ってきてください。");
-        successModalRef.current?.showModal();
-      }
+      await yamiiApi.deleteUserData();
+      setSuccessMessage("データを削除しました。またいつでも戻ってきてください。");
+      successModalRef.current?.showModal();
     } catch (error) {
       clientLogger.error("Delete error:", error);
     } finally {
@@ -167,12 +130,8 @@ export default function SettingsPage() {
 
   const handleUnblock = async (userId: string) => {
     try {
-      const res = await fetch(`/api/users/block/${userId}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        setBlockedUsers(blockedUsers.filter((b) => b.blockedUser?.id !== userId));
-      }
+      await userApi.unblockUser(userId);
+      setBlockedUsers(blockedUsers.filter((b) => b.blockedUser?.id !== userId));
     } catch (error) {
       clientLogger.error("Failed to unblock user:", error);
     }
@@ -181,27 +140,21 @@ export default function SettingsPage() {
   const handleDeletePrivateSessions = async () => {
     setIsDeletingSessions(true);
     try {
-      const res = await fetch("/api/chat/sessions?type=private", {
-        method: "DELETE",
+      const data = await api.delete<{ deletedCount: number }>("/api/chat/sessions", {
+        params: { type: "private" },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setSuccessMessage(`${data.deletedCount}件のプライベート相談を削除しました。`);
-        successModalRef.current?.showModal();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "削除に失敗しました");
-      }
+      setSuccessMessage(`${data.deletedCount}件のプライベート相談を削除しました。`);
+      successModalRef.current?.showModal();
     } catch (error) {
       clientLogger.error("Delete sessions error:", error);
-      toast.error("削除に失敗しました");
+      toast.error(error instanceof Error ? error.message : "削除に失敗しました");
     } finally {
       setIsDeletingSessions(false);
     }
   };
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await authApi.logout();
     localStorage.removeItem("yamix_handle");
     localStorage.removeItem("yamix_displayName");
     localStorage.removeItem("yamix_avatarUrl");

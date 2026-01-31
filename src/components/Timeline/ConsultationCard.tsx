@@ -7,28 +7,12 @@ import { useRouter } from "next/navigation";
 import type { TimelineConsultation } from "@/types";
 import { parseMentions } from "@/lib/mention-parser";
 import { encodeHandle } from "@/lib/encode-handle";
+import { ConsultTypeIcon } from "@/components/ConsultTypeIcon";
+import { formatRelativeDate } from "@/lib/format-date";
 
 interface Props {
   consultation: TimelineConsultation;
   currentUserHandle?: string;
-}
-
-function formatDate(date: Date): string {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "たった今";
-  if (minutes < 60) return `${minutes}分前`;
-  if (hours < 24) return `${hours}時間前`;
-  if (days < 7) return `${days}日前`;
-
-  return date.toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
@@ -128,39 +112,14 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
           ) : null}
           {/* Right side: visibility icon and time */}
           <div className="flex items-center gap-x-1.5 ml-auto shrink-0">
-            {/* Consult type indicator - only show for PRIVATE */}
-            {consultation.consultType === "PRIVATE" && (
-              <span className="text-base-content/40" title="プライベート相談">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3 w-3 inline-block"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </span>
-            )}
-            {consultation.consultType === "DIRECTED" && (
-              <span className="text-base-content/40" title="指名相談">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-3 w-3 inline-block"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
-                </svg>
+            {/* Consult type indicator - only show for non-PUBLIC */}
+            {consultation.consultType !== "PUBLIC" && (
+              <span className="text-base-content/40">
+                <ConsultTypeIcon type={consultation.consultType} className="h-3 w-3 inline-block" />
               </span>
             )}
             <span className="text-[12px] text-base-content/50">
-              {formatDate(new Date(consultation.createdAt))}
+              {formatRelativeDate(new Date(consultation.createdAt))}
             </span>
           </div>
         </header>

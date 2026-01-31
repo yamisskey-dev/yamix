@@ -273,6 +273,108 @@ export const followApi = {
   },
 };
 
+/**
+ * ブックマークAPI
+ */
+export const bookmarkApi = {
+  async getBookmarks(
+    limit = 100
+  ): Promise<{ bookmarks: { sessionId: string }[] }> {
+    return api.get("/api/bookmarks", { params: { limit } });
+  },
+
+  async addBookmark(sessionId: string): Promise<void> {
+    return api.post("/api/bookmarks", { sessionId });
+  },
+
+  async removeBookmark(sessionId: string): Promise<void> {
+    return api.delete("/api/bookmarks", { params: { sessionId } });
+  },
+};
+
+/**
+ * ユーザーAPI
+ */
+export const userApi = {
+  async blockUser(blockedUserId: string): Promise<void> {
+    return api.post("/api/users/block", { blockedUserId });
+  },
+
+  async unblockUser(userId: string): Promise<void> {
+    return api.delete(`/api/users/block/${userId}`);
+  },
+
+  async getBlockedUsers(): Promise<{
+    blocks: Array<{
+      id: string;
+      blockedUser: {
+        id: string;
+        handle: string;
+        displayName: string | null;
+        avatarUrl: string | null;
+      } | null;
+    }>;
+  }> {
+    return api.get("/api/users/block");
+  },
+};
+
+/**
+ * ExploreAPI
+ */
+export const exploreApi = {
+  async getExplore(
+    cursor?: string | null,
+    limit = 10
+  ): Promise<TimelineResponse> {
+    return api.get<TimelineResponse>("/api/explore", {
+      params: { cursor, limit },
+    });
+  },
+};
+
+/**
+ * Yamii API
+ */
+export const yamiiApi = {
+  async getUserProfile(): Promise<{ explicit_profile?: string }> {
+    return api.get("/api/yamii/user");
+  },
+
+  async updateUserProfile(data: {
+    explicit_profile: string;
+  }): Promise<void> {
+    return api.patch("/api/yamii/user", data);
+  },
+
+  async deleteUserData(): Promise<void> {
+    return api.delete("/api/yamii/user");
+  },
+};
+
+/**
+ * メッセージAPI
+ */
+export const messageApi = {
+  async sendGas(
+    messageId: string
+  ): Promise<{ gasAmount: number }> {
+    return api.post(`/api/messages/${messageId}/gas`);
+  },
+};
+
+/**
+ * バージョンAPI
+ */
+export const versionApi = {
+  async getVersion(): Promise<{
+    yamix: { version: string };
+    yamii: { version: string | null; status: "connected" | "error" };
+  }> {
+    return api.get("/api/version");
+  },
+};
+
 // ============================================
 // Re-exports
 // ============================================
