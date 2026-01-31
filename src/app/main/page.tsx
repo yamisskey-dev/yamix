@@ -151,8 +151,8 @@ export default function NewChatPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
-      // エラー時もフラグを維持（リトライ防止）
-      submittingRef.current = true;
+      // エラー時はフラグをリセット（再試行を許可）
+      submittingRef.current = false;
     }
   };
 
