@@ -19,15 +19,21 @@ const AUTH_TAG_LENGTH = 16;
 const SALT_LENGTH = 16;
 const KEY_LENGTH = 32; // 256ビット
 let _encKeyWarned = false;
+let _masterKeyCache: Buffer | null = null;
+const _userKeyCache = new Map<string, Buffer>();
+const USER_KEY_CACHE_MAX = 1000;
 
 /**
- * マスターキーを取得
+ * マスターキーを取得（キャッシュ付き）
  * 環境変数から取得、なければ生成（開発用）
  */
 function getMasterKey(): Buffer {
+  if (_masterKeyCache) return _masterKeyCache;
+
   const envKey = process.env.MESSAGE_ENCRYPTION_KEY;
   if (envKey) {
-    return Buffer.from(envKey, "base64");
+    _masterKeyCache = Buffer.from(envKey, "base64");
+    return _masterKeyCache;
   }
 
   // フォールバック: JWT_SECRETからキーを派生（既存データとの互換性のため維持）
@@ -36,13 +42,19 @@ function getMasterKey(): Buffer {
     logger.warn("MESSAGE_ENCRYPTION_KEY not set in production. Using derived key from JWT_SECRET.");
   }
   const jwtSecret = process.env.JWT_SECRET || "development-secret";
-  return crypto.pbkdf2Sync(jwtSecret, "yamix-fallback-salt", 100000, KEY_LENGTH, "sha256");
+  _masterKeyCache = crypto.pbkdf2Sync(jwtSecret, "yamix-fallback-salt", 100000, KEY_LENGTH, "sha256");
+  return _masterKeyCache;
 }
 
 /**
- * ユーザーIDからメッセージ暗号化キーを派生
+ * ユーザーIDからメッセージ暗号化キーを派生（キャッシュ付き）
+ * PBKDF2は10万回イテレーションで高コストのため、ユーザーごとにキャッシュ
  */
 function deriveUserKey(userId: string, context: string = "chat_message"): Buffer {
+  const cacheKey = `${userId}:${context}`;
+  const cached = _userKeyCache.get(cacheKey);
+  if (cached) return cached;
+
   const masterKey = getMasterKey();
   const salt = crypto
     .createHash("sha256")
@@ -50,7 +62,16 @@ function deriveUserKey(userId: string, context: string = "chat_message"): Buffer
     .digest()
     .subarray(0, SALT_LENGTH);
 
-  return crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, "sha256");
+  const key = crypto.pbkdf2Sync(masterKey, salt, 100000, KEY_LENGTH, "sha256");
+
+  // キャッシュサイズ制限（メモリリーク防止）
+  if (_userKeyCache.size >= USER_KEY_CACHE_MAX) {
+    const firstKey = _userKeyCache.keys().next().value;
+    if (firstKey !== undefined) _userKeyCache.delete(firstKey);
+  }
+  _userKeyCache.set(cacheKey, key);
+
+  return key;
 }
 
 /**

@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log(`Created new Misskey app for ${misskeyHost}`);
+      logger.info("Created new Misskey app", { host: misskeyHost });
     }
 
     // Generate auth session
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       300
     );
 
-    console.log(`Created Misskey auth session for ${misskeyHost}`);
+    logger.info("Created Misskey auth session", { host: misskeyHost });
 
     return NextResponse.json(authSession);
   } catch (error) {
