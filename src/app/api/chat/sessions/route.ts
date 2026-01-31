@@ -95,7 +95,12 @@ export async function GET(req: NextRequest) {
     // Add bookmarked sessions (excluding duplicates)
     const bookmarkedSessionList = bookmarkedSessions
       .map((b) => b.session)
-      .filter((s) => !ownedIds.has(s.id) && !directedSessionIds.has(s.id));
+      .filter((s) => {
+        if (ownedIds.has(s.id) || directedSessionIds.has(s.id)) return false;
+        // モデレーション非公開化されたセッションは他人のブックマークから除外
+        if (s.consultType === "PRIVATE" && (s._count?.messages ?? 0) > 0) return false;
+        return true;
+      });
 
     const allSessions = [...ownedSessions, ...directedSessions, ...bookmarkedSessionList]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
