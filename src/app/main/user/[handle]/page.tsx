@@ -352,6 +352,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 key={consultation.id}
                 consultation={consultation}
                 currentUserHandle={currentUserHandle ?? undefined}
+                displayMode="title"
               />
             ))}
           </div>
