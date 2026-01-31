@@ -112,19 +112,11 @@ export default function NewChatPage() {
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 二重送信ガード: refとstateの両方でチェック
     if (!inputValue.trim() || isLoading || submittingRef.current) {
-      console.log('[DEBUG] Submit blocked:', {
-        hasInput: !!inputValue.trim(),
-        isLoading,
-        submittingRef: submittingRef.current
-      });
       return;
     }
 
-    // 即座にガードを設定（同期的）
     submittingRef.current = true;
-    console.log('[DEBUG] Submit started, flag set to true');
 
     const messageContent = inputValue.trim();
     setInputValue("");
@@ -132,7 +124,7 @@ export default function NewChatPage() {
     setError(undefined);
 
     try {
-      // Create new session with consultType and isAnonymous
+      // Create new session with consultType, isAnonymous, and initialMessage
       const createRes = await fetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -140,6 +132,7 @@ export default function NewChatPage() {
           consultType,
           isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
           allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
+          initialMessage: messageContent,
           ...(consultType === "DIRECTED" && {
             targetUserHandles: targetUsers.map((u) => u.handle),
           }),
@@ -147,24 +140,17 @@ export default function NewChatPage() {
       });
 
       if (!createRes.ok) {
-        throw new Error("セッションの作成に失敗しました");
+        const errorData = await createRes.json();
+        throw new Error(errorData.error || "セッションの作成に失敗しました");
       }
 
       const session = await createRes.json();
-      console.log('[DEBUG] Session created, navigating to:', session.id);
 
-      // Navigate to the session page with the initial message.
-      // The chat page will handle displaying and sending the message.
-      const encodedMessage = encodeURIComponent(messageContent);
-      router.push(`/main/chat/${session.id}?initialMessage=${encodedMessage}`);
-
-      // 画面遷移が完了するまでフラグは維持（二重送信防止）
-      // コンポーネントがアンマウントされるので、フラグはリセット不要
+      // Navigate to the session page (initial message already sent by API)
+      router.push(`/main/chat/${session.id}`);
     } catch (err) {
-      console.log('[DEBUG] Submit error, resetting flag');
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
-      // エラー時はフラグをリセット（再試行を許可）
       submittingRef.current = false;
     }
   }, [inputValue, isLoading, consultType, isAnonymous, allowAnonymousResponses, targetUsers, router]);

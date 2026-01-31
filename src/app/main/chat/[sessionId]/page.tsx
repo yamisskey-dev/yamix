@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo, use, lazy, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
@@ -223,11 +223,7 @@ async function handleSSEResponse(
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const toast = useToast();
-  const initialMessageRef = useRef<string | null>(null);
-  const [initialMessageSent, setInitialMessageSent] = useState(false);
-  const sendingInitialMessageRef = useRef<boolean>(false);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -323,97 +319,6 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     fetchSession();
   }, [sessionId, router]);
-
-  // Auto-send initial message
-  useEffect(() => {
-    let cancelled = false;
-    const initialMessage = searchParams.get("initialMessage");
-
-    // 多重ガード: ref、state、送信中フラグの3重チェック
-    if (!initialMessage ||
-        initialMessageRef.current ||
-        initialMessageSent ||
-        sendingInitialMessageRef.current ||
-        !sessionInfo ||
-        isFetching ||
-        isLoading) {
-      console.log('[DEBUG] Initial message send blocked:', {
-        hasInitialMessage: !!initialMessage,
-        initialMessageRef: initialMessageRef.current,
-        initialMessageSent,
-        sendingInitialMessageRef: sendingInitialMessageRef.current,
-        hasSessionInfo: !!sessionInfo,
-        isFetching,
-        isLoading
-      });
-      return;
-    }
-
-    // 即座に全てのガードを設定（同期的に実行される）
-    initialMessageRef.current = initialMessage;
-    sendingInitialMessageRef.current = true;
-    setInitialMessageSent(true);
-
-    // React Strict Mode対策: 即座にURLパラメータを削除して二重実行を防止
-    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
-
-    console.log('[DEBUG] Sending initial message:', decodeURIComponent(initialMessage));
-
-    const content = decodeURIComponent(initialMessage);
-    const userMessage: LocalMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-    setError(undefined);
-    window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
-
-    (async () => {
-      if (cancelled) {
-        console.log('[DEBUG] Initial message send cancelled (cleanup)');
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content }),
-        });
-
-        if (cancelled) {
-          console.log('[DEBUG] Initial message response cancelled (cleanup)');
-          return;
-        }
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "メッセージの送信に失敗しました");
-        }
-
-        console.log('[DEBUG] Initial message sent successfully');
-        await handleSSEResponse(res, userMessage.id, sseCallbacks);
-      } catch (err) {
-        if (!cancelled) {
-          console.log('[DEBUG] Initial message send error:', err);
-          setError(err instanceof Error ? err.message : "エラーが発生しました");
-          setIsLoading(false);
-        }
-        // エラー時もsendingフラグはリセットしない（無限ループ防止）
-      } finally {
-        // 送信完了後もフラグは維持（二重送信防止）
-        sendingInitialMessageRef.current = true;
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, sessionId, sessionInfo]);
 
   // Auto-scroll
   useEffect(() => {

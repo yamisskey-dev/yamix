@@ -4,8 +4,12 @@ import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { createChatSessionSchema, validateBody, parseLimit } from "@/lib/validation";
-import { decryptMessage } from "@/lib/encryption";
+import { decryptMessage, encryptMessage } from "@/lib/encryption";
 import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
+import { yamiiClient } from "@/lib/yamii-client";
+import { TOKEN_ECONOMY } from "@/types";
+import { notifyDirectedRequest } from "@/lib/notifications";
+import { checkCrisisKeywords } from "@/lib/crisis";
 
 // Prismaのセッション取得結果の型
 interface PrismaSessionResult {
@@ -165,7 +169,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const { consultType, isAnonymous, allowAnonymousResponses, category, targetUserHandles } = validation.data;
+    const { consultType, isAnonymous, allowAnonymousResponses, category, targetUserHandles, initialMessage } = validation.data;
 
     // DIRECTED: 指名先ユーザーを検索
     let targetUserIds: string[] = [];
@@ -263,6 +267,117 @@ export async function POST(req: NextRequest) {
         _count: { select: { targets: true } },
       },
     });
+
+    // If initialMessage is provided, send it immediately
+    if (initialMessage && initialMessage.trim()) {
+      try {
+        // Check wallet balance
+        const consultCost = consultType === "PUBLIC"
+          ? TOKEN_ECONOMY.PUBLIC_CONSULT_COST
+          : consultType === "DIRECTED"
+            ? TOKEN_ECONOMY.DIRECTED_CONSULT_COST
+            : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
+
+        const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
+        if (!wallet || wallet.balance < consultCost) {
+          // Delete the session if wallet is insufficient
+          await prisma.chatSession.delete({ where: { id: session.id } });
+          return NextResponse.json(
+            { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
+            { status: 400 }
+          );
+        }
+
+        // Generate title for first message
+        const generatedTitle = await yamiiClient.generateTitle(initialMessage.trim());
+
+        // Moderation check for PUBLIC/DIRECTED
+        let moderationCrisis = false;
+        if (consultType === "PUBLIC" || consultType === "DIRECTED") {
+          try {
+            const moderationResult = await yamiiClient.sendCounselingMessage(
+              initialMessage.trim(), payload.userId, { sessionId: session.id }
+            );
+            moderationCrisis = moderationResult.is_crisis;
+          } catch {
+            moderationCrisis = checkCrisisKeywords(initialMessage.trim());
+          }
+        }
+
+        // 3-strike system: increment crisisCount, only privatize on 3rd detection
+        let shouldHide = false;
+        if (moderationCrisis && (consultType === "PUBLIC" || consultType === "DIRECTED")) {
+          const updatedSession = await prisma.chatSession.update({
+            where: { id: session.id },
+            data: { crisisCount: { increment: 1 } },
+          });
+          shouldHide = updatedSession.crisisCount >= 3;
+        }
+
+        // Save user message and deduct cost
+        const now = new Date();
+        await prisma.$transaction(async (tx) => {
+          await tx.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { decrement: consultCost } },
+          });
+          await tx.transaction.create({
+            data: { senderId: wallet.id, amount: -consultCost, txType: "CONSULT_HUMAN" },
+          });
+
+          const encryptedContent = encryptMessage(initialMessage.trim(), payload.userId);
+          await tx.chatMessage.create({
+            data: {
+              sessionId: session.id,
+              role: "USER",
+              content: encryptedContent,
+              isCrisis: moderationCrisis,
+              isHidden: shouldHide
+            },
+          });
+
+          const sessionUpdate: Record<string, unknown> = { updatedAt: now };
+          if (generatedTitle) sessionUpdate.title = generatedTitle;
+          if (shouldHide) {
+            sessionUpdate.consultType = "PRIVATE";
+            sessionUpdate.isPublic = false;
+          }
+          await tx.chatSession.update({ where: { id: session.id }, data: sessionUpdate });
+        });
+
+        // Notify targets if DIRECTED and not hidden
+        if (!shouldHide && consultType === "DIRECTED" && targetUserIds.length > 0) {
+          await notifyDirectedRequest(targetUserIds, payload.sub, session.id, isAnonymous);
+        }
+
+        // Delete notifications if privatized
+        if (shouldHide) {
+          await prisma.notification.deleteMany({
+            where: { linkUrl: { contains: `/main/chat/${session.id}` }, userId: { not: payload.userId } },
+          });
+        }
+
+        // Return session with updated title
+        return NextResponse.json(
+          {
+            ...session,
+            targetCount: session._count.targets,
+            title: generatedTitle || session.title,
+            consultType: shouldHide ? "PRIVATE" : session.consultType,
+            isPublic: shouldHide ? false : session.isPublic,
+            initialMessageSent: true,
+          },
+          { status: 201 }
+        );
+      } catch (error) {
+        logger.error("Send initial message error", { sessionId: session.id, userId: payload.userId }, error);
+        // Return session even if message sending failed
+        return NextResponse.json(
+          { ...session, targetCount: session._count.targets, initialMessageSent: false },
+          { status: 201 }
+        );
+      }
+    }
 
     return NextResponse.json(
       { ...session, targetCount: session._count.targets },
