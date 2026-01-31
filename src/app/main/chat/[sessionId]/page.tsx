@@ -303,10 +303,19 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
   const initialMessageSentRef = useRef<boolean>(false);
+  // Ref to track if session has been fetched (prevent double execution in Strict Mode)
+  const sessionFetchedRef = useRef<boolean>(false);
 
   // Fetch session data
   useEffect(() => {
     console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
+
+    // Prevent double execution in React Strict Mode
+    if (sessionFetchedRef.current) {
+      console.log('[CHAT DEBUG] Session already fetched, skipping');
+      return;
+    }
+
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
       if (!isMounted) {
@@ -379,6 +388,9 @@ export default function ChatSessionPage({ params }: PageProps) {
           )
         );
         console.log('[CHAT DEBUG] All state set successfully, setting isFetching to false');
+
+        // Mark as fetched to prevent double execution
+        sessionFetchedRef.current = true;
       } catch (err) {
         clientLogger.error("Error fetching session:", err);
         setError("セッションの読み込みに失敗しました");
