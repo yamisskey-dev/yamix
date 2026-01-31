@@ -12,6 +12,7 @@ export const revalidate = 0;
 // Prismaセッション結果の型
 interface PrismaSessionWithMessages {
   id: string;
+  title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
   createdAt: Date;
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       select: {
         id: true,
+        title: true,
         consultType: true,
         isAnonymous: true,
         createdAt: true,
@@ -98,6 +100,7 @@ export async function GET(req: NextRequest) {
         return {
           id: s.id,
           sessionId: s.id,
+          title: s.title || null,
           question: userMsg ? decryptMessage(userMsg.content, ownerId) : "",
           answer: firstAssistantMsg ? decryptMessage(firstAssistantMsg.content, ownerId) : null,
           consultType: s.consultType,

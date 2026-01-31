@@ -33,8 +33,8 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
     ? "匿名さん"
     : consultation.user?.displayName || consultation.user?.handle?.split("@")[1] || "匿名";
 
-  // Room title: first line or truncated question
-  const titleText = consultation.question.split("\n")[0].slice(0, 40) || "無題のルーム";
+  // Room title: prefer DB title (AI-generated summary), fallback to first line of question
+  const titleText = consultation.title || consultation.question.split("\n")[0].slice(0, 40) || "無題のルーム";
 
   const questionText = consultation.question.length > 200
     ? consultation.question.slice(0, 200) + "…"
@@ -94,39 +94,37 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
           </div>
         </div>
 
-        {/* Chat area - fills remaining height */}
-        <div className="flex-1 px-3 py-3 flex flex-col gap-2.5 bg-base-200/40 overflow-hidden relative min-h-0">
-          {/* User message (right) */}
-          <div className="flex justify-end">
-            <div className="bg-primary/15 text-base-content rounded-2xl rounded-br-sm px-3 py-2 max-w-[85%]">
-              <p className="text-[12px] leading-relaxed break-words">
-                {questionText}
-              </p>
+        {/* Chat area - fills remaining height, uses same DaisyUI chat classes as actual chat */}
+        <div className="flex-1 px-2 py-2 flex flex-col bg-base-200/40 overflow-hidden relative min-h-0">
+          {/* User message (right) - same as ChatBubble chat-user */}
+          <div className="chat chat-end">
+            <div className="chat-bubble chat-user shadow-sm text-[12px] leading-relaxed break-words max-w-[85%]">
+              {questionText}
             </div>
           </div>
 
-          {/* Response (left) */}
+          {/* Response (left) - same as ChatBubble chat-assistant */}
           {answerText && (
-            <div className="flex justify-start gap-1.5">
-              <div className="w-4 h-4 rounded-full flex-shrink-0 mt-1 overflow-hidden">
-                {consultation.replies?.[0]?.responder?.avatarUrl ? (
-                  <Image
-                    src={consultation.replies[0].responder.avatarUrl}
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="rounded-full object-cover w-full h-full"
-                  />
-                ) : (
-                  <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
-                    <span className="text-[8px]">🤖</span>
-                  </div>
-                )}
+            <div className="chat chat-start">
+              <div className="chat-image avatar">
+                <div className="w-5 rounded-full overflow-hidden">
+                  {consultation.replies?.[0]?.responder?.avatarUrl ? (
+                    <Image
+                      src={consultation.replies[0].responder.avatarUrl}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="rounded-full object-cover w-full h-full"
+                    />
+                  ) : (
+                    <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
+                      <span className="text-[8px]">🤖</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="bg-base-300/80 text-base-content rounded-2xl rounded-bl-sm px-3 py-2 max-w-[80%]">
-                <p className="text-[12px] leading-relaxed break-words">
-                  {answerText}
-                </p>
+              <div className={`chat-bubble ${consultation.replies?.[0]?.responder ? "chat-human-response" : "chat-assistant"} shadow-sm text-[12px] leading-relaxed break-words max-w-[80%]`}>
+                {answerText}
               </div>
             </div>
           )}

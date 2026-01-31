@@ -81,6 +81,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       return {
         id: response.id,
         sessionId: session.id,
+        title: session.title || null,
         question,
         answer,
         consultType: session.consultType,

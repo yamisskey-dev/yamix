@@ -109,6 +109,7 @@ export async function GET(req: NextRequest) {
         return {
           id: msg.id,
           sessionId: session.id,
+          title: session.title || null,
           question: decryptedMsgContent,
           answer: null,
           consultType: session.consultType,
@@ -137,6 +138,7 @@ export async function GET(req: NextRequest) {
         return {
           id: msg.id,
           sessionId: session.id,
+          title: session.title || null,
           question, // Previous USER message (already decrypted)
           answer: decryptedMsgContent,
           consultType: session.consultType,

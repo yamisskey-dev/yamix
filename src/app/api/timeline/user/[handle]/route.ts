@@ -15,6 +15,7 @@ interface PrismaUser {
 
 interface PrismaSessionWithMessages {
   id: string;
+  title: string | null;
   consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
   createdAt: Date;
@@ -100,6 +101,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return {
           id: s.id,
           sessionId: s.id,
+          title: s.title || null,
           question,
           answer, // PUBLIC相談ではnullの場合あり
           consultType: s.consultType,
