@@ -123,41 +123,43 @@ export default function NewChatPage() {
     setIsLoading(true);
     setError(undefined);
 
-    try {
-      // Create new session
-      const createRes = await fetch("/api/chat/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          consultType,
-          isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
-          allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
-          ...(consultType === "DIRECTED" && {
-            targetUserHandles: targetUsers.map((u) => u.handle),
-          }),
+    // Create new session (don't await to keep in user interaction context)
+    fetch("/api/chat/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        consultType,
+        isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
+        allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
+        ...(consultType === "DIRECTED" && {
+          targetUserHandles: targetUsers.map((u) => u.handle),
         }),
+      }),
+    })
+      .then(async (createRes) => {
+        if (!createRes.ok) {
+          const errorData = await createRes.json();
+          throw new Error(errorData.error || "セッションの作成に失敗しました");
+        }
+        return createRes.json();
+      })
+      .then((session) => {
+        console.log('[DEBUG] Session created:', session.id);
+
+        // Store initial message in sessionStorage for the chat page to pick up
+        sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
+        console.log('[DEBUG] Message stored in sessionStorage');
+
+        // Navigate immediately while still in user interaction context
+        console.log('[DEBUG] Navigating to:', `/main/chat/${session.id}`);
+        window.location.href = `/main/chat/${session.id}`;
+      })
+      .catch((err) => {
+        console.error('[DEBUG] Error:', err);
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+        setIsLoading(false);
+        submittingRef.current = false;
       });
-
-      if (!createRes.ok) {
-        const errorData = await createRes.json();
-        throw new Error(errorData.error || "セッションの作成に失敗しました");
-      }
-
-      const session = await createRes.json();
-      console.log('[DEBUG] Session created:', session.id);
-
-      // Store initial message in sessionStorage for the chat page to pick up
-      sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
-      console.log('[DEBUG] Message stored in sessionStorage');
-
-      // Use window.location.href instead of router.push() to avoid Service Worker issues on mobile
-      console.log('[DEBUG] Navigating to:', `/main/chat/${session.id}`);
-      window.location.href = `/main/chat/${session.id}`;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-      setIsLoading(false);
-      submittingRef.current = false;
-    }
   }, [inputValue, isLoading, consultType, isAnonymous, allowAnonymousResponses, targetUsers, router]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
