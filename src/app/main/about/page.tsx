@@ -155,8 +155,8 @@ export default async function AboutPage() {
           </div>
         </FormSection>
 
-        {/* ソースコード */}
-        <FormSection>
+        {/* ソースコード・バージョン */}
+        <FormSection label="ソースコード">
           <FormLink
             href="https://github.com/yamisskey-dev/yamix"
             icon={
@@ -166,7 +166,7 @@ export default async function AboutPage() {
             }
             external
           >
-            ソースコード (Yamix)
+            Yamix (Frontend) v{yamixVersion}
           </FormLink>
           <FormLink
             href="https://github.com/yamisskey-dev/yamii"
@@ -177,16 +177,8 @@ export default async function AboutPage() {
             }
             external
           >
-            ソースコード (Yamii)
+            Yamii (Backend) v{yamiiVersion}
           </FormLink>
-        </FormSection>
-
-        {/* バージョン情報 */}
-        <FormSection label="バージョン情報">
-          <div className="grid grid-cols-2 gap-4">
-            <MkKeyValue label="Yamix (Frontend)">v{yamixVersion}</MkKeyValue>
-            <MkKeyValue label="Yamii (Backend)">v{yamiiVersion}</MkKeyValue>
-          </div>
         </FormSection>
 
         {/* 管理者・連絡先 */}
