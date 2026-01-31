@@ -48,7 +48,7 @@ Yamixはプライバシーファーストで設計されています：
 | Cache | Redis |
 | PWA | next-pwa (Service Worker + Manifest) |
 | API Docs | OpenAPI 3.0 + Swagger UI |
-| Blockchain | Optimism（構想中） |
+| Blockchain | [YAMI DAO](https://github.com/yamisskey-dev/yamidao) 連携（ETHアドレス管理を委譲） |
 
 ## クイックスタート
 
@@ -124,20 +124,16 @@ pnpm prisma:studio # Prisma Studio起動
 
 **現在の状況**: Phase 4まで完了、Phase 5（経済システム）進行中
 
-## 関連プロジェクト
-
-- [Yamii](https://github.com/yamisskey-dev/yamii) - AI相談APIサーバー
-- [YAMI DAO](https://github.com/yamisskey-dev/yamidao) - ガバナンスプラットフォーム
-- [Neo-Quesdon](https://github.com/yamisskey-dev/neo-quesdon) - Q&Aプラットフォーム
-
 ## ライセンス
 
 AGPL-3.0 License
 
 ## 謝辞
 
-- 故 menhera.jp にインスパイア
-- [Misskey](https://github.com/misskey-dev/misskey) と同じ精神で
+- 故 menhera.jp の精神を継承
+- [Misskey](https://github.com/misskey-dev/misskey) - 認証システムとタイムラインUI
+- ChatGPT - AI対話インターフェース
+- Black Cat Carnival - UX設計の参考
 
 ---
 
