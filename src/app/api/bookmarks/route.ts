@@ -106,9 +106,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // 自分のセッションか、公開セッションのみブックマーク可能
-    if (session.userId !== payload.userId && session.consultType !== "PUBLIC") {
-      return NextResponse.json({ error: "Cannot bookmark private session" }, { status: 403 });
+    // 自分のセッションか、公開セッション、または自分宛の指名セッションのみブックマーク可能
+    if (session.userId !== payload.userId) {
+      // 他人のセッションの場合
+      if (session.consultType === "PUBLIC") {
+        // 公開セッションはブックマーク可能
+      } else if (session.consultType === "DIRECTED") {
+        // 指名セッションの場合、自分が対象に含まれているかチェック
+        const isTarget = await prisma.chatSessionTarget.findFirst({
+          where: {
+            sessionId: body.sessionId,
+            userId: payload.userId,
+          },
+        });
+        if (!isTarget) {
+          return NextResponse.json({ error: "Cannot bookmark this session" }, { status: 403 });
+        }
+      } else {
+        // PRIVATE セッションは他人がブックマークできない
+        return NextResponse.json({ error: "Cannot bookmark private session" }, { status: 403 });
+      }
     }
 
     // ブックマークを作成（すでに存在する場合はエラーにならない）
