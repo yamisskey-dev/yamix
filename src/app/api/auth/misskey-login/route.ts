@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { RedisService } from "@/lib/redis";
 import { detectInstance, isMisskeyLike } from "@/lib/detect-instance";
 import { logger } from "@/lib/logger";
@@ -53,14 +53,9 @@ export async function POST(req: NextRequest) {
     // Check if we have existing app credentials for this instance
     let server: ServerRecord | null = null;
 
-    if (isPrismaAvailable() && prisma) {
-      server = await prisma.server.findFirst({
-        where: { instances: misskeyHost },
-      });
-    } else {
-      // Use in-memory storage
-      server = memoryDB.servers.get(misskeyHost) || null;
-    }
+    server = await prisma.server.findFirst({
+      where: { instances: misskeyHost },
+    });
 
     // If no app exists or appSecret is invalid, create new app
     if (!server || !server.appSecret) {
@@ -90,34 +85,18 @@ export async function POST(req: NextRequest) {
       const appSecret = appData.secret;
 
       // Store server record
-      if (isPrismaAvailable() && prisma) {
-        server = await prisma.server.upsert({
-          where: { instances: misskeyHost },
-          update: {
-            appSecret,
-            instanceType,
-          },
-          create: {
-            instances: misskeyHost,
-            appSecret,
-            instanceType,
-          },
-        });
-      } else {
-        // Use in-memory storage
-        const now = new Date();
-        server = {
-          id: server?.id || generateId(),
-          instances: misskeyHost,
-          instanceType,
+      server = await prisma.server.upsert({
+        where: { instances: misskeyHost },
+        update: {
           appSecret,
-        };
-        memoryDB.servers.set(misskeyHost, {
-          ...server,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+          instanceType,
+        },
+        create: {
+          instances: misskeyHost,
+          appSecret,
+          instanceType,
+        },
+      });
 
       logger.info("Created new Misskey app", { host: misskeyHost });
     }
@@ -137,17 +116,10 @@ export async function POST(req: NextRequest) {
 
       // If app secret is invalid, clear it and retry
       if (errorData.error?.code === "NO_SUCH_APP") {
-        if (isPrismaAvailable() && prisma) {
-          await prisma.server.update({
-            where: { instances: misskeyHost },
-            data: { appSecret: null },
-          });
-        } else {
-          const existing = memoryDB.servers.get(misskeyHost);
-          if (existing) {
-            existing.appSecret = null;
-          }
-        }
+        await prisma.server.update({
+          where: { instances: misskeyHost },
+          data: { appSecret: null },
+        });
         return NextResponse.json(
           { error: "App credentials expired. Please try again." },
           { status: 500 }

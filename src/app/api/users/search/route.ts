@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
@@ -34,13 +34,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = getPrismaClient();
-
-    if (!db) {
-      return NextResponse.json({ users: [] });
-    }
-
-    const users = await db.user.findMany({
+    const users = await prisma.user.findMany({
       where: {
         AND: [
           { id: { not: payload.userId } },
@@ -68,7 +62,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
-      users: users.map((u) => ({
+      users: users.map((u: typeof users[number]) => ({
         id: u.id,
         handle: u.handle,
         displayName: u.profile?.displayName || null,

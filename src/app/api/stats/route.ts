@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { getUserStats } from "@/lib/stats";
-import { prisma, isPrismaAvailable } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
 /**
@@ -44,50 +43,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    if (!isPrismaAvailable() || !prisma) {
-      // Prisma未接続時はデフォルト値を返す
-      return NextResponse.json({
-        walletId: walletId,
-        currentBalance: 10,
-        equilibriumBalance: 50,
-        balanceRatio: 0.2,
-        dependency: {
-          level: "LOW",
-          score: 0,
-          label: "低依存",
-          description: "データベースに接続していないため、統計を取得できません。",
-        },
-        today: {
-          aiConsults: 0,
-          humanConsults: 0,
-          totalConsults: 0,
-          tokensSpent: 0,
-          tokensEarned: 0,
-          netTokens: 0,
-        },
-        week: {
-          aiConsults: 0,
-          humanConsults: 0,
-          totalConsults: 0,
-          tokensSpent: 0,
-          tokensEarned: 0,
-          netTokens: 0,
-        },
-        month: {
-          aiConsults: 0,
-          humanConsults: 0,
-          totalConsults: 0,
-          tokensSpent: 0,
-          tokensEarned: 0,
-          netTokens: 0,
-        },
-        trend: {
-          direction: "STABLE",
-          weekOverWeekChange: 0,
-        },
-      });
-    }
-
     const stats = await getUserStats(walletId);
 
     if (!stats) {

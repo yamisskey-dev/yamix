@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
-import { isPrismaAvailable } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import {
   getEconomyConfig,
@@ -29,9 +28,8 @@ export async function GET(req: NextRequest) {
     const config = await getEconomyConfig();
     const equilibriumBalance = await getEquilibriumBalance();
 
-    // walletIdがある場合は個人の状態も返す
     let personalStatus = null;
-    if (payload.walletId && isPrismaAvailable()) {
+    if (payload.walletId) {
       const todayRewardEarned = await getTodayRewardEarned(payload.walletId);
       const remainingRewardCapacity = await getRemainingRewardCapacity(
         payload.walletId
@@ -83,13 +81,6 @@ export async function POST(req: NextRequest) {
 
   if (!payload.walletId) {
     return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-  }
-
-  if (!isPrismaAvailable()) {
-    return NextResponse.json(
-      { error: "Database unavailable" },
-      { status: 503 }
-    );
   }
 
   try {

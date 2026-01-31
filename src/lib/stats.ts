@@ -3,7 +3,7 @@
  * 依存度（Dependency Level）の計算とユーザー使用状況の提供
  */
 
-import { getPrismaClient, isPrismaAvailable } from "./prisma";
+import { prisma } from "./prisma";
 import { getEconomyConfig, getEquilibriumBalance } from "./economy";
 
 // ============================================
@@ -149,20 +149,6 @@ async function getPeriodStats(
   walletId: string,
   startDate: Date
 ): Promise<PeriodStats> {
-  if (!isPrismaAvailable()) {
-    return {
-      aiConsults: 0,
-      humanConsults: 0,
-      totalConsults: 0,
-      tokensSpent: 0,
-      tokensEarned: 0,
-      netTokens: 0,
-    };
-  }
-
-  const prisma = getPrismaClient()!;
-
-  // 相談回数の集計
   const consultStats = await prisma.transaction.groupBy({
     by: ["txType"],
     where: {
@@ -174,7 +160,6 @@ async function getPeriodStats(
     _sum: { amount: true },
   });
 
-  // 報酬の集計
   const rewardStats = await prisma.transaction.aggregate({
     where: {
       senderId: walletId,
@@ -218,13 +203,6 @@ async function getPeriodStats(
 // ============================================
 
 async function getConsecutiveUsageDays(walletId: string): Promise<number> {
-  if (!isPrismaAvailable()) {
-    return 0;
-  }
-
-  const prisma = getPrismaClient()!;
-
-  // 過去30日の使用日を取得
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -242,14 +220,12 @@ async function getConsecutiveUsageDays(walletId: string): Promise<number> {
     return 0;
   }
 
-  // 使用日をユニークに抽出
   const usageDates = new Set<string>();
   for (const tx of transactions) {
     const dateStr = tx.createdAt.toISOString().split("T")[0];
     usageDates.add(dateStr);
   }
 
-  // 今日から遡って連続日数をカウント
   let consecutiveDays = 0;
   const today = new Date();
 
@@ -261,7 +237,6 @@ async function getConsecutiveUsageDays(walletId: string): Promise<number> {
     if (usageDates.has(dateStr)) {
       consecutiveDays++;
     } else if (i > 0) {
-      // 今日以外で途切れたらストップ
       break;
     }
   }
@@ -274,17 +249,11 @@ async function getConsecutiveUsageDays(walletId: string): Promise<number> {
 // ============================================
 
 async function calculateTrend(walletId: string): Promise<UsageTrend> {
-  if (!isPrismaAvailable()) {
-    return { direction: "STABLE", weekOverWeekChange: 0 };
-  }
-
   const now = new Date();
 
-  // 今週の開始日
   const thisWeekStart = new Date(now);
   thisWeekStart.setDate(now.getDate() - 7);
 
-  // 先週の開始日・終了日
   const lastWeekStart = new Date(now);
   lastWeekStart.setDate(now.getDate() - 14);
   const lastWeekEnd = new Date(now);
@@ -293,7 +262,6 @@ async function calculateTrend(walletId: string): Promise<UsageTrend> {
   const thisWeekStats = await getPeriodStats(walletId, thisWeekStart);
   const lastWeekStats = await getPeriodStats(walletId, lastWeekStart);
 
-  // 先週との比較
   const lastWeekConsults = lastWeekStats.totalConsults;
   const thisWeekConsults = thisWeekStats.totalConsults;
 
@@ -327,13 +295,6 @@ async function calculateTrend(walletId: string): Promise<UsageTrend> {
 // ============================================
 
 export async function getUserStats(walletId: string): Promise<UserStats | null> {
-  if (!isPrismaAvailable()) {
-    return null;
-  }
-
-  const prisma = getPrismaClient()!;
-
-  // ウォレット情報を取得
   const wallet = await prisma.wallet.findUnique({
     where: { id: walletId },
   });
@@ -345,7 +306,6 @@ export async function getUserStats(walletId: string): Promise<UserStats | null> 
   const config = await getEconomyConfig();
   const equilibriumBalance = await getEquilibriumBalance();
 
-  // 期間の開始日を計算
   const now = new Date();
 
   const todayStart = new Date(now);
@@ -357,7 +317,6 @@ export async function getUserStats(walletId: string): Promise<UserStats | null> 
   const monthStart = new Date(now);
   monthStart.setMonth(now.getMonth() - 1);
 
-  // 各期間の統計を並列で取得
   const [todayStats, weekStats, monthStats, consecutiveDays, trend] =
     await Promise.all([
       getPeriodStats(walletId, todayStart),
@@ -367,15 +326,12 @@ export async function getUserStats(walletId: string): Promise<UserStats | null> 
       calculateTrend(walletId),
     ]);
 
-  // AI相談の割合を計算
   const totalConsults = weekStats.totalConsults;
   const aiRatio =
     totalConsults > 0 ? weekStats.aiConsults / totalConsults : 0;
 
-  // 残高比率
   const balanceRatio = wallet.balance / equilibriumBalance;
 
-  // 依存度スコアを計算
   const dependencyScore = computeDependencyScore({
     todayConsults: todayStats.totalConsults,
     weekConsults: weekStats.totalConsults,

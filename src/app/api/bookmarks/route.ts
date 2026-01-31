@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { decryptMessage } from "@/lib/encryption";
@@ -25,16 +25,7 @@ export async function GET(req: NextRequest) {
   const limit = parseLimit(searchParams.get("limit"));
 
   try {
-    const db = getPrismaClient();
-
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
-      );
-    }
-
-    const bookmarks = await db.bookmark.findMany({
+    const bookmarks = await prisma.bookmark.findMany({
       where: { userId: payload.userId },
       include: {
         session: {
@@ -57,7 +48,7 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({
-      bookmarks: bookmarks.map((b) => {
+      bookmarks: bookmarks.map((b: typeof bookmarks[number]) => {
         // Decrypt message content for preview (backwards compatible)
         const rawContent = b.session.messages[0]?.content;
         const decryptedContent = rawContent
@@ -121,17 +112,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = getPrismaClient();
-
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
-      );
-    }
-
     // セッションが存在し、かつ公開されているか確認
-    const session = await db.chatSession.findUnique({
+    const session = await prisma.chatSession.findUnique({
       where: { id: body.sessionId },
     });
 
@@ -145,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ブックマークを作成（すでに存在する場合はエラーにならない）
-    const bookmark = await db.bookmark.upsert({
+    const bookmark = await prisma.bookmark.upsert({
       where: {
         userId_sessionId: {
           userId: payload.userId,
@@ -200,17 +182,8 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const db = getPrismaClient();
-
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
-      );
-    }
-
     // ブックマークを削除
-    await db.bookmark.deleteMany({
+    await prisma.bookmark.deleteMany({
       where: {
         userId: payload.userId,
         sessionId,

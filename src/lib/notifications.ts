@@ -1,4 +1,4 @@
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
 export type NotificationType = "RESPONSE" | "MENTION" | "GAS_RECEIVED" | "SYSTEM";
@@ -16,14 +16,7 @@ interface CreateNotificationParams {
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   try {
-    const db = getPrismaClient();
-
-    if (!db) {
-      logger.warn("Database not available, notification not created", { ...params });
-      return;
-    }
-
-    await db.notification.create({
+    await prisma.notification.create({
       data: {
         userId: params.userId,
         type: params.type,
@@ -89,7 +82,7 @@ export async function notifyDirectedRequest(
   const displayName = isAnonymous ? "匿名ユーザー" : `${senderHandle}さん`;
 
   await Promise.all(
-    targetUserIds.map((userId) =>
+    targetUserIds.map((userId: string) =>
       createNotification({
         userId,
         type: "MENTION",

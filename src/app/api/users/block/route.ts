@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient, memoryDB, generateId } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 
@@ -36,79 +36,37 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const db = getPrismaClient();
+    // Check if blocked user exists
+    const blockedUser = await prisma.user.findUnique({
+      where: { id: body.blockedUserId },
+    });
 
-    if (db) {
-      // Check if blocked user exists
-      const blockedUser = await db.user.findUnique({
-        where: { id: body.blockedUserId },
-      });
+    if (!blockedUser) {
+      return NextResponse.json(
+        { error: "ユーザーが見つかりません" },
+        { status: 404 }
+      );
+    }
 
-      if (!blockedUser) {
-        return NextResponse.json(
-          { error: "ユーザーが見つかりません" },
-          { status: 404 }
-        );
-      }
-
-      // Create or get existing block
-      const block = await db.userBlock.upsert({
-        where: {
-          blockerId_blockedId: {
-            blockerId: payload.userId,
-            blockedId: body.blockedUserId,
-          },
-        },
-        create: {
+    // Create or get existing block
+    const block = await prisma.userBlock.upsert({
+      where: {
+        blockerId_blockedId: {
           blockerId: payload.userId,
           blockedId: body.blockedUserId,
         },
-        update: {}, // No updates needed if already exists
-      });
-
-      return NextResponse.json({
-        success: true,
-        block,
-      });
-    } else {
-      // In-memory fallback
-      const blockedUser = memoryDB.users.get(body.blockedUserId);
-
-      if (!blockedUser) {
-        return NextResponse.json(
-          { error: "ユーザーが見つかりません" },
-          { status: 404 }
-        );
-      }
-
-      // Check if block already exists
-      const existingBlock = Array.from(memoryDB.userBlocks.values()).find(
-        (b) => b.blockerId === payload.userId && b.blockedId === body.blockedUserId
-      );
-
-      if (existingBlock) {
-        return NextResponse.json({
-          success: true,
-          block: existingBlock,
-        });
-      }
-
-      // Create new block
-      const blockId = generateId();
-      const block = {
-        id: blockId,
+      },
+      create: {
         blockerId: payload.userId,
         blockedId: body.blockedUserId,
-        createdAt: new Date(),
-      };
+      },
+      update: {}, // No updates needed if already exists
+    });
 
-      memoryDB.userBlocks.set(blockId, block);
-
-      return NextResponse.json({
-        success: true,
-        block,
-      });
-    }
+    return NextResponse.json({
+      success: true,
+      block,
+    });
   } catch (error) {
     logger.error("Block user error", { blockedUserId: body.blockedUserId }, error);
     return NextResponse.json(
@@ -132,63 +90,30 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const db = getPrismaClient();
-
-    if (db) {
-      const blocks = await db.userBlock.findMany({
-        where: { blockerId: payload.userId },
-        include: {
-          blocked: {
-            include: {
-              profile: true,
-            },
+    const blocks = await prisma.userBlock.findMany({
+      where: { blockerId: payload.userId },
+      include: {
+        blocked: {
+          include: {
+            profile: true,
           },
         },
-        orderBy: { createdAt: "desc" },
-      });
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-      return NextResponse.json({
-        blocks: blocks.map((block) => ({
-          id: block.id,
-          blockedUser: {
-            id: block.blocked.id,
-            handle: block.blocked.handle,
-            displayName: block.blocked.profile?.displayName || null,
-            avatarUrl: block.blocked.profile?.avatarUrl || null,
-          },
-          createdAt: block.createdAt,
-        })),
-      });
-    } else {
-      // In-memory fallback
-      const blocks = Array.from(memoryDB.userBlocks.values())
-        .filter((b) => b.blockerId === payload.userId)
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-      return NextResponse.json({
-        blocks: blocks.map((block) => {
-          const blockedUser = memoryDB.users.get(block.blockedId);
-          const profile = blockedUser
-            ? Array.from(memoryDB.profiles.values()).find(
-                (p) => p.userId === blockedUser.id
-              )
-            : null;
-
-          return {
-            id: block.id,
-            blockedUser: blockedUser
-              ? {
-                  id: blockedUser.id,
-                  handle: blockedUser.handle,
-                  displayName: profile?.displayName || null,
-                  avatarUrl: profile?.avatarUrl || null,
-                }
-              : null,
-            createdAt: block.createdAt,
-          };
-        }),
-      });
-    }
+    return NextResponse.json({
+      blocks: blocks.map((block) => ({
+        id: block.id,
+        blockedUser: {
+          id: block.blocked.id,
+          handle: block.blocked.handle,
+          displayName: block.blocked.profile?.displayName || null,
+          avatarUrl: block.blocked.profile?.avatarUrl || null,
+        },
+        createdAt: block.createdAt,
+      })),
+    });
   } catch (error) {
     logger.error("Get blocks error", {}, error);
     return NextResponse.json(

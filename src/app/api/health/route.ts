@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma, isPrismaAvailable } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const status = {
@@ -9,14 +9,10 @@ export async function GET() {
   };
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      await prisma.$queryRaw`SELECT 1`;
-      status.database = "connected";
-    } else {
-      status.database = "in-memory";
-    }
+    await prisma.$queryRaw`SELECT 1`;
+    status.database = "connected";
   } catch {
-    status.database = "disconnected";
+    status.database = "error";
     status.status = "degraded";
   }
 

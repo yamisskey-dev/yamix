@@ -1,208 +1,30 @@
 import { PrismaClient } from "@prisma/client";
-import type { WalletType, PostType, ConsultTarget, TransactionType } from "@/types";
 import { logger } from "@/lib/logger";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | null;
-  prismaAvailable: boolean;
-  memoryDB: MemoryDB;
+  prisma: PrismaClient | undefined;
 };
 
-/**
- * Prismaクライアントが利用可能な場合のみ返す型安全なゲッター
- * 使用例: const db = getPrismaClient(); if (db) { await db.user.findMany(); }
- */
-export function getPrismaClient(): PrismaClient | null {
-  if (globalForPrisma.prismaAvailable && prisma) {
-    return prisma;
-  }
-  return null;
-}
-
-// In-memory storage types
-interface ServerRecord {
-  id: string;
-  instances: string;
-  instanceType: string;
-  appSecret: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface UserRecord {
-  id: string;
-  handle: string;
-  account: string;
-  hostName: string;
-  token: string;
-  serverId: string;
-  ethAddress: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface ProfileRecord {
-  id: string;
-  userId: string;
-  displayName: string | null;
-  avatarUrl: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface WalletRecord {
-  id: string;
-  address: string;
-  balance: number;
-  userId: string; // Required (1:1 relation)
-  walletType: WalletType;
-  createdAt: Date;
-}
-
-interface PostRecord {
-  id: string;
-  content: string;
-  walletId: string;
-  parentId: string | null;
-  postType: PostType;
-  targetType: ConsultTarget | null;
-  tokenCost: number;
-  tokenReward: number;
-  createdAt: Date;
-}
-
-interface FollowRecord {
-  id: string;
-  followerId: string;
-  targetId: string;
-  createdAt: Date;
-}
-
-interface TransactionRecord {
-  id: string;
-  postId: string | null;
-  senderId: string;
-  amount: number;
-  txType: TransactionType;
-  createdAt: Date;
-}
-
-interface UserBlockRecord {
-  id: string;
-  blockerId: string;
-  blockedId: string;
-  createdAt: Date;
-}
-
-interface ChatSessionRecord {
-  id: string;
-  userId: string;
-  title: string | null;
-  consultType: "PRIVATE" | "PUBLIC";
-  isAnonymous: boolean;
-  allowAnonymousResponses: boolean;
-  category: string | null;
-  isPublic: boolean; // DEPRECATED: consultType=PUBLIC と同義
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface ChatMessageRecord {
-  id: string;
-  sessionId: string;
-  role: "USER" | "ASSISTANT";
-  content: string;
-  isCrisis: boolean;
-  responderId?: string;
-  isAnonymous: boolean;
-  gasAmount: number;
-  createdAt: Date;
-}
-
-interface NotificationRecord {
-  id: string;
-  userId: string;
-  type: "RESPONSE" | "MENTION" | "GAS_RECEIVED" | "SYSTEM";
-  title: string;
-  message: string;
-  linkUrl: string | null;
-  isRead: boolean;
-  createdAt: Date;
-}
-
-interface BookmarkRecord {
-  id: string;
-  userId: string;
-  sessionId: string;
-  createdAt: Date;
-}
-
-interface MemoryDB {
-  servers: Map<string, ServerRecord>;
-  users: Map<string, UserRecord>;
-  profiles: Map<string, ProfileRecord>;
-  wallets: Map<string, WalletRecord>;
-  posts: Map<string, PostRecord>;
-  follows: Map<string, FollowRecord>;
-  transactions: Map<string, TransactionRecord>;
-  chatSessions: Map<string, ChatSessionRecord>;
-  chatMessages: Map<string, ChatMessageRecord>;
-  userBlocks: Map<string, UserBlockRecord>;
-  notifications: Map<string, NotificationRecord>;
-  bookmarks: Map<string, BookmarkRecord>;
-}
-
-// Initialize in-memory storage
-if (!globalForPrisma.memoryDB) {
-  globalForPrisma.memoryDB = {
-    servers: new Map(),
-    users: new Map(),
-    profiles: new Map(),
-    wallets: new Map(),
-    posts: new Map(),
-    follows: new Map(),
-    transactions: new Map(),
-    chatSessions: new Map(),
-    chatMessages: new Map(),
-    userBlocks: new Map(),
-    notifications: new Map(),
-    bookmarks: new Map(),
-  };
-}
-
-function createPrismaClient(): PrismaClient | null {
+function createPrismaClient(): PrismaClient {
   if (!process.env.DATABASE_URL) {
-    logger.warn("DATABASE_URL not set, using in-memory database");
-    globalForPrisma.prismaAvailable = false;
-    return null;
+    throw new Error(
+      "DATABASE_URL is required. PostgreSQL is mandatory for Yamix."
+    );
   }
 
-  try {
-    const client = new PrismaClient({
-      log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
-    });
-    globalForPrisma.prismaAvailable = true;
-    return client;
-  } catch (error) {
-    logger.warn("Failed to create Prisma client", {}, error);
-    globalForPrisma.prismaAvailable = false;
-    return null;
-  }
+  const client = new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  });
+  logger.info("Prisma client created");
+  return client;
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production" && prisma) {
+if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-export function isPrismaAvailable(): boolean {
-  return globalForPrisma.prismaAvailable === true && prisma !== null;
-}
-
-export const memoryDB = globalForPrisma.memoryDB;
-
-// Helper to generate IDs
 export function generateId(): string {
   return crypto.randomUUID();
 }

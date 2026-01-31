@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, generateId } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
@@ -44,69 +44,48 @@ export async function POST(req: NextRequest) {
   const ethAmount = (parseFloat(TOKEN_ECONOMY.ETH_PER_YAMI) * amount).toFixed(6);
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      // Verify wallet belongs to user
-      const wallet = await prisma.wallet.findUnique({
-        where: { id: walletId },
-      });
+    // Verify wallet belongs to user
+    const wallet = await prisma.wallet.findUnique({
+      where: { id: walletId },
+    });
 
-      if (!wallet) {
-        return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
-      }
-
-      if (wallet.userId !== payload.userId) {
-        return NextResponse.json({ error: "Not authorized" }, { status: 403 });
-      }
-
-      // Check max balance
-      if (wallet.balance + amount > TOKEN_ECONOMY.MAX_BALANCE) {
-        return NextResponse.json(
-          { error: `Purchase would exceed max balance of ${TOKEN_ECONOMY.MAX_BALANCE} YAMI` },
-          { status: 400 }
-        );
-      }
-
-      // Create pending purchase record
-      const purchase = await prisma.tokenPurchase.create({
-        data: {
-          walletId,
-          amount,
-          ethAmount,
-          status: "PENDING",
-        },
-      });
-
-      return NextResponse.json({
-        purchase,
-        paymentInfo: {
-          network: TOKEN_ECONOMY.NETWORK,
-          chainId: TOKEN_ECONOMY.CHAIN_ID,
-          ethAmount,
-          // In production, this would be the YAMI DAO treasury address on Optimism
-          recipientAddress: process.env.YAMI_DAO_TREASURY_ADDRESS || (() => { throw new Error("YAMI_DAO_TREASURY_ADDRESS must be set"); })(),
-          memo: `Purchase ${amount} YAMI for wallet ${walletId}`,
-        },
-      }, { status: 201 });
-    } else {
-      // In-memory fallback (simplified - no actual Optimism ETH handling)
-      return NextResponse.json({
-        purchase: {
-          id: generateId(),
-          walletId,
-          amount,
-          ethAmount,
-          status: "PENDING",
-          createdAt: new Date(),
-        },
-        paymentInfo: {
-          network: TOKEN_ECONOMY.NETWORK,
-          chainId: TOKEN_ECONOMY.CHAIN_ID,
-          ethAmount,
-          recipientAddress: "0x...",
-          memo: `Purchase ${amount} YAMI for wallet ${walletId}`,
-        },
-      }, { status: 201 });
+    if (!wallet) {
+      return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
     }
+
+    if (wallet.userId !== payload.userId) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    // Check max balance
+    if (wallet.balance + amount > TOKEN_ECONOMY.MAX_BALANCE) {
+      return NextResponse.json(
+        { error: `Purchase would exceed max balance of ${TOKEN_ECONOMY.MAX_BALANCE} YAMI` },
+        { status: 400 }
+      );
+    }
+
+    // Create pending purchase record
+    const purchase = await prisma.tokenPurchase.create({
+      data: {
+        walletId,
+        amount,
+        ethAmount,
+        status: "PENDING",
+      },
+    });
+
+    return NextResponse.json({
+      purchase,
+      paymentInfo: {
+        network: TOKEN_ECONOMY.NETWORK,
+        chainId: TOKEN_ECONOMY.CHAIN_ID,
+        ethAmount,
+        // In production, this would be the YAMI DAO treasury address on Optimism
+        recipientAddress: process.env.YAMI_DAO_TREASURY_ADDRESS || (() => { throw new Error("YAMI_DAO_TREASURY_ADDRESS must be set"); })(),
+        memo: `Purchase ${amount} YAMI for wallet ${walletId}`,
+      },
+    }, { status: 201 });
   } catch (error) {
     logger.error("YAMI purchase error:", {}, error);
     return NextResponse.json(
@@ -133,37 +112,33 @@ export async function GET(req: NextRequest) {
   const walletId = searchParams.get("walletId");
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      // Get user's wallets
-      const wallets = await prisma.wallet.findMany({
-        where: { userId: payload.userId },
-        select: { id: true },
-      });
+    // Get user's wallets
+    const wallets = await prisma.wallet.findMany({
+      where: { userId: payload.userId },
+      select: { id: true },
+    });
 
-      const walletIds = wallets.map((w) => w.id);
+    const walletIds = wallets.map((w) => w.id);
 
-      // Filter by walletId if provided
-      const whereClause = walletId && walletIds.includes(walletId)
-        ? { walletId }
-        : { walletId: { in: walletIds } };
+    // Filter by walletId if provided
+    const whereClause = walletId && walletIds.includes(walletId)
+      ? { walletId }
+      : { walletId: { in: walletIds } };
 
-      const purchases = await prisma.tokenPurchase.findMany({
-        where: whereClause,
-        orderBy: { createdAt: "desc" },
-        include: {
-          wallet: {
-            select: {
-              id: true,
-              address: true,
-            },
+    const purchases = await prisma.tokenPurchase.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+      include: {
+        wallet: {
+          select: {
+            id: true,
+            address: true,
           },
         },
-      });
+      },
+    });
 
-      return NextResponse.json(purchases);
-    } else {
-      return NextResponse.json([]);
-    }
+    return NextResponse.json(purchases);
   } catch (error) {
     logger.error("Get purchase history error:", {}, error);
     return NextResponse.json(

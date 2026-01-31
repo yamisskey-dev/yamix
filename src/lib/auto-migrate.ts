@@ -3,20 +3,14 @@
  * 平文メッセージを暗号化する
  */
 
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { encryptMessage, isEncrypted } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 
 export async function migrateUnencryptedMessages(): Promise<void> {
-  const db = getPrismaClient();
-  if (!db) {
-    logger.info("[auto-migrate] Database not available, skipping");
-    return;
-  }
-
   try {
     // 平文メッセージをカウント（$enc$で始まらないもの）
-    const plaintextCount = await db.chatMessage.count({
+    const plaintextCount = await prisma.chatMessage.count({
       where: {
         NOT: {
           content: {
@@ -34,7 +28,7 @@ export async function migrateUnencryptedMessages(): Promise<void> {
     logger.info(`[auto-migrate] Found ${plaintextCount} unencrypted messages, migrating...`);
 
     // 平文メッセージを取得
-    const messages = await db.chatMessage.findMany({
+    const messages = await prisma.chatMessage.findMany({
       where: {
         NOT: {
           content: {
@@ -63,7 +57,7 @@ export async function migrateUnencryptedMessages(): Promise<void> {
 
         const encryptedContent = encryptMessage(message.content, message.session.userId);
 
-        await db.chatMessage.update({
+        await prisma.chatMessage.update({
           where: { id: message.id },
           data: { content: encryptedContent },
         });

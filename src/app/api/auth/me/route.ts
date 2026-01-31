@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isPrismaAvailable, memoryDB } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 
@@ -35,26 +35,14 @@ export async function GET(req: NextRequest) {
       avatarUrl: string | null;
     } | null = null;
 
-    if (isPrismaAvailable() && prisma) {
-      const dbUser = await prisma.user.findUnique({
-        where: { id: payload.userId },
-        include: { profile: true },
-      });
+    const dbUser = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: { profile: true },
+    });
 
-      if (dbUser) {
-        user = dbUser;
-        profile = dbUser.profile;
-      }
-    } else {
-      // Use in-memory storage
-      const memUser = Array.from(memoryDB.users.values()).find(
-        (u) => u.id === payload.userId
-      );
-
-      if (memUser) {
-        user = memUser;
-        profile = memoryDB.profiles.get(memUser.id) || null;
-      }
+    if (dbUser) {
+      user = dbUser;
+      profile = dbUser.profile;
     }
 
     if (!user) {
@@ -103,20 +91,12 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    if (isPrismaAvailable() && prisma) {
-      await prisma.profile.update({
-        where: { userId: payload.userId },
-        data: {
-          ...(body.allowDirectedConsult !== undefined && { allowDirectedConsult: body.allowDirectedConsult }),
-        },
-      });
-    } else {
-      const profile = memoryDB.profiles.get(payload.userId);
-      if (profile && body.allowDirectedConsult !== undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (profile as any).allowDirectedConsult = body.allowDirectedConsult;
-      }
-    }
+    await prisma.profile.update({
+      where: { userId: payload.userId },
+      data: {
+        ...(body.allowDirectedConsult !== undefined && { allowDirectedConsult: body.allowDirectedConsult }),
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

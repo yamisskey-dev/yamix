@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
-import { prisma, isPrismaAvailable, memoryDB, generateId } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { RedisService } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { createJWT, createTokenCookie } from "@/lib/jwt";
@@ -59,13 +59,9 @@ export async function POST(req: NextRequest) {
     // Get server info
     let server: { id: string; appSecret: string | null } | null = null;
 
-    if (isPrismaAvailable() && prisma) {
-      server = await prisma.server.findFirst({
-        where: { instances: host },
-      });
-    } else {
-      server = memoryDB.servers.get(host) || null;
-    }
+    server = await prisma.server.findFirst({
+      where: { instances: host },
+    });
 
     if (!server || !server.appSecret) {
       return NextResponse.json(
@@ -108,115 +104,54 @@ export async function POST(req: NextRequest) {
     let userId: string;
     let walletId: string;
 
-    if (isPrismaAvailable() && prisma) {
-      // Upsert user with wallet in a transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // Upsert user
-        const user = await tx.user.upsert({
-          where: { handle },
-          update: {
-            token: hashedToken,
-            updatedAt: now,
-          },
-          create: {
-            handle,
-            account: misskeyUser.username,
-            hostName: host,
-            token: hashedToken,
-            serverId: server.id,
-          },
-          include: { wallet: true },
-        });
-
-        // Upsert profile
-        await tx.profile.upsert({
-          where: { userId: user.id },
-          update: {
-            displayName: misskeyUser.name || misskeyUser.username,
-            avatarUrl: misskeyUser.avatarUrl,
-            updatedAt: now,
-          },
-          create: {
-            userId: user.id,
-            displayName: misskeyUser.name || misskeyUser.username,
-            avatarUrl: misskeyUser.avatarUrl,
-          },
-        });
-
-        // Create wallet if not exists (1:1 relation)
-        let wallet = user.wallet;
-        if (!wallet) {
-          wallet = await tx.wallet.create({
-            data: {
-              address: generateAddress(),
-              balance: TOKEN_ECONOMY.INITIAL_BALANCE,
-              walletType: "HUMAN",
-              userId: user.id,
-            },
-          });
-        }
-
-        return { user, wallet };
-      });
-
-      userId = result.user.id;
-      walletId = result.wallet.id;
-    } else {
-      // Use in-memory storage
-      const existingUser = Array.from(memoryDB.users.values()).find(u => u.handle === handle);
-
-      if (existingUser) {
-        existingUser.token = hashedToken;
-        existingUser.updatedAt = now;
-        userId = existingUser.id;
-      } else {
-        userId = generateId();
-        memoryDB.users.set(handle, {
-          id: userId,
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.upsert({
+        where: { handle },
+        update: {
+          token: hashedToken,
+          updatedAt: now,
+        },
+        create: {
           handle,
           account: misskeyUser.username,
           hostName: host,
           token: hashedToken,
           serverId: server.id,
-          ethAddress: null,
-          createdAt: now,
-          updatedAt: now,
-        });
-      }
+        },
+        include: { wallet: true },
+      });
 
-      // Upsert profile in memory
-      const existingProfile = memoryDB.profiles.get(userId);
-      if (existingProfile) {
-        existingProfile.displayName = misskeyUser.name || misskeyUser.username;
-        existingProfile.avatarUrl = misskeyUser.avatarUrl || null;
-        existingProfile.updatedAt = now;
-      } else {
-        memoryDB.profiles.set(userId, {
-          id: generateId(),
-          userId,
+      await tx.profile.upsert({
+        where: { userId: user.id },
+        update: {
           displayName: misskeyUser.name || misskeyUser.username,
-          avatarUrl: misskeyUser.avatarUrl || null,
-          createdAt: now,
+          avatarUrl: misskeyUser.avatarUrl,
           updatedAt: now,
+        },
+        create: {
+          userId: user.id,
+          displayName: misskeyUser.name || misskeyUser.username,
+          avatarUrl: misskeyUser.avatarUrl,
+        },
+      });
+
+      let wallet = user.wallet;
+      if (!wallet) {
+        wallet = await tx.wallet.create({
+          data: {
+            address: generateAddress(),
+            balance: TOKEN_ECONOMY.INITIAL_BALANCE,
+            walletType: "HUMAN",
+            userId: user.id,
+          },
         });
       }
 
-      // Create wallet if not exists (1:1 relation)
-      const existingWallet = Array.from(memoryDB.wallets.values()).find(w => w.userId === userId);
-      if (existingWallet) {
-        walletId = existingWallet.id;
-      } else {
-        walletId = generateId();
-        memoryDB.wallets.set(walletId, {
-          id: walletId,
-          address: generateAddress(),
-          balance: TOKEN_ECONOMY.INITIAL_BALANCE,
-          walletType: "HUMAN",
-          userId,
-          createdAt: now,
-        });
-      }
-    }
+      return { user, wallet };
+    });
+
+    userId = result.user.id;
+    walletId = result.wallet.id;
 
     // Clean up session
     await RedisService.delete(`login/misskey/${token}`);

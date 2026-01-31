@@ -3,7 +3,7 @@
  * 詳細: docs/TOKEN_ECONOMY.md
  */
 
-import { getPrismaClient, isPrismaAvailable } from "./prisma";
+import { prisma } from "./prisma";
 import { TOKEN_ECONOMY } from "@/types";
 
 // ============================================
@@ -26,11 +26,6 @@ interface EconomyConfig {
  * 存在しない場合はデフォルト値を使用
  */
 export async function getEconomyConfig(): Promise<EconomyConfig> {
-  if (!isPrismaAvailable()) {
-    return getDefaultConfig();
-  }
-
-  const prisma = getPrismaClient()!;
   const configs = await prisma.economyConfig.findMany();
   const configMap = new Map(configs.map((c) => [c.key, c.value]));
 
@@ -83,16 +78,6 @@ interface GrantResult {
  * 1日1回のみ付与可能
  */
 export async function applyDailyGrant(walletId: string): Promise<GrantResult> {
-  if (!isPrismaAvailable()) {
-    return {
-      granted: false,
-      amount: 0,
-      newBalance: 0,
-      message: "Database unavailable",
-    };
-  }
-
-  const prisma = getPrismaClient()!;
   const config = await getEconomyConfig();
 
   const wallet = await prisma.wallet.findUnique({
@@ -108,7 +93,6 @@ export async function applyDailyGrant(walletId: string): Promise<GrantResult> {
     };
   }
 
-  // 今日すでに付与済みかチェック
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -121,7 +105,6 @@ export async function applyDailyGrant(walletId: string): Promise<GrantResult> {
     };
   }
 
-  // 残高上限チェック
   const newBalance = Math.min(
     wallet.balance + config.dailyGrantAmount,
     config.maxBalance
@@ -137,9 +120,7 @@ export async function applyDailyGrant(walletId: string): Promise<GrantResult> {
     };
   }
 
-  // トランザクションで付与
   const result = await prisma.$transaction(async (tx) => {
-    // ウォレット更新
     const updated = await tx.wallet.update({
       where: { id: walletId },
       data: {
@@ -148,7 +129,6 @@ export async function applyDailyGrant(walletId: string): Promise<GrantResult> {
       },
     });
 
-    // トランザクション記録
     await tx.transaction.create({
       data: {
         senderId: walletId,
@@ -187,16 +167,6 @@ interface DecayResult {
  * 例: decayRate=20% → balance * 0.8
  */
 export async function applyDecay(walletId: string): Promise<DecayResult> {
-  if (!isPrismaAvailable()) {
-    return {
-      applied: false,
-      decayAmount: 0,
-      newBalance: 0,
-      message: "Database unavailable",
-    };
-  }
-
-  const prisma = getPrismaClient()!;
   const config = await getEconomyConfig();
 
   const wallet = await prisma.wallet.findUnique({
@@ -212,7 +182,6 @@ export async function applyDecay(walletId: string): Promise<DecayResult> {
     };
   }
 
-  // 今日すでに適用済みかチェック
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -225,12 +194,10 @@ export async function applyDecay(walletId: string): Promise<DecayResult> {
     };
   }
 
-  // 減衰計算（小数点以下切り捨て）
   const decayRate = config.decayRatePercent / 100;
   const decayAmount = Math.floor(wallet.balance * decayRate);
 
   if (decayAmount <= 0) {
-    // 残高が少なすぎて減衰なし → 記録だけ更新
     await prisma.wallet.update({
       where: { id: walletId },
       data: { lastDecayAt: new Date() },
@@ -246,9 +213,7 @@ export async function applyDecay(walletId: string): Promise<DecayResult> {
 
   const newBalanceAfterDecay = wallet.balance - decayAmount;
 
-  // トランザクションで減衰適用
   const result = await prisma.$transaction(async (tx) => {
-    // ウォレット更新
     const updated = await tx.wallet.update({
       where: { id: walletId },
       data: {
@@ -257,7 +222,6 @@ export async function applyDecay(walletId: string): Promise<DecayResult> {
       },
     });
 
-    // トランザクション記録（負の値として記録）
     await tx.transaction.create({
       data: {
         senderId: walletId,
@@ -294,10 +258,8 @@ interface DailyProcessResult {
 export async function processDailyEconomy(
   walletId: string
 ): Promise<DailyProcessResult> {
-  // 1. まず減衰を適用
   const decay = await applyDecay(walletId);
 
-  // 2. 次にBI付与
   const grant = await applyDailyGrant(walletId);
 
   return {
@@ -315,11 +277,6 @@ export async function processDailyEconomy(
  * 今日すでに獲得した報酬額を取得
  */
 export async function getTodayRewardEarned(walletId: string): Promise<number> {
-  if (!isPrismaAvailable()) {
-    return 0;
-  }
-
-  const prisma = getPrismaClient()!;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -328,7 +285,7 @@ export async function getTodayRewardEarned(walletId: string): Promise<number> {
       senderId: walletId,
       txType: "RESPONSE_REWARD",
       createdAt: { gte: today },
-      amount: { gt: 0 }, // 報酬のみ（受け取り側）
+      amount: { gt: 0 },
     },
     _sum: { amount: true },
   });
@@ -378,7 +335,6 @@ export async function getConsultCost(target: ConsultTarget): Promise<number> {
     case "HUMAN":
       return config.humanConsultCost;
     case "ANY":
-      // ANY は人間相談の60%くらい
       return Math.ceil((config.humanConsultCost + config.aiConsultCost) / 2);
     default:
       return config.aiConsultCost;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { decryptMessage } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
@@ -34,13 +34,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   }
 
   try {
-    const db = getPrismaClient();
-    if (!db) {
-      return NextResponse.json({ messages: [] });
-    }
-
     // Verify session exists and user has access
-    const session = await db.chatSession.findUnique({
+    const session = await prisma.chatSession.findUnique({
       where: { id },
       select: {
         userId: true,
@@ -60,7 +55,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: "Not authorized" }, { status: 403 });
       }
       if (session.consultType === "DIRECTED") {
-        const isTarget = await db.chatSessionTarget.findUnique({
+        const isTarget = await prisma.chatSessionTarget.findUnique({
           where: {
             sessionId_userId: {
               sessionId: id,
@@ -75,7 +70,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch only new messages
-    const newMessages = await db.chatMessage.findMany({
+    const newMessages = await prisma.chatMessage.findMany({
       where: {
         sessionId: id,
         createdAt: { gt: afterDate },
@@ -91,7 +86,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       },
     });
 
-    const messages = newMessages.map((m) => ({
+    const messages = newMessages.map((m: typeof newMessages[number]) => ({
       id: m.id,
       role: m.role,
       content: decryptMessage(m.content, session.userId),

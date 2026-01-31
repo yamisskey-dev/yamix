@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrismaClient } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
@@ -39,16 +39,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const db = getPrismaClient();
-    if (!db) {
-      return NextResponse.json(
-        { error: "Database not available" },
-        { status: 503 }
-      );
-    }
-
     // メッセージを取得
-    const message = await db.chatMessage.findUnique({
+    const message = await prisma.chatMessage.findUnique({
       where: { id: messageId },
       include: {
         session: true,
@@ -89,7 +81,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // 送信者のウォレットとユーザー情報を取得
-    const senderWallet = await db.wallet.findUnique({
+    const senderWallet = await prisma.wallet.findUnique({
       where: { userId: payload.userId },
       include: {
         user: true,
@@ -112,7 +104,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // トランザクション実行
-    await db.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // 送信者からYAMIを減らす
       await tx.wallet.update({
         where: { id: senderWallet.id },
