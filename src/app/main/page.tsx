@@ -147,6 +147,10 @@ export default function NewChatPage() {
 
       // Store initial message in sessionStorage for the chat page to pick up
       sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
+
+      // Wait a tick to ensure sessionStorage is written (especially important on mobile browsers)
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       router.push(`/main/chat/${session.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");

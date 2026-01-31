@@ -248,6 +248,9 @@ export default function ChatSessionPage({ params }: PageProps) {
   const pollFailCountRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
+  const initialMessageSentRef = useRef<boolean>(false);
+
   // SSE callback refs (stable across renders)
   const sseCallbacks = useMemo(() => ({
     setMessages,
@@ -327,13 +330,19 @@ export default function ChatSessionPage({ params }: PageProps) {
       return;
     }
 
+    // Prevent double execution in React Strict Mode
+    if (initialMessageSentRef.current) {
+      return;
+    }
+
     // Check for pending message in sessionStorage
     const pendingMessage = sessionStorage.getItem(`pendingMessage-${sessionId}`);
     if (!pendingMessage) {
       return;
     }
 
-    // Remove from sessionStorage immediately to prevent double execution
+    // Mark as sent and remove from sessionStorage
+    initialMessageSentRef.current = true;
     sessionStorage.removeItem(`pendingMessage-${sessionId}`);
 
     const userMessage: LocalMessage = {
