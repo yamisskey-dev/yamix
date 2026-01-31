@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, memo, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 
 const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
@@ -92,13 +92,13 @@ export default function NewChatPage() {
     };
   }, [userSearchQuery, targetUsers]);
 
-  const addTargetUser = (user: { handle: string; displayName: string | null; avatarUrl: string | null }) => {
+  const addTargetUser = useCallback((user: { handle: string; displayName: string | null; avatarUrl: string | null }) => {
     setTargetUsers((prev) => [...prev, user]);
     setUserSearchQuery("");
     setUserSearchResults([]);
-  };
+  }, []);
 
-  const removeTargetUser = (handle: string) => {
+  const removeTargetUser = useCallback((handle: string) => {
     setTargetUsers((prev) => {
       const updated = prev.filter((u) => u.handle !== handle);
       if (updated.length === 0) {
@@ -107,16 +107,24 @@ export default function NewChatPage() {
       }
       return updated;
     });
-  };
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 二重送信ガード: refとstateの両方でチェック
-    if (!inputValue.trim() || isLoading || submittingRef.current) return;
+    if (!inputValue.trim() || isLoading || submittingRef.current) {
+      console.log('[DEBUG] Submit blocked:', {
+        hasInput: !!inputValue.trim(),
+        isLoading,
+        submittingRef: submittingRef.current
+      });
+      return;
+    }
 
     // 即座にガードを設定（同期的）
     submittingRef.current = true;
+    console.log('[DEBUG] Submit started, flag set to true');
 
     const messageContent = inputValue.trim();
     setInputValue("");
@@ -143,25 +151,30 @@ export default function NewChatPage() {
       }
 
       const session = await createRes.json();
+      console.log('[DEBUG] Session created, navigating to:', session.id);
 
       // Navigate to the session page with the initial message.
       // The chat page will handle displaying and sending the message.
       const encodedMessage = encodeURIComponent(messageContent);
       router.push(`/main/chat/${session.id}?initialMessage=${encodedMessage}`);
+
+      // 画面遷移が完了するまでフラグは維持（二重送信防止）
+      // コンポーネントがアンマウントされるので、フラグはリセット不要
     } catch (err) {
+      console.log('[DEBUG] Submit error, resetting flag');
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
       // エラー時はフラグをリセット（再試行を許可）
       submittingRef.current = false;
     }
-  };
+  }, [inputValue, isLoading, consultType, isAnonymous, allowAnonymousResponses, targetUsers, router]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
-  };
+  }, [handleSubmit]);
 
   // Input form component (memoized to prevent unnecessary re-renders)
   const inputForm = useMemo(() => (
@@ -374,8 +387,7 @@ export default function NewChatPage() {
     handleSubmit,
     handleKeyDown,
     addTargetUser,
-    removeTargetUser,
-    textareaRef
+    removeTargetUser
   ]);
 
   return (
