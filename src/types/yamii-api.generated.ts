@@ -1,10 +1,80 @@
 /**
  * Yamii API Types — auto-generated from OpenAPI schema
- * Yamii API v3.0.0
+ * Yamii Yamii API v1.0.0
  *
  * DO NOT EDIT MANUALLY
  * Regenerate with: pnpm generate:yamii-types
  */
+
+/** API情報レスポンス */
+export interface APIInfoResponse {
+  service: string;
+  version: string;
+  description: string;
+  features: string[];
+}
+
+/** 認証コールバックリクエスト */
+export interface AuthCallbackRequest {
+  session_id: string;
+  token: string;
+}
+
+/** 認証コールバックレスポンス */
+export interface AuthCallbackResponse {
+  access_token: string;
+  user_id: string;
+  username: string;
+  instance_url: string;
+  expires_at: string;
+}
+
+/** 認証開始リクエスト */
+export interface AuthStartRequest {
+  instance_url: string;
+}
+
+/** 認証開始レスポンス */
+export interface AuthStartResponse {
+  auth_url: string;
+  session_id: string;
+}
+
+/** 暗号化Blobレスポンス */
+export interface BlobResponse {
+  encrypted_data: string;
+  nonce: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** データ削除リクエスト */
+export interface ClearDataRequest {
+  /** ユーザーID */
+  user_id: string;
+  /** 削除を確認 */
+  confirm?: boolean;
+}
+
+/** データ削除レスポンス */
+export interface ClearDataResponse {
+  /** レスポンスメッセージ */
+  response: string;
+  /** コマンド名 */
+  command?: string;
+  /** 削除されたか */
+  deleted?: boolean;
+}
+
+/** コマンドレスポンス */
+export interface CommandResponse {
+  /** レスポンステキスト */
+  response: string;
+  /** 実行されたコマンド */
+  command: string;
+  /** コマンドとして処理されたか */
+  is_command?: boolean;
+}
 
 /** 会話履歴の1メッセージ */
 export interface ConversationMessage {
@@ -28,16 +98,6 @@ export interface CounselingRequest {
   conversation_history?: ConversationMessage[] | null;
 }
 
-/** 感情分析結果 */
-export interface EmotionAnalysisResponse {
-  primary_emotion: string;
-  intensity: number;
-  stability: number;
-  is_crisis: boolean;
-  all_emotions: Record<string, number>;
-  confidence: number;
-}
-
 /** カウンセリングレスポンス */
 export interface CounselingResponse {
   response: string;
@@ -53,10 +113,26 @@ export interface CounselingResponse {
   crisis_resources?: string[] | null;
 }
 
-/** ユーザープロファイル設定リクエスト */
-export interface UserProfileRequest {
-  explicit_profile?: string | null;
-  display_name?: string | null;
+/** 感情分析結果 */
+export interface EmotionAnalysisResponse {
+  primary_emotion: string;
+  intensity: number;
+  stability: number;
+  is_crisis: boolean;
+  all_emotions: Record<string, number>;
+  confidence: number;
+}
+
+/** エクスポートレスポンス */
+export interface ExportResponse {
+  /** レスポンスメッセージ */
+  response: string;
+  /** コマンド名 */
+  command?: string;
+  /** データサマリー */
+  data_summary?: Record<string, unknown> | null;
+  /** 完全エクスポートURL */
+  full_export_url?: string | null;
 }
 
 /** ヘルスチェックレスポンス */
@@ -65,6 +141,44 @@ export interface HealthResponse {
   timestamp: string;
   version: string;
   components: Record<string, boolean>;
+}
+
+/** メッセージ分類結果 */
+export interface MessageClassification {
+  /** コマンドかどうか */
+  is_command: boolean;
+  /** コマンドタイプ */
+  command_type?: string | null;
+  /** 空メッセージかどうか */
+  is_empty: boolean;
+  /** カウンセリングに回すべきか */
+  should_counsel: boolean;
+}
+
+/** メッセージリクエスト */
+export interface MessageRequest {
+  /** メッセージテキスト */
+  message: string;
+  /** ユーザーID */
+  user_id: string;
+  /** プラットフォーム名 */
+  platform?: string;
+  /** Bot名 */
+  bot_name?: string;
+}
+
+/** 暗号化Blob保存リクエスト */
+export interface SaveBlobRequest {
+  encrypted_data: string;
+  nonce: string;
+}
+
+/** セッション情報 */
+export interface SessionInfo {
+  user_id: string;
+  username: string;
+  instance_url: string;
+  expires_at: string;
 }
 
 /** タイトル生成リクエスト */
@@ -79,10 +193,8 @@ export interface SummarizeTitleResponse {
   title: string;
 }
 
-/** API情報レスポンス */
-export interface APIInfoResponse {
-  service: string;
-  version: string;
-  description: string;
-  features: string[];
+/** ユーザープロファイル設定リクエスト */
+export interface UserProfileRequest {
+  explicit_profile?: string | null;
+  display_name?: string | null;
 }
