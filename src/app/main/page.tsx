@@ -157,7 +157,7 @@ export default function NewChatPage() {
           document.body.appendChild(anchor);
           anchor.click();
           document.body.removeChild(anchor);
-        }, 100); // 100ms delay to ensure DB commit
+        }, 500); // 500ms delay to ensure DB commit (increased for testing)
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
