@@ -145,6 +145,7 @@ export default function NewChatPage() {
       })
       .then((session) => {
         console.log('[DEBUG] Session created:', session.id);
+        alert('[DEBUG] Session created: ' + session.id);
 
         // Store initial message in sessionStorage for the chat page to pick up
         sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
@@ -152,6 +153,7 @@ export default function NewChatPage() {
 
         // Navigate immediately while still in user interaction context
         console.log('[DEBUG] Navigating to:', `/main/chat/${session.id}`);
+        alert('[DEBUG] About to navigate');
         window.location.href = `/main/chat/${session.id}`;
       })
       .catch((err) => {
