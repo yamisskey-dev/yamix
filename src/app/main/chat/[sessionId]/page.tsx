@@ -395,7 +395,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, sessionId, sessionInfo, isFetching]);
+  }, [searchParams, sessionId, sessionInfo]);
 
   // Auto-scroll
   useEffect(() => {
