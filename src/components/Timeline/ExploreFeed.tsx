@@ -22,15 +22,10 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
   // Room title: prefer DB title (AI-generated summary), fallback to first line of question
   const titleText = consultation.title || consultation.question.split("\n")[0].slice(0, 40) || "無題のルーム";
 
-  const questionText = consultation.question.length > 200
-    ? consultation.question.slice(0, 200) + "…"
+  // Truncate each message to fit more bubbles in the preview
+  const questionText = consultation.question.length > 150
+    ? consultation.question.slice(0, 150) + "…"
     : consultation.question;
-
-  const answerText = consultation.answer
-    ? consultation.answer.length > 300
-      ? consultation.answer.slice(0, 300) + "…"
-      : consultation.answer
-    : null;
 
   // Unique human participants from replies
   const participants = (consultation.replies || [])
@@ -81,7 +76,7 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
         </div>
 
         {/* Chat area - fills remaining height, uses same DaisyUI chat classes as actual chat */}
-        <div className="flex-1 px-2 py-2 flex flex-col bg-base-200/40 overflow-hidden relative min-h-0">
+        <div className="flex-1 px-2 py-2 flex flex-col gap-1 bg-base-200/40 overflow-hidden relative min-h-0">
           {/* User message (right) - same as ChatBubble chat-user */}
           <div className="chat chat-end">
             <div className="chat-bubble chat-user shadow-sm text-[12px] leading-relaxed break-words max-w-[85%]">
@@ -89,31 +84,38 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
             </div>
           </div>
 
-          {/* Response (left) - same as ChatBubble chat-assistant */}
-          {answerText && (
-            <div className="chat chat-start">
-              <div className="chat-image avatar">
-                <div className="w-5 rounded-full overflow-hidden">
-                  {consultation.replies?.[0]?.responder?.avatarUrl ? (
-                    <Image
-                      src={consultation.replies[0].responder.avatarUrl}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="rounded-full object-cover w-full h-full"
-                    />
-                  ) : (
-                    <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
-                      <span className="text-[8px]">🤖</span>
-                    </div>
-                  )}
+          {/* All replies - show as many as fit in the height */}
+          {consultation.replies && consultation.replies.map((reply, index) => {
+            const replyText = reply.content.length > 150
+              ? reply.content.slice(0, 150) + "…"
+              : reply.content;
+            const isHumanResponse = !!reply.responder;
+
+            return (
+              <div key={reply.id || index} className="chat chat-start">
+                <div className="chat-image avatar">
+                  <div className="w-5 rounded-full overflow-hidden">
+                    {reply.responder?.avatarUrl ? (
+                      <Image
+                        src={reply.responder.avatarUrl}
+                        alt=""
+                        width={20}
+                        height={20}
+                        className="rounded-full object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
+                        <span className="text-[8px]">🤖</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className={`chat-bubble ${isHumanResponse ? "chat-human-response" : "chat-assistant"} shadow-sm text-[12px] leading-relaxed break-words max-w-[80%]`}>
+                  {replyText}
                 </div>
               </div>
-              <div className={`chat-bubble ${consultation.replies?.[0]?.responder ? "chat-human-response" : "chat-assistant"} shadow-sm text-[12px] leading-relaxed break-words max-w-[80%]`}>
-                {answerText}
-              </div>
-            </div>
-          )}
+            );
+          })}
 
           {/* Fade-out at bottom */}
           <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-base-200/90 to-transparent pointer-events-none" />
