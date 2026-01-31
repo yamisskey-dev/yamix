@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, use } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, use, lazy, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
-import { BookmarkButton } from "@/components/BookmarkButton";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { ConfirmModal } from "@/components/Modal";
 import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
+
+// 動的インポートで初期ロードを高速化
+const BookmarkButton = lazy(() => import("@/components/BookmarkButton").then(mod => ({ default: mod.BookmarkButton })));
+const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
+const ConfirmModal = lazy(() => import("@/components/Modal").then(mod => ({ default: mod.ConfirmModal })));
 import { chatApi, userApi, messageApi, api } from "@/lib/api-client";
 import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
@@ -224,6 +226,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const searchParams = useSearchParams();
   const toast = useToast();
   const initialMessageRef = useRef<string | null>(null);
+  const [initialMessageSent, setInitialMessageSent] = useState(false);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -246,14 +249,14 @@ export default function ChatSessionPage({ params }: PageProps) {
   const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
 
   // SSE callback refs (stable across renders)
-  const sseCallbacks = {
+  const sseCallbacks = useMemo(() => ({
     setMessages,
     setIsLoading,
     setSessionInfo,
     setShowCrisisAlert,
     sessionInfo,
     toast,
-  };
+  }), [setMessages, setIsLoading, setSessionInfo, setShowCrisisAlert, sessionInfo, toast]);
 
   // Fetch session data
   useEffect(() => {
@@ -319,10 +322,11 @@ export default function ChatSessionPage({ params }: PageProps) {
   // Auto-send initial message
   useEffect(() => {
     const initialMessage = searchParams.get("initialMessage");
-    if (!initialMessage || initialMessageRef.current || !sessionInfo || isFetching) return;
-    initialMessageRef.current = "sent";
+    if (!initialMessage || initialMessageRef.current || initialMessageSent || !sessionInfo || isFetching || isLoading) return;
 
-    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+    // 二重送信を防ぐため、refとstateの両方でガード
+    initialMessageRef.current = initialMessage;
+    setInitialMessageSent(true);
 
     const content = decodeURIComponent(initialMessage);
     const userMessage: LocalMessage = {
@@ -350,12 +354,17 @@ export default function ChatSessionPage({ params }: PageProps) {
         }
 
         await handleSSEResponse(res, userMessage.id, sseCallbacks);
+
+        // メッセージ送信成功後にURL書き換え
+        window.history.replaceState({}, "", `/main/chat/${sessionId}`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
+        // エラー時はフラグをリセットしない（無限ループ防止）
       }
     })();
-  }, [searchParams, sessionInfo, isFetching, sessionId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isFetching, isLoading, sessionId, initialMessageSent]);
 
   // Auto-scroll
   useEffect(() => {
@@ -692,7 +701,9 @@ export default function ChatSessionPage({ params }: PageProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <BookmarkButton sessionId={sessionId} />
+            <Suspense fallback={<div className="w-8 h-8" />}>
+              <BookmarkButton sessionId={sessionId} />
+            </Suspense>
             {sessionInfo.isOwner && (
               <button
                 className="btn btn-ghost btn-xs text-error hover:bg-error/10"
@@ -809,7 +820,9 @@ export default function ChatSessionPage({ params }: PageProps) {
                 aria-label="送信"
               >
                 {isLoading ? (
-                  <LoadingSpinner size="xs" inline />
+                  <Suspense fallback={<span className="loading loading-spinner loading-xs" />}>
+                    <LoadingSpinner size="xs" inline />
+                  </Suspense>
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                     <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
@@ -825,30 +838,34 @@ export default function ChatSessionPage({ params }: PageProps) {
       </div>
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        ref={deleteModalRef}
-        title="相談を削除"
-        body={
-          sessionInfo && (sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED") && sessionInfo.responseCount > 0
-            ? `この相談には${sessionInfo.responseCount}件の回答があります。\n削除すると他のユーザーの回答も消えます。\n\nこの操作は取り消せません。\n\n本当に削除しますか？`
-            : `この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`
-        }
-        confirmText={isDeleting ? "削除中..." : "削除する"}
-        cancelText="キャンセル"
-        onConfirm={handleDelete}
-        confirmButtonClass="btn-error"
-      />
+      <Suspense fallback={null}>
+        <ConfirmModal
+          ref={deleteModalRef}
+          title="相談を削除"
+          body={
+            sessionInfo && (sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED") && sessionInfo.responseCount > 0
+              ? `この相談には${sessionInfo.responseCount}件の回答があります。\n削除すると他のユーザーの回答も消えます。\n\nこの操作は取り消せません。\n\n本当に削除しますか？`
+              : `この相談とすべての回答が完全に削除されます。\nこの操作は取り消せません。\n\n本当に削除しますか？`
+          }
+          confirmText={isDeleting ? "削除中..." : "削除する"}
+          cancelText="キャンセル"
+          onConfirm={handleDelete}
+          confirmButtonClass="btn-error"
+        />
+      </Suspense>
 
       {/* Block Confirmation Modal */}
-      <ConfirmModal
-        ref={blockModalRef}
-        title="ユーザーをブロック"
-        body={"このユーザーをブロックしますか？\n\nブロックすると：\n• このユーザーの匿名・非匿名すべての回答がブロックされます\n• あなたの公開相談に回答できなくなります"}
-        confirmText={isBlocking ? "ブロック中..." : "ブロック"}
-        cancelText="キャンセル"
-        onConfirm={handleBlock}
-        confirmButtonClass="btn-error"
-      />
+      <Suspense fallback={null}>
+        <ConfirmModal
+          ref={blockModalRef}
+          title="ユーザーをブロック"
+          body={"このユーザーをブロックしますか？\n\nブロックすると：\n• このユーザーの匿名・非匿名すべての回答がブロックされます\n• あなたの公開相談に回答できなくなります"}
+          confirmText={isBlocking ? "ブロック中..." : "ブロック"}
+          cancelText="キャンセル"
+          onConfirm={handleBlock}
+          confirmButtonClass="btn-error"
+        />
+      </Suspense>
     </div>
   );
 }

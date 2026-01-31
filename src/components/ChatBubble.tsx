@@ -59,7 +59,7 @@ export const ChatBubble = memo(function ChatBubble({
   }
 
   return (
-    <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-slide-up group`}>
+    <div className={`chat ${isUser ? "chat-end" : "chat-start"} group`}>
       {/* Avatar for assistant or human */}
       {!isUser && (
         <div className="chat-image avatar">
@@ -222,7 +222,7 @@ interface CrisisAlertProps {
 
 export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: CrisisAlertProps) {
   return (
-    <div className="chat chat-start animate-slide-up">
+    <div className="chat chat-start">
       <div className="chat-image avatar">
         <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-warning/30">
           <Image

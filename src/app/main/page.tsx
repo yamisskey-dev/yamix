@@ -1,22 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
 
-interface LocalMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
+const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
 
 export default function NewChatPage() {
   const router = useRouter();
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
   const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC" | "DIRECTED">("PRIVATE");
@@ -28,13 +19,7 @@ export default function NewChatPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -100,14 +85,7 @@ export default function NewChatPage() {
     e.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessage: LocalMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const messageContent = inputValue.trim();
     setInputValue("");
     setIsLoading(true);
     setError(undefined);
@@ -134,8 +112,8 @@ export default function NewChatPage() {
       const session = await createRes.json();
 
       // Navigate to the session page with the initial message.
-      // The chat page will handle sending the message and streaming the response.
-      const encodedMessage = encodeURIComponent(userMessage.content);
+      // The chat page will handle displaying and sending the message.
+      const encodedMessage = encodeURIComponent(messageContent);
       router.push(`/main/chat/${session.id}?initialMessage=${encodedMessage}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
@@ -150,9 +128,7 @@ export default function NewChatPage() {
     }
   };
 
-  const isInitialState = messages.length === 0 && !isLoading && !showCrisisAlert;
-
-  // Input form component (reused in both layouts)
+  // Input form component
   const inputForm = (
     <>
       <div className="bg-base-200/50 rounded-2xl border border-base-300/50">
@@ -278,7 +254,9 @@ export default function NewChatPage() {
             aria-label="送信"
           >
             {isLoading ? (
-              <LoadingSpinner size="xs" inline />
+              <Suspense fallback={<span className="loading loading-spinner loading-xs" />}>
+                <LoadingSpinner size="xs" inline />
+              </Suspense>
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -363,82 +341,45 @@ export default function NewChatPage() {
     </>
   );
 
-  // Initial state: centered on desktop, input at bottom on mobile
-  if (isInitialState) {
-    return (
-      <div className="flex-1 flex flex-col h-full">
-        {/* Desktop: centered layout like ChatGPT/Claude */}
-        <div className="hidden xl:flex flex-1 flex-col items-center justify-center p-4">
-          <div className="w-full max-w-2xl">
-            <p className="text-base-content/50 text-lg text-center mb-6">
-              今日はどうしましたか？
-            </p>
-            {inputForm}
-          </div>
-        </div>
-
-        {/* Mobile: greeting at center, input at bottom for easier tapping */}
-        <div className="xl:hidden flex-1 flex flex-col">
-          <div className="flex-1 flex flex-col items-center justify-center p-4">
-            <p className="text-base-content/50 text-lg text-center">
-              今日はどうしましたか？
-            </p>
-          </div>
-          <div className="p-4 pt-0">
-            <div className="max-w-2xl mx-auto">
-              {inputForm}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Chat mode: standard layout with messages at top, input at bottom
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        <div className="max-w-6xl mx-auto">
-          {/* Crisis Alert - shown as first message */}
-          {showCrisisAlert && (
-            <CrisisAlert
-              onClose={() => setShowCrisisAlert(false)}
-              onDisable={() => {
-                localStorage.setItem("yamix_crisis_alert_disabled", "true");
-                setShowCrisisAlert(false);
-              }}
-            />
-          )}
-
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-              timestamp={msg.timestamp}
-            />
-          ))}
-
-          {isLoading && <ChatBubble role="assistant" content="" isLoading />}
-
+      {/* Desktop: centered layout like ChatGPT/Claude */}
+      <div className="hidden xl:flex flex-1 flex-col items-center justify-center p-4">
+        <div className="w-full max-w-2xl">
+          <p className="text-base-content/50 text-lg text-center mb-6">
+            今日はどうしましたか？
+          </p>
+          {inputForm}
           {error && (
-            <div className="alert alert-error text-sm" role="alert" aria-live="polite">
+            <div className="alert alert-error text-sm mt-4" role="alert" aria-live="polite">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <span>{error}</span>
             </div>
           )}
-
-          <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="p-4">
-        <div className="max-w-6xl mx-auto">
-          {inputForm}
+      {/* Mobile: greeting at center, input at bottom for easier tapping */}
+      <div className="xl:hidden flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <p className="text-base-content/50 text-lg text-center">
+            今日はどうしましたか？
+          </p>
+        </div>
+        <div className="p-4 pt-0">
+          <div className="max-w-2xl mx-auto">
+            {inputForm}
+            {error && (
+              <div className="alert alert-error text-sm mt-4" role="alert" aria-live="polite">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
