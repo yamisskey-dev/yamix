@@ -222,6 +222,7 @@ async function handleSSEResponse(
 
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
+  console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId);
   const router = useRouter();
   const toast = useToast();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -263,36 +264,44 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Fetch session data
   useEffect(() => {
+    console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
-      if (!isMounted) return; // Skip if component was unmounted
+      if (!isMounted) {
+        console.log('[CHAT DEBUG] Component unmounted, skipping fetch');
+        return;
+      }
       try {
-        console.log('[DEBUG] Fetching session, attempt:', retryCount + 1);
+        console.log('[CHAT DEBUG] Fetching session, attempt:', retryCount + 1, 'isMounted:', isMounted);
         const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
         setCurrentUser(currentUserData);
 
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
-        console.log('[DEBUG] Session fetch response:', res.status, res.statusText);
+        console.log('[CHAT DEBUG] Session fetch response:', res.status, res.statusText, 'isMounted:', isMounted);
         if (!res.ok) {
           if (res.status === 404 && retryCount < 3) {
             // Session not found - might be DB transaction lag, retry after 100ms
-            console.log('[DEBUG] Session not found, retrying...');
+            console.log('[CHAT DEBUG] Session not found, retrying...');
             await new Promise(resolve => setTimeout(resolve, 100));
             return fetchSession(retryCount + 1);
           }
           if (res.status === 404) {
-            console.log('[DEBUG] Session not found after retries, redirecting to /main');
+            console.log('[CHAT DEBUG] Session not found after retries, redirecting to /main');
             router.replace("/main");
             return;
           }
-          console.error('[DEBUG] Session fetch failed:', res.status, res.statusText);
+          console.error('[CHAT DEBUG] Session fetch failed:', res.status, res.statusText);
           throw new Error("Failed to fetch session");
         }
-        console.log('[DEBUG] Session fetched successfully');
+        console.log('[CHAT DEBUG] Session fetched successfully, parsing JSON...');
 
-        if (!isMounted) return; // Check before state update
+        if (!isMounted) {
+          console.log('[CHAT DEBUG] Component unmounted before state update, aborting');
+          return;
+        }
 
         const session: ChatSessionWithMessages = await res.json();
+        console.log('[CHAT DEBUG] JSON parsed, setting state...');
         const isOwner = currentUserData ? session.userId === currentUserData.id : false;
         const currentUserId = currentUserData?.id || null;
 
@@ -327,11 +336,14 @@ export default function ChatSessionPage({ params }: PageProps) {
             transformMessage(m, isOwner, currentUserId, session.isAnonymous, session.user, anonymousUserMap)
           )
         );
+        console.log('[CHAT DEBUG] All state set successfully, setting isFetching to false');
       } catch (err) {
         clientLogger.error("Error fetching session:", err);
         setError("セッションの読み込みに失敗しました");
+        console.log('[CHAT DEBUG] Error in fetchSession:', err);
       } finally {
         setIsFetching(false);
+        console.log('[CHAT DEBUG] fetchSession completed, isFetching:', false);
       }
     };
 
@@ -339,29 +351,35 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Cleanup function to prevent state updates after unmount
     return () => {
+      console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
     };
   }, [sessionId, router]);
 
   // Auto-send message from sessionStorage
   useEffect(() => {
+    console.log('[CHAT DEBUG] Auto-send effect triggered, sessionInfo:', !!sessionInfo, 'isFetching:', isFetching, 'isLoading:', isLoading);
     // Only proceed if session is loaded
     if (!sessionInfo || isFetching || isLoading) {
+      console.log('[CHAT DEBUG] Auto-send skipped: not ready');
       return;
     }
 
     // Prevent double execution in React Strict Mode
     if (initialMessageSentRef.current) {
+      console.log('[CHAT DEBUG] Auto-send skipped: already sent');
       return;
     }
 
     // Check for pending message in sessionStorage
     const pendingMessage = sessionStorage.getItem(`pendingMessage-${sessionId}`);
+    console.log('[CHAT DEBUG] Pending message from sessionStorage:', pendingMessage ? 'found' : 'not found');
     if (!pendingMessage) {
       return;
     }
 
     // Mark as sent and remove from sessionStorage
+    console.log('[CHAT DEBUG] Sending initial message:', pendingMessage.substring(0, 50) + '...');
     initialMessageSentRef.current = true;
     sessionStorage.removeItem(`pendingMessage-${sessionId}`);
 
@@ -376,6 +394,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     setIsLoading(true);
     setError(undefined);
     window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+    console.log('[CHAT DEBUG] User message added to UI, starting API call...');
 
     (async () => {
       try {

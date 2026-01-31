@@ -144,11 +144,15 @@ export default function NewChatPage() {
         return createRes.json();
       })
       .then((session) => {
+        console.log('[MAIN DEBUG] Session created successfully:', session.id);
         // Store initial message in sessionStorage for the chat page to pick up
         sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
+        console.log('[MAIN DEBUG] Stored message in sessionStorage');
 
         // Navigate immediately for better UX - chat page will handle retries if needed
+        console.log('[MAIN DEBUG] About to navigate to:', `/main/chat/${session.id}`);
         router.push(`/main/chat/${session.id}`);
+        console.log('[MAIN DEBUG] router.push() called');
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
