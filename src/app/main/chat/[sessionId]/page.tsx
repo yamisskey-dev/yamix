@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo, use, lazy, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
@@ -223,7 +223,6 @@ async function handleSSEResponse(
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const toast = useToast();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -248,9 +247,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
   const pollFailCountRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Auto-send message ref (prevent double submission in React Strict Mode)
-  const autoSendMessageRef = useRef<string | null>(null);
 
   // SSE callback refs (stable across renders)
   const sseCallbacks = useMemo(() => ({
@@ -324,26 +320,26 @@ export default function ChatSessionPage({ params }: PageProps) {
     fetchSession();
   }, [sessionId, router]);
 
-  // Auto-send message from URL parameter
+  // Auto-send message from sessionStorage
   useEffect(() => {
-    const sendMessage = searchParams.get("sendMessage");
-
-    // Guard: only send if we have a message, session is loaded, and haven't sent this message yet
-    if (!sendMessage || !sessionInfo || isFetching || isLoading || autoSendMessageRef.current === sendMessage) {
+    // Only proceed if session is loaded
+    if (!sessionInfo || isFetching || isLoading) {
       return;
     }
 
-    // Mark this message as sent
-    autoSendMessageRef.current = sendMessage;
+    // Check for pending message in sessionStorage
+    const pendingMessage = sessionStorage.getItem(`pendingMessage-${sessionId}`);
+    if (!pendingMessage) {
+      return;
+    }
 
-    // Remove URL parameter immediately to prevent double execution
-    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+    // Remove from sessionStorage immediately to prevent double execution
+    sessionStorage.removeItem(`pendingMessage-${sessionId}`);
 
-    const messageContent = decodeURIComponent(sendMessage);
     const userMessage: LocalMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: messageContent,
+      content: pendingMessage,
       timestamp: new Date(),
     };
 
@@ -357,7 +353,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: messageContent }),
+          body: JSON.stringify({ message: pendingMessage }),
         });
 
         if (!res.ok) {
@@ -371,7 +367,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         setIsLoading(false);
       }
     })();
-  }, [searchParams, sessionId, sessionInfo, isFetching, isLoading, sseCallbacks]);
+  }, [sessionId, sessionInfo, isFetching, isLoading, sseCallbacks]);
 
   // Auto-scroll
   useEffect(() => {

@@ -145,8 +145,9 @@ export default function NewChatPage() {
 
       const session = await createRes.json();
 
-      // Navigate to chat page with initial message in state
-      router.push(`/main/chat/${session.id}?sendMessage=${encodeURIComponent(messageContent)}`);
+      // Store initial message in sessionStorage for the chat page to pick up
+      sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
+      router.push(`/main/chat/${session.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
