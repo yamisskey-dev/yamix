@@ -134,14 +134,18 @@ async function handleSSEResponse(
   }
 ): Promise<void> {
   const contentType = res.headers.get("content-type") || "";
+  console.log('[SSE DEBUG] handleSSEResponse called, contentType:', contentType);
 
   if (contentType.includes("text/event-stream") && res.body) {
     const streamingMsgId = crypto.randomUUID();
     let streamStarted = false;
+    let chunkCount = 0;
 
     try {
+      console.log('[SSE DEBUG] Starting SSE stream processing');
       await processSSEStream(res, {
         onInit(event) {
+          console.log('[SSE DEBUG] onInit called, event:', event);
           if (event.userMessageId) {
             callbacks.setMessages((prev) =>
               prev.map((m) =>
@@ -155,8 +159,11 @@ async function handleSSEResponse(
           }
         },
         onChunk(chunk) {
+          chunkCount++;
+          console.log('[SSE DEBUG] onChunk called, chunk #', chunkCount, 'length:', chunk.length);
           if (!streamStarted) {
             streamStarted = true;
+            console.log('[SSE DEBUG] First chunk, creating assistant message');
             callbacks.setIsLoading(false);
             callbacks.setMessages((prev) => [...prev, {
               id: streamingMsgId,
@@ -175,6 +182,7 @@ async function handleSSEResponse(
           }
         },
         onDone(event) {
+          console.log('[SSE DEBUG] onDone called, total chunks:', chunkCount, 'event:', event);
           const realMsgId = event.assistantMessageId || streamingMsgId;
           callbacks.setMessages((prev) =>
             prev.map((m) =>
@@ -190,13 +198,17 @@ async function handleSSEResponse(
           }
         },
         onError(error) {
+          console.error('[SSE DEBUG] onError called, error:', error);
           throw new Error(error);
         },
       });
+      console.log('[SSE DEBUG] SSE stream processing completed');
     } finally {
+      console.log('[SSE DEBUG] Finally block, setting isLoading to false');
       callbacks.setIsLoading(false);
     }
   } else {
+    console.log('[SSE DEBUG] Non-streaming response, parsing JSON');
     // Non-streaming JSON response
     const data = await res.json();
 
