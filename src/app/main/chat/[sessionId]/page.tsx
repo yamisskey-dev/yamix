@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo, use, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useCallback, use, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
@@ -14,7 +14,7 @@ const ConfirmModal = lazy(() => import("@/components/Modal").then(mod => ({ defa
 import { chatApi, userApi, messageApi, api } from "@/lib/api-client";
 import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
-import { useToast } from "@/components/Toast";
+import { useToastActions } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 
 interface PageProps {
@@ -130,8 +130,7 @@ async function handleSSEResponse(
     setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
     setSessionInfo: React.Dispatch<React.SetStateAction<SessionInfo | null>>;
     setShowCrisisAlert: React.Dispatch<React.SetStateAction<boolean>>;
-    sessionInfo: SessionInfo | null;
-    toast: ReturnType<typeof useToast>;
+    showToast: (message: string, type?: "success" | "error" | "warning" | "info") => void;
   }
 ): Promise<void> {
   const contentType = res.headers.get("content-type") || "";
@@ -150,8 +149,8 @@ async function handleSSEResponse(
               )
             );
           }
-          if (event.sessionTitle && callbacks.sessionInfo) {
-            callbacks.setSessionInfo({ ...callbacks.sessionInfo, title: event.sessionTitle });
+          if (event.sessionTitle) {
+            callbacks.setSessionInfo((prev) => prev ? { ...prev, title: event.sessionTitle! } : null);
             window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
           }
         },
@@ -182,9 +181,9 @@ async function handleSSEResponse(
               m.id === streamingMsgId ? { ...m, id: realMsgId } : m
             )
           );
-          if (event.sessionPrivatized && callbacks.sessionInfo) {
-            callbacks.setSessionInfo({ ...callbacks.sessionInfo, consultType: "PRIVATE" });
-            callbacks.toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+          if (event.sessionPrivatized) {
+            callbacks.setSessionInfo((prev) => prev ? { ...prev, consultType: "PRIVATE" } : null);
+            callbacks.showToast("この相談は安全のため非公開に変更されました", "warning");
           }
           if (checkCrisisAlert(event.isCrisis)) {
             callbacks.setShowCrisisAlert(true);
@@ -201,9 +200,9 @@ async function handleSSEResponse(
     // Non-streaming JSON response
     const data = await res.json();
 
-    if (data.sessionPrivatized && callbacks.sessionInfo) {
-      callbacks.setSessionInfo({ ...callbacks.sessionInfo, consultType: "PRIVATE" });
-      callbacks.toast.showToast("この相談は安全のため非公開に変更されました", "warning");
+    if (data.sessionPrivatized) {
+      callbacks.setSessionInfo((prev) => prev ? { ...prev, consultType: "PRIVATE" } : null);
+      callbacks.showToast("この相談は安全のため非公開に変更されました", "warning");
     }
     if (checkCrisisAlert(data.isCrisis)) {
       callbacks.setShowCrisisAlert(true);
@@ -224,7 +223,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId);
   const router = useRouter();
-  const toast = useToast();
+  const toast = useToastActions();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -251,16 +250,6 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
   const initialMessageSentRef = useRef<boolean>(false);
-
-  // SSE callback refs (stable across renders)
-  const sseCallbacks = useMemo(() => ({
-    setMessages,
-    setIsLoading,
-    setSessionInfo,
-    setShowCrisisAlert,
-    sessionInfo,
-    toast,
-  }), [setMessages, setIsLoading, setSessionInfo, setShowCrisisAlert, sessionInfo, toast]);
 
   // Fetch session data
   useEffect(() => {
@@ -409,13 +398,19 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
-        await handleSSEResponse(res, userMessage.id, sseCallbacks);
+        await handleSSEResponse(res, userMessage.id, {
+          setMessages,
+          setIsLoading,
+          setSessionInfo,
+          setShowCrisisAlert,
+          showToast: toast.showToast,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
       }
     })();
-  }, [sessionId, sessionInfo, isFetching, isLoading, sseCallbacks]);
+  }, [sessionId, sessionInfo, isFetching, isLoading, toast.showToast, setMessages, setIsLoading, setSessionInfo, setShowCrisisAlert]);
 
   // Auto-scroll
   useEffect(() => {
@@ -658,7 +653,13 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
-        await handleSSEResponse(res, userMessage.id, sseCallbacks);
+        await handleSSEResponse(res, userMessage.id, {
+          setMessages,
+          setIsLoading,
+          setSessionInfo,
+          setShowCrisisAlert,
+          showToast: toast.showToast,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);

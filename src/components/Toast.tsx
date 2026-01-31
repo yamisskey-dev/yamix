@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useCallback,
+  useMemo,
   ReactNode,
 } from "react";
 
@@ -21,8 +22,7 @@ export interface Toast {
   duration?: number;
 }
 
-interface ToastContextType {
-  toasts: Toast[];
+interface ToastActionsType {
   showToast: (
     message: string,
     type?: ToastType,
@@ -36,11 +36,17 @@ interface ToastContextType {
   info: (message: string, duration?: number) => void;
 }
 
+interface ToastContextType extends ToastActionsType {
+  toasts: Toast[];
+}
+
 // ============================================
 // Context
 // ============================================
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+// Split contexts to prevent unnecessary re-renders
+const ToastStateContext = createContext<Toast[] | undefined>(undefined);
+const ToastActionsContext = createContext<ToastActionsType | undefined>(undefined);
 
 // ============================================
 // Provider
@@ -93,26 +99,42 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [showToast]
   );
 
+  // Memoize actions to prevent unnecessary re-renders
+  const actions = useMemo(
+    () => ({ showToast, hideToast, success, error, warning, info }),
+    [showToast, hideToast, success, error, warning, info]
+  );
+
   return (
-    <ToastContext.Provider
-      value={{ toasts, showToast, hideToast, success, error, warning, info }}
-    >
-      {children}
-      <ToastContainer toasts={toasts} onClose={hideToast} />
-    </ToastContext.Provider>
+    <ToastStateContext.Provider value={toasts}>
+      <ToastActionsContext.Provider value={actions}>
+        {children}
+        <ToastContainer toasts={toasts} onClose={hideToast} />
+      </ToastActionsContext.Provider>
+    </ToastStateContext.Provider>
   );
 }
 
 // ============================================
-// Hook
+// Hooks
 // ============================================
 
 export function useToast(): ToastContextType {
-  const context = useContext(ToastContext);
-  if (!context) {
+  const toasts = useContext(ToastStateContext);
+  const actions = useContext(ToastActionsContext);
+  if (!toasts || !actions) {
     throw new Error("useToast must be used within a ToastProvider");
   }
-  return context;
+  return { toasts, ...actions };
+}
+
+// Hook for actions only (doesn't re-render when toasts change)
+export function useToastActions(): ToastActionsType {
+  const actions = useContext(ToastActionsContext);
+  if (!actions) {
+    throw new Error("useToastActions must be used within a ToastProvider");
+  }
+  return actions;
 }
 
 // ============================================
