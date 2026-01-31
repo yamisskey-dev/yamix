@@ -1,9 +1,36 @@
 "use client";
 
-import { useState, useRef, useEffect, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useMemo, memo, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 
 const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
+
+// Memoized user search list item to prevent unnecessary re-renders
+const UserSearchListItem = memo(function UserSearchListItem({
+  user,
+  onAdd
+}: {
+  user: { id: string; handle: string; displayName: string | null; avatarUrl: string | null };
+  onAdd: (user: { handle: string; displayName: string | null; avatarUrl: string | null }) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="btn btn-ghost btn-xs w-full justify-start gap-2 transition-colors duration-150"
+        onClick={() => onAdd(user)}
+      >
+        {user.avatarUrl && (
+          <img src={user.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
+        )}
+        <span className="truncate">
+          {user.displayName && <span className="font-medium">{user.displayName} </span>}
+          <span className="opacity-60">@{user.handle}</span>
+        </span>
+      </button>
+    </li>
+  );
+});
 
 export default function NewChatPage() {
   const router = useRouter();
@@ -128,8 +155,8 @@ export default function NewChatPage() {
     }
   };
 
-  // Input form component
-  const inputForm = (
+  // Input form component (memoized to prevent unnecessary re-renders)
+  const inputForm = useMemo(() => (
     <>
       <div className="bg-base-200/50 rounded-2xl border border-base-300/50">
         {/* Textarea */}
@@ -310,21 +337,7 @@ export default function NewChatPage() {
           {userSearchResults.length > 0 && (
             <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto">
               {userSearchResults.map((user) => (
-                <li key={user.id}>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-xs w-full justify-start gap-2"
-                    onClick={() => addTargetUser(user)}
-                  >
-                    {user.avatarUrl && (
-                      <img src={user.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
-                    )}
-                    <span className="truncate">
-                      {user.displayName && <span className="font-medium">{user.displayName} </span>}
-                      <span className="opacity-60">@{user.handle}</span>
-                    </span>
-                  </button>
-                </li>
+                <UserSearchListItem key={user.id} user={user} onAdd={addTargetUser} />
               ))}
             </ul>
           )}
@@ -339,7 +352,23 @@ export default function NewChatPage() {
         Shift + Enter で改行
       </p>
     </>
-  );
+  ), [
+    inputValue,
+    isLoading,
+    consultType,
+    isAnonymous,
+    allowAnonymousResponses,
+    targetUsers,
+    showUserSearch,
+    userSearchQuery,
+    userSearchResults,
+    isSearching,
+    handleSubmit,
+    handleKeyDown,
+    addTargetUser,
+    removeTargetUser,
+    textareaRef
+  ]);
 
   return (
     <div className="flex-1 flex flex-col h-full">

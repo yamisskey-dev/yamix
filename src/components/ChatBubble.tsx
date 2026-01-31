@@ -90,6 +90,8 @@ export const ChatBubble = memo(function ChatBubble({
                     alt={responder!.displayName || "ユーザー"}
                     width={32}
                     height={32}
+                    quality={80}
+                    placeholder="empty"
                     className="rounded-full"
                   />
                 ) : (
@@ -112,6 +114,8 @@ export const ChatBubble = memo(function ChatBubble({
                     alt={responder!.displayName || "ユーザー"}
                     width={32}
                     height={32}
+                    quality={80}
+                    placeholder="empty"
                     className="rounded-full"
                   />
                 ) : (
@@ -130,6 +134,7 @@ export const ChatBubble = memo(function ChatBubble({
                 alt="Yamii"
                 width={32}
                 height={32}
+                priority
                 className="w-full h-full object-cover"
               />
             </div>
@@ -230,6 +235,7 @@ export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: Cri
             alt="Yamii"
             width={32}
             height={32}
+            priority
             className="w-full h-full object-cover"
           />
         </div>

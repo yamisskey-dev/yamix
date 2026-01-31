@@ -265,6 +265,43 @@ body {
   animation: dropdownIn 0.15s ease-out;
 }
 
+/* Pulse animation for skeletons */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth transitions for interactive elements */
+.btn {
+  transition: background-color 150ms ease-in-out, color 150ms ease-in-out, transform 100ms ease-out, opacity 150ms ease-in-out;
+}
+
+.chat-bubble {
+  transition: transform 150ms ease-out, opacity 150ms ease-out, box-shadow 200ms ease-out;
+}
+
+/* Smooth message entrance */
+.chat {
+  animation: slideUp 0.2s ease-out;
+}
+
+/* Hover effects */
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
 /* GitHub Corner (yamisskey-down style) */
 .github-corner:hover .octo-arm {
   animation: octocat-wave 560ms ease-in-out;

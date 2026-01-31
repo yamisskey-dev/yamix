@@ -242,11 +242,14 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null } | null>(null);
 
   // Polling refs
   const lastPollTimeRef = useRef<string | null>(null);
   const messageIdsRef = useRef<Set<string>>(new Set());
   const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
+  const pollFailCountRef = useRef<number>(0);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // SSE callback refs (stable across renders)
   const sseCallbacks = useMemo(() => ({
@@ -262,7 +265,8 @@ export default function ChatSessionPage({ params }: PageProps) {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const currentUser = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
+        const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
+        setCurrentUser(currentUserData);
 
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) {
@@ -274,8 +278,8 @@ export default function ChatSessionPage({ params }: PageProps) {
         }
 
         const session: ChatSessionWithMessages = await res.json();
-        const isOwner = currentUser ? session.userId === currentUser.id : false;
-        const currentUserId = currentUser?.id || null;
+        const isOwner = currentUserData ? session.userId === currentUserData.id : false;
+        const currentUserId = currentUserData?.id || null;
 
         const responseCount = session.messages.filter(
           (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
@@ -453,18 +457,33 @@ export default function ChatSessionPage({ params }: PageProps) {
     [sessionInfo]
   );
 
-  // Poll for new messages
+  // Poll for new messages with adaptive backoff
   useEffect(() => {
     if (!sessionInfo || sessionInfo.consultType === "PRIVATE") return;
 
+    // Calculate polling interval with exponential backoff
+    const getPollingInterval = () => {
+      const failCount = pollFailCountRef.current;
+      if (failCount === 0) return 5000;   // 5 seconds
+      if (failCount === 1) return 10000;  // 10 seconds
+      if (failCount === 2) return 30000;  // 30 seconds
+      return 60000;                       // 60 seconds max
+    };
+
     const poll = async () => {
+      // Skip polling when tab is hidden (browser optimization)
       if (document.hidden) return;
+
       const after = lastPollTimeRef.current || new Date(0).toISOString();
       try {
         const data = await api.get<{ messages: unknown[] }>(
           `/api/chat/sessions/${sessionId}/poll`,
           { params: { after } }
         );
+
+        // Reset fail count on successful poll
+        pollFailCountRef.current = 0;
+
         if (data.messages?.length > 0) {
           const newMsgs = data.messages
             .map(transformPolledMessage)
@@ -473,13 +492,32 @@ export default function ChatSessionPage({ params }: PageProps) {
             setMessages((prev) => [...prev, ...newMsgs]);
           }
         }
+
+        // Reschedule with base interval on success
+        scheduleNextPoll(5000);
       } catch {
-        // Silently ignore polling errors
+        // Increment fail count and reschedule with backoff
+        pollFailCountRef.current++;
+        const nextInterval = getPollingInterval();
+        scheduleNextPoll(nextInterval);
       }
     };
 
-    const interval = setInterval(poll, 5000);
-    return () => clearInterval(interval);
+    const scheduleNextPoll = (interval: number) => {
+      if (pollIntervalRef.current) {
+        clearTimeout(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = setTimeout(poll, interval);
+    };
+
+    // Start initial poll
+    scheduleNextPoll(5000);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearTimeout(pollIntervalRef.current);
+      }
+    };
   }, [sessionId, sessionInfo, transformPolledMessage]);
 
   // Auto-resize textarea
@@ -580,6 +618,24 @@ export default function ChatSessionPage({ params }: PageProps) {
       }
     } else if (canRespond) {
       const responseContent = inputValue.trim();
+
+      // Optimistic UI: Show response immediately
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticResponse: LocalMessage = {
+        id: optimisticId,
+        role: "assistant",
+        content: responseContent,
+        timestamp: new Date(),
+        responder: currentUser ? {
+          displayName: isAnonymousResponse ? null : currentUser.displayName,
+          avatarUrl: isAnonymousResponse ? null : currentUser.avatarUrl,
+          isAnonymous: isAnonymousResponse,
+          handle: isAnonymousResponse ? undefined : currentUser.handle,
+          responderId: currentUser.id,
+        } : undefined,
+      };
+
+      setMessages((prev) => [...prev, optimisticResponse]);
       setInputValue("");
       setIsLoading(true);
       setError(undefined);
@@ -597,6 +653,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           isAnonymous: isAnonymousResponse,
         });
 
+        // Replace optimistic message with real one(s)
         if (data.isAIResponse) {
           if (checkCrisisAlert(data.isCrisis)) {
             setShowCrisisAlert(true);
@@ -615,7 +672,8 @@ export default function ChatSessionPage({ params }: PageProps) {
             timestamp: new Date(),
             responder: null,
           };
-          setMessages((prev) => [...prev, userMsg, aiMessage]);
+          // Remove optimistic message and add real messages
+          setMessages((prev) => [...prev.filter(m => !m.id.startsWith('optimistic-')), userMsg, aiMessage]);
         } else {
           const responseMessage: LocalMessage = {
             id: data.message.id,
@@ -623,13 +681,16 @@ export default function ChatSessionPage({ params }: PageProps) {
             content: responseContent,
             timestamp: new Date(),
           };
-          setMessages((prev) => [...prev, responseMessage]);
+          // Remove optimistic message and add real message
+          setMessages((prev) => [...prev.filter(m => !m.id.startsWith('optimistic-')), responseMessage]);
 
           if (data.reward && data.reward > 0) {
             clientLogger.info(`+${data.reward} YAMI を獲得しました！`);
           }
         }
       } catch (err) {
+        // Remove optimistic message on error
+        setMessages((prev) => prev.filter(m => !m.id.startsWith('optimistic-')));
         setError(err instanceof Error ? err.message : "エラーが発生しました");
       } finally {
         setIsLoading(false);
@@ -646,29 +707,29 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   if (isFetching) {
     return (
-      <div className="flex-1 flex flex-col h-full p-4 space-y-4">
+      <div className="flex-1 flex flex-col h-full p-4 space-y-4 animate-fade-in">
         <div className="chat chat-start">
           <div className="chat-image avatar">
-            <div className="w-8 h-8 rounded-full skeleton" />
+            <div className="w-8 h-8 rounded-full bg-base-300 skeleton" />
           </div>
           <div className="chat-bubble bg-base-200/60 shadow-none">
-            <div className="skeleton h-4 w-48 mb-2" />
-            <div className="skeleton h-4 w-32" />
+            <div className="skeleton bg-base-300 h-4 w-48 mb-2 rounded" />
+            <div className="skeleton bg-base-300 h-4 w-32 rounded" />
           </div>
         </div>
         <div className="chat chat-end">
           <div className="chat-bubble bg-primary/20 shadow-none">
-            <div className="skeleton h-4 w-40" />
+            <div className="skeleton bg-primary/30 h-4 w-40 rounded" />
           </div>
         </div>
         <div className="chat chat-start">
           <div className="chat-image avatar">
-            <div className="w-8 h-8 rounded-full skeleton" />
+            <div className="w-8 h-8 rounded-full bg-base-300 skeleton" />
           </div>
           <div className="chat-bubble bg-base-200/60 shadow-none">
-            <div className="skeleton h-4 w-56 mb-2" />
-            <div className="skeleton h-4 w-44 mb-2" />
-            <div className="skeleton h-4 w-36" />
+            <div className="skeleton bg-base-300 h-4 w-56 mb-2 rounded" />
+            <div className="skeleton bg-base-300 h-4 w-44 mb-2 rounded" />
+            <div className="skeleton bg-base-300 h-4 w-36 rounded" />
           </div>
         </div>
       </div>
