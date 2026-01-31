@@ -348,15 +348,16 @@ export default function ChatSessionPage({ params }: PageProps) {
   // Auto-send message from sessionStorage
   useEffect(() => {
     console.log('[CHAT DEBUG] Auto-send effect triggered, sessionInfo:', !!sessionInfo, 'isFetching:', isFetching, 'isLoading:', isLoading);
-    // Only proceed if session is loaded
-    if (!sessionInfo || isFetching || isLoading) {
-      console.log('[CHAT DEBUG] Auto-send skipped: not ready');
-      return;
-    }
 
     // Prevent double execution in React Strict Mode
     if (initialMessageSentRef.current) {
       console.log('[CHAT DEBUG] Auto-send skipped: already sent');
+      return;
+    }
+
+    // Only proceed if session is loaded (not fetching and not loading)
+    if (isFetching || isLoading) {
+      console.log('[CHAT DEBUG] Auto-send skipped: not ready');
       return;
     }
 
@@ -410,7 +411,8 @@ export default function ChatSessionPage({ params }: PageProps) {
         setIsLoading(false);
       }
     })();
-  }, [sessionId, sessionInfo, isFetching, isLoading, toast.showToast, setMessages, setIsLoading, setSessionInfo, setShowCrisisAlert]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, isFetching, isLoading]);
 
   // Auto-scroll
   useEffect(() => {
