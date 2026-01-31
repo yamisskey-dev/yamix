@@ -271,7 +271,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       const sessionUpdate: Record<string, unknown> = { updatedAt: new Date() };
       if (shouldHide) {
         sessionUpdate.consultType = "PRIVATE";
-        sessionUpdate.isPublic = false;
       }
       await tx.chatSession.update({
         where: { id },

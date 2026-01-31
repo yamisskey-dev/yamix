@@ -22,7 +22,6 @@ interface SessionData {
   userId: string;
   consultType: string;
   isAnonymous: boolean;
-  isPublic: boolean;
   messages: PrismaMessage[];
 }
 
@@ -62,7 +61,7 @@ async function saveUserMessageAndDeduct(opts: {
 
     const sessionUpdate: Record<string, unknown> = { updatedAt: now };
     if (isFirstMessage && generatedTitle) sessionUpdate.title = generatedTitle;
-    if (shouldHide) { sessionUpdate.consultType = "PRIVATE"; sessionUpdate.isPublic = false; }
+    if (shouldHide) { sessionUpdate.consultType = "PRIVATE"; }
     await tx.chatSession.update({ where: { id: sessionId }, data: sessionUpdate });
 
     return { userMsgId: userMsg.id, userMsg };
@@ -216,7 +215,7 @@ async function handleStreamingResponse(opts: {
                 }
 
                 if (shouldHide) {
-                  await prisma.chatSession.update({ where: { id: sessionId }, data: { consultType: "PRIVATE", isPublic: false } });
+                  await prisma.chatSession.update({ where: { id: sessionId }, data: { consultType: "PRIVATE" } });
                   await deleteNotificationsOnPrivatize(sessionId, payload.userId);
                 }
 

@@ -17,7 +17,6 @@ interface PrismaSessionResult {
   title: string | null;
   consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
   isAnonymous: boolean;
-  isPublic: boolean; // DEPRECATED
   userId: string;
   updatedAt: Date;
   messages: { content: string; role: string }[];
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
       title: true,
       consultType: true,
       isAnonymous: true,
-      isPublic: true, // DEPRECATED
       userId: true,
       updatedAt: true,
       messages: {
@@ -118,7 +116,6 @@ export async function GET(req: NextRequest) {
           preview: decryptedContent?.slice(0, 50) || null,
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
-          isPublic: s.isPublic, // DEPRECATED
           targetCount: s._count?.targets ?? 0,
           isReceived: directedSessionIds.has(s.id),
           isCrisisPrivatized: (s._count?.messages ?? 0) > 0,
@@ -248,7 +245,6 @@ export async function POST(req: NextRequest) {
         isAnonymous,
         allowAnonymousResponses,
         category,
-        isPublic: consultType === "PUBLIC", // 後方互換性
         ...(consultType === "DIRECTED" && targetUserIds.length > 0 && {
           targets: {
             create: targetUserIds.map((uid) => ({ userId: uid })),
@@ -261,7 +257,6 @@ export async function POST(req: NextRequest) {
         consultType: true,
         isAnonymous: true,
         category: true,
-        isPublic: true,
         createdAt: true,
         updatedAt: true,
         _count: { select: { targets: true } },
@@ -340,7 +335,6 @@ export async function POST(req: NextRequest) {
           if (generatedTitle) sessionUpdate.title = generatedTitle;
           if (shouldHide) {
             sessionUpdate.consultType = "PRIVATE";
-            sessionUpdate.isPublic = false;
           }
           await tx.chatSession.update({ where: { id: session.id }, data: sessionUpdate });
         });
@@ -364,7 +358,6 @@ export async function POST(req: NextRequest) {
             targetCount: session._count.targets,
             title: generatedTitle || session.title,
             consultType: shouldHide ? "PRIVATE" : session.consultType,
-            isPublic: shouldHide ? false : session.isPublic,
             initialMessageSent: true,
           },
           { status: 201 }
