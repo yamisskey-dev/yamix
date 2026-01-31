@@ -263,7 +263,9 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Fetch session data
   useEffect(() => {
+    let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
+      if (!isMounted) return; // Skip if component was unmounted
       try {
         console.log('[DEBUG] Fetching session, attempt:', retryCount + 1);
         const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
@@ -287,6 +289,8 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error("Failed to fetch session");
         }
         console.log('[DEBUG] Session fetched successfully');
+
+        if (!isMounted) return; // Check before state update
 
         const session: ChatSessionWithMessages = await res.json();
         const isOwner = currentUserData ? session.userId === currentUserData.id : false;
@@ -332,6 +336,11 @@ export default function ChatSessionPage({ params }: PageProps) {
     };
 
     fetchSession();
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [sessionId, router]);
 
   // Auto-send message from sessionStorage
