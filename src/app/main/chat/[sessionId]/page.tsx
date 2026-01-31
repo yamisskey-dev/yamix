@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo, use, lazy, Suspense } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
@@ -223,6 +223,7 @@ async function handleSSEResponse(
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -247,6 +248,9 @@ export default function ChatSessionPage({ params }: PageProps) {
   const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
   const pollFailCountRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-send message ref (prevent double submission in React Strict Mode)
+  const autoSendMessageRef = useRef<string | null>(null);
 
   // SSE callback refs (stable across renders)
   const sseCallbacks = useMemo(() => ({
@@ -319,6 +323,55 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     fetchSession();
   }, [sessionId, router]);
+
+  // Auto-send message from URL parameter
+  useEffect(() => {
+    const sendMessage = searchParams.get("sendMessage");
+
+    // Guard: only send if we have a message, session is loaded, and haven't sent this message yet
+    if (!sendMessage || !sessionInfo || isFetching || isLoading || autoSendMessageRef.current === sendMessage) {
+      return;
+    }
+
+    // Mark this message as sent
+    autoSendMessageRef.current = sendMessage;
+
+    // Remove URL parameter immediately to prevent double execution
+    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+
+    const messageContent = decodeURIComponent(sendMessage);
+    const userMessage: LocalMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: messageContent,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+    setError(undefined);
+    window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: messageContent }),
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || "メッセージの送信に失敗しました");
+        }
+
+        await handleSSEResponse(res, userMessage.id, sseCallbacks);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+        setIsLoading(false);
+      }
+    })();
+  }, [searchParams, sessionId, sessionInfo, isFetching, isLoading, sseCallbacks]);
 
   // Auto-scroll
   useEffect(() => {

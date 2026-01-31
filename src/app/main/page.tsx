@@ -124,7 +124,7 @@ export default function NewChatPage() {
     setError(undefined);
 
     try {
-      // Create new session with consultType, isAnonymous, and initialMessage
+      // Create new session
       const createRes = await fetch("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -132,7 +132,6 @@ export default function NewChatPage() {
           consultType,
           isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
           allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
-          initialMessage: messageContent,
           ...(consultType === "DIRECTED" && {
             targetUserHandles: targetUsers.map((u) => u.handle),
           }),
@@ -146,8 +145,8 @@ export default function NewChatPage() {
 
       const session = await createRes.json();
 
-      // Navigate to the session page (initial message already sent by API)
-      router.push(`/main/chat/${session.id}`);
+      // Navigate to chat page with initial message in state
+      router.push(`/main/chat/${session.id}?sendMessage=${encodeURIComponent(messageContent)}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
