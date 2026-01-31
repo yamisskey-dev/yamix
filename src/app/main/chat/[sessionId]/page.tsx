@@ -244,6 +244,8 @@ async function handleSSEResponse(
         flushContentBuffer();
       }
       callbacks.setIsLoading(false);
+      // Log to verify message was added (will be visible in next render)
+      console.log('[SSE DEBUG] SSE processing finished, check next render for messages count');
     }
   } else {
     console.log('[SSE DEBUG] Non-streaming response, parsing JSON');
@@ -271,10 +273,11 @@ async function handleSSEResponse(
 
 export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
-  console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId);
   const router = useRouter();
   const toast = useToastActions();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
+
+  console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
