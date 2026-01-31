@@ -153,8 +153,8 @@ export default function NewChatPage() {
 
         // Navigate immediately while still in user interaction context
         console.log('[DEBUG] Navigating to:', `/main/chat/${session.id}`);
-        alert('[DEBUG] About to navigate');
-        window.location.href = `/main/chat/${session.id}`;
+        alert('[DEBUG] About to navigate with location.replace');
+        location.replace(`/main/chat/${session.id}`);
       })
       .catch((err) => {
         console.error('[DEBUG] Error:', err);
