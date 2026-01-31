@@ -13,10 +13,9 @@ import { formatRelativeDate } from "@/lib/format-date";
 interface Props {
   consultation: TimelineConsultation;
   currentUserHandle?: string;
-  displayMode?: "full" | "title"; // "full": 質問全文表示、"title": タイトルのみ表示
 }
 
-export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle, displayMode = "full" }: Props) {
+export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
   const router = useRouter();
 
   // 回答モードかどうか（responderがnullの場合はAI回答）
@@ -160,9 +159,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
                     への回答
                   </span>
                   <p className="text-[12px] text-base-content/60 whitespace-pre-wrap break-words leading-[1.5] line-clamp-2 mt-0.5">
-                    {displayMode === "title" && consultation.title
-                      ? consultation.title
-                      : parseMentions(consultation.question)}
+                    {parseMentions(consultation.question)}
                   </p>
                 </div>
               </div>
@@ -172,13 +169,8 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
               {consultation.answer ? parseMentions(consultation.answer) : ""}
             </p>
           </>
-        ) : displayMode === "title" ? (
-          /* タイトルモード: タイトルのみ表示 */
-          <p className="text-[13px] font-medium text-base-content/90">
-            {consultation.title || "新しい相談"}
-          </p>
         ) : (
-          /* 通常モード: 質問全文を表示 */
+          /* 通常モード: 質問を表示 */
           <p className="text-[13px] whitespace-pre-wrap break-words leading-[1.6]">
             {parseMentions(consultation.question)}
           </p>
