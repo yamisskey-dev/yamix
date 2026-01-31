@@ -37,6 +37,7 @@ export default function NewChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
+  const submittingRef = useRef<boolean>(false);
   const [consultType, setConsultType] = useState<"PRIVATE" | "PUBLIC" | "DIRECTED">("PRIVATE");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [allowAnonymousResponses, setAllowAnonymousResponses] = useState(true);
@@ -110,7 +111,12 @@ export default function NewChatPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isLoading) return;
+
+    // 二重送信ガード: refとstateの両方でチェック
+    if (!inputValue.trim() || isLoading || submittingRef.current) return;
+
+    // 即座にガードを設定（同期的）
+    submittingRef.current = true;
 
     const messageContent = inputValue.trim();
     setInputValue("");
@@ -145,6 +151,8 @@ export default function NewChatPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
       setIsLoading(false);
+      // エラー時もフラグを維持（リトライ防止）
+      submittingRef.current = true;
     }
   };
 
