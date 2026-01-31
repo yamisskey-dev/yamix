@@ -14,42 +14,32 @@ export function ServiceWorkerRegister() {
       "serviceWorker" in navigator &&
       process.env.NODE_ENV === "production"
     ) {
-      // TEMPORARY: Unregister existing service workers to test navigation issue
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister().then(() => {
-            logger.debug("Service Worker unregistered for testing");
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          logger.debug("Service Worker registered", {
+            scope: registration.scope,
           });
-        }
-      });
 
-      // Original registration code commented out for testing
-      // navigator.serviceWorker
-      //   .register("/sw.js")
-      //   .then((registration) => {
-      //     logger.debug("Service Worker registered", {
-      //       scope: registration.scope,
-      //     });
-
-      //     // 更新をチェック
-      //     registration.addEventListener("updatefound", () => {
-      //       const newWorker = registration.installing;
-      //       if (newWorker) {
-      //         newWorker.addEventListener("statechange", () => {
-      //           if (
-      //             newWorker.state === "installed" &&
-      //             navigator.serviceWorker.controller
-      //           ) {
-      //             // 新しいバージョンが利用可能
-      //             logger.debug("New version available");
-      //           }
-      //         });
-      //       }
-      //     });
-      //   })
-      //   .catch((error) => {
-      //     logger.error("Service Worker registration failed", {}, error);
-      //   });
+          // 更新をチェック
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  // 新しいバージョンが利用可能
+                  logger.debug("New version available");
+                }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          logger.error("Service Worker registration failed", {}, error);
+        });
     }
   }, []);
 
