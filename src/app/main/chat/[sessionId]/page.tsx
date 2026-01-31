@@ -336,6 +336,15 @@ export default function ChatSessionPage({ params }: PageProps) {
         !sessionInfo ||
         isFetching ||
         isLoading) {
+      console.log('[DEBUG] Initial message send blocked:', {
+        hasInitialMessage: !!initialMessage,
+        initialMessageRef: initialMessageRef.current,
+        initialMessageSent,
+        sendingInitialMessageRef: sendingInitialMessageRef.current,
+        hasSessionInfo: !!sessionInfo,
+        isFetching,
+        isLoading
+      });
       return;
     }
 
@@ -343,6 +352,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     initialMessageRef.current = initialMessage;
     sendingInitialMessageRef.current = true;
     setInitialMessageSent(true);
+    console.log('[DEBUG] Sending initial message:', decodeURIComponent(initialMessage));
 
     const content = decodeURIComponent(initialMessage);
     const userMessage: LocalMessage = {
@@ -369,11 +379,13 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error(data.error || "メッセージの送信に失敗しました");
         }
 
+        console.log('[DEBUG] Initial message sent successfully');
         await handleSSEResponse(res, userMessage.id, sseCallbacks);
 
         // メッセージ送信成功後にURL書き換え
         window.history.replaceState({}, "", `/main/chat/${sessionId}`);
       } catch (err) {
+        console.log('[DEBUG] Initial message send error:', err);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
         // エラー時もsendingフラグはリセットしない（無限ループ防止）
@@ -383,7 +395,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, sessionId]);
+  }, [searchParams, sessionId, sessionInfo, isFetching, isLoading]);
 
   // Auto-scroll
   useEffect(() => {
