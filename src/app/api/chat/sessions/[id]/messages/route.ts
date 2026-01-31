@@ -195,7 +195,16 @@ async function handleStreamingResponse(opts: {
               } else if (data.done) {
                 const isCrisis = data.is_crisis || false;
                 const isPublicType = session.consultType === "PUBLIC" || session.consultType === "DIRECTED";
-                const shouldHide = isCrisis && isPublicType;
+
+                // 3-strike system: increment crisisCount, only privatize on 3rd detection
+                let shouldHide = false;
+                if (isCrisis && isPublicType) {
+                  const updatedSession = await prisma.chatSession.update({
+                    where: { id: sessionId },
+                    data: { crisisCount: { increment: 1 } },
+                  });
+                  shouldHide = updatedSession.crisisCount >= 3;
+                }
 
                 const encryptedContent = encryptMessage(fullResponse, payload.userId);
                 const assistantMsg = await prisma.chatMessage.create({
@@ -275,7 +284,16 @@ async function handleNonStreamingResponse(opts: {
   }
 
   const isPublicType = session.consultType === "PUBLIC" || session.consultType === "DIRECTED";
-  const shouldHide = moderationCrisis && isPublicType;
+
+  // 3-strike system: increment crisisCount, only privatize on 3rd detection
+  let shouldHide = false;
+  if (moderationCrisis && isPublicType) {
+    const updatedSession = await prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { crisisCount: { increment: 1 } },
+    });
+    shouldHide = updatedSession.crisisCount >= 3;
+  }
 
   const { userMsg } = await saveUserMessageAndDeduct({
     sessionId,

@@ -317,6 +317,7 @@ model ChatSession {
   isAnonymous              Boolean     @default(false)    // 匿名投稿
   allowAnonymousResponses  Boolean     @default(true)     // 匿名回答を許可するか
   category                 String?                        // Phase 2用: カテゴリ（恋愛/仕事/メンタル等）
+  crisisCount              Int         @default(0)        // 危機検出回数（3回で自動非公開化）
   createdAt                DateTime    @default(now())
   updatedAt                DateTime    @updatedAt
 

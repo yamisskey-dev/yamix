@@ -139,7 +139,7 @@ export default function AboutPage() {
               <li>非公開の相談は、あなた本人のみが閲覧できます</li>
               <li>AI相談はOpenAI APIを通じて処理されます</li>
               <li>すべての相談はAIによる<strong className="text-base-content/80">自動モデレーション</strong>の対象です</li>
-              <li>公開・指名相談で危険な内容が検出された場合、相談は自動的に<strong className="text-base-content/80">非公開化</strong>されます</li>
+              <li>公開・指名相談で危険な内容が<strong className="text-base-content/80">3回</strong>検出された場合、相談は自動的に<strong className="text-base-content/80">非公開化</strong>されます（3ストライク制）</li>
             </ul>
           </div>
         </FormSection>

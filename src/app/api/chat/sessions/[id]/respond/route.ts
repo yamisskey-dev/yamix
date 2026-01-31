@@ -201,8 +201,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       moderationCrisis = checkCrisisKeywords(body.content.trim());
     }
 
-    // If crisis detected in PUBLIC/DIRECTED, auto-privatize
-    const shouldHide = moderationCrisis && (sessionWithMessages.consultType === "PUBLIC" || sessionWithMessages.consultType === "DIRECTED");
+    // 3-strike system: increment crisisCount, only privatize on 3rd detection
+    const isPublicType = sessionWithMessages.consultType === "PUBLIC" || sessionWithMessages.consultType === "DIRECTED";
+    let shouldHide = false;
+    if (moderationCrisis && isPublicType) {
+      const updatedSession = await prisma.chatSession.update({
+        where: { id },
+        data: { crisisCount: { increment: 1 } },
+      });
+      shouldHide = updatedSession.crisisCount >= 3;
+    }
 
     // Get responder wallet and check balance for response cost
     const responderWallet = await prisma.wallet.findUnique({
