@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
     : "'self' 'unsafe-eval' 'unsafe-inline'";
   response.headers.set(
     "Content-Security-Policy",
-    `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yamix.mizume.works http://yamix.mizume.works:5050;`
+    `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://yamix.mizume.works http://yamix.mizume.works:5050 https://down.yami.ski;`
   );
 
   // Permissions Policy
