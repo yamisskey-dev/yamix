@@ -316,6 +316,9 @@ export default function ChatSessionPage({ params }: PageProps) {
       return;
     }
 
+    // Mark as fetching immediately to prevent double execution
+    sessionFetchedRef.current = true;
+
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
       if (!isMounted) {
@@ -388,9 +391,6 @@ export default function ChatSessionPage({ params }: PageProps) {
           )
         );
         console.log('[CHAT DEBUG] All state set successfully, setting isFetching to false');
-
-        // Mark as fetched to prevent double execution
-        sessionFetchedRef.current = true;
       } catch (err) {
         clientLogger.error("Error fetching session:", err);
         setError("セッションの読み込みに失敗しました");
