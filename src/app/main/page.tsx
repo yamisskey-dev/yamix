@@ -25,7 +25,7 @@ const UserSearchListItem = memo(function UserSearchListItem({
         )}
         <span className="truncate">
           {user.displayName && <span className="font-medium">{user.displayName} </span>}
-          <span className="opacity-60">@{user.handle}</span>
+          <span className="opacity-60">{user.handle}</span>
         </span>
       </button>
     </li>
