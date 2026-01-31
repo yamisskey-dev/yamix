@@ -10,7 +10,7 @@ import { encodeHandle } from "@/lib/encode-handle";
 
 interface Props {
   consultation: TimelineConsultation;
-  currentUserHandle?: string; // 現在のユーザーハンドル（自分の相談には回答不可）
+  currentUserHandle?: string;
 }
 
 function formatDate(date: Date): string {

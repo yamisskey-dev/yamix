@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
 import { parseLimit } from "@/lib/validation";
+import { decryptMessage } from "@/lib/encryption";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,7 @@ interface PrismaSessionWithMessages {
   isAnonymous: boolean;
   createdAt: Date;
   user: {
+    id: string;
     handle: string;
     profile: { displayName: string | null; avatarUrl: string | null } | null;
   };
@@ -74,6 +76,7 @@ export async function GET(req: NextRequest) {
     const consultations: TimelineConsultation[] = items
       .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
       .map((s) => {
+        const ownerId = s.user.id;
         const userMsg = s.messages.find((m) => m.role === "USER");
         const firstAssistantMsg = s.messages.find((m) => m.role === "ASSISTANT");
 
@@ -82,7 +85,7 @@ export async function GET(req: NextRequest) {
           .filter((m) => m.role === "ASSISTANT")
           .map((m) => ({
             id: m.id,
-            content: m.content,
+            content: decryptMessage(m.content, ownerId),
             createdAt: m.createdAt,
             responder: m.responder ? {
               id: m.responder.id,
@@ -95,8 +98,8 @@ export async function GET(req: NextRequest) {
         return {
           id: s.id,
           sessionId: s.id,
-          question: userMsg?.content || "",
-          answer: firstAssistantMsg?.content || null, // PUBLIC相談ではnullの場合あり
+          question: userMsg ? decryptMessage(userMsg.content, ownerId) : "",
+          answer: firstAssistantMsg ? decryptMessage(firstAssistantMsg.content, ownerId) : null,
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
           user: s.isAnonymous ? null : { // 匿名の場合はnull

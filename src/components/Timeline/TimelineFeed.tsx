@@ -14,8 +14,10 @@ export function TimelineFeed() {
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string>();
+  const [hasNew, setHasNew] = useState(false);
   const observerRef = useRef<IntersectionObserver>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const latestIdRef = useRef<string | null>(null);
 
   const fetchTimeline = useCallback(async (cursorId?: string | null) => {
     try {
@@ -40,9 +42,13 @@ export function TimelineFeed() {
         setConsultations((prev) => [...prev, ...data.consultations]);
       } else {
         setConsultations(data.consultations);
+        if (data.consultations.length > 0) {
+          latestIdRef.current = data.consultations[0].id;
+        }
       }
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
+      setHasNew(false);
     } catch (err) {
       clientLogger.error("Error fetching timeline:", err);
       setError("タイムラインの読み込みに失敗しました");
@@ -55,14 +61,32 @@ export function TimelineFeed() {
   // Initial fetch
   useEffect(() => {
     fetchTimeline();
-    // Get current user handle from localStorage
     const handle = localStorage.getItem("yamix_handle");
     if (handle) {
       setCurrentUserHandle(handle);
     }
   }, [fetchTimeline]);
 
-  // Infinite scroll with IntersectionObserver
+  // Check for new posts periodically
+  useEffect(() => {
+    const checkNew = async () => {
+      try {
+        const res = await fetch("/api/timeline?limit=1");
+        if (res.ok) {
+          const data: TimelineResponse = await res.json();
+          if (data.consultations.length > 0 && latestIdRef.current && data.consultations[0].id !== latestIdRef.current) {
+            setHasNew(true);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    const interval = setInterval(checkNew, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Infinite scroll
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -112,7 +136,6 @@ export function TimelineFeed() {
   if (consultations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        {/* Yui mascot image */}
         <img
           src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yui/yui-256x256.webp"
           alt="Yui"
@@ -128,6 +151,16 @@ export function TimelineFeed() {
 
   return (
     <div className="bg-base-100/50 backdrop-blur-sm rounded-xl border border-base-content/10 overflow-hidden">
+      {/* New posts indicator */}
+      {hasNew && (
+        <button
+          onClick={() => fetchTimeline()}
+          className="w-full py-2 text-sm text-primary bg-primary/10 hover:bg-primary/15 border-b border-primary/20 transition-colors"
+        >
+          新しい相談があります
+        </button>
+      )}
+
       {consultations.map((consultation) => (
         <ConsultationCard
           key={consultation.id}

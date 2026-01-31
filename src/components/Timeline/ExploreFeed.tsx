@@ -1,19 +1,191 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { ConsultationCard } from "./ConsultationCard";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { BookmarkButton } from "@/components/BookmarkButton";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { clientLogger } from "@/lib/client-logger";
 
+function formatDate(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "たった今";
+  if (minutes < 60) return `${minutes}分前`;
+  if (hours < 24) return `${hours}時間前`;
+  if (days < 7) return `${days}日前`;
+
+  return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+}
+
+/** Phone-screen chat preview card */
+function PhoneChatCard({ consultation }: { consultation: TimelineConsultation }) {
+  const router = useRouter();
+  const replyCount = consultation.replies?.length || 0;
+  const isAnonymous = consultation.isAnonymous || !consultation.user;
+
+  const displayName = isAnonymous
+    ? "匿名さん"
+    : consultation.user?.displayName || consultation.user?.handle?.split("@")[1] || "匿名";
+
+  // Room title: first line or truncated question
+  const titleText = consultation.question.split("\n")[0].slice(0, 40) || "無題のルーム";
+
+  const questionText = consultation.question.length > 200
+    ? consultation.question.slice(0, 200) + "…"
+    : consultation.question;
+
+  const answerText = consultation.answer
+    ? consultation.answer.length > 300
+      ? consultation.answer.slice(0, 300) + "…"
+      : consultation.answer
+    : null;
+
+  // Unique human participants from replies
+  const participants = (consultation.replies || [])
+    .filter((r) => r.responder)
+    .reduce<Array<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }>>((acc, r) => {
+      if (r.responder && !acc.some((p) => p.id === r.responder!.id)) {
+        acc.push(r.responder);
+      }
+      return acc;
+    }, []);
+
+  return (
+    <article
+      onClick={() => router.push(`/main/chat/${consultation.sessionId}`)}
+      className="w-[85vw] sm:w-auto sm:aspect-[9/19] h-full flex-shrink-0 snap-center cursor-pointer group"
+    >
+      <div className="bg-base-300/80 rounded-[20px] border border-base-content/10 overflow-hidden shadow-lg group-hover:shadow-xl group-hover:border-base-content/15 transition-all duration-200 h-full flex flex-col">
+        {/* Status bar */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2 bg-base-300/60 flex-shrink-0">
+          <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+            {isAnonymous ? (
+              <div className="bg-base-content/10 flex items-center justify-center w-full h-full text-[10px]">
+                😎
+              </div>
+            ) : consultation.user?.avatarUrl ? (
+              <Image
+                src={consultation.user.avatarUrl}
+                alt={displayName}
+                width={20}
+                height={20}
+                className="rounded-full object-cover w-full h-full"
+              />
+            ) : (
+              <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[9px] font-bold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <span className="text-[11px] text-base-content/50 flex-shrink-0">
+              {displayName}
+            </span>
+            <span className="text-[10px] text-base-content/30 flex-shrink-0">·</span>
+            <span className="text-[11px] font-semibold text-base-content/80 truncate">
+              {titleText}
+            </span>
+          </div>
+        </div>
+
+        {/* Chat area - fills remaining height */}
+        <div className="flex-1 px-3 py-3 flex flex-col gap-2.5 bg-base-200/40 overflow-hidden relative min-h-0">
+          {/* User message (right) */}
+          <div className="flex justify-end">
+            <div className="bg-primary/15 text-base-content rounded-2xl rounded-br-sm px-3 py-2 max-w-[85%]">
+              <p className="text-[12px] leading-relaxed break-words">
+                {questionText}
+              </p>
+            </div>
+          </div>
+
+          {/* Response (left) */}
+          {answerText && (
+            <div className="flex justify-start gap-1.5">
+              <div className="w-4 h-4 rounded-full flex-shrink-0 mt-1 overflow-hidden">
+                {consultation.replies?.[0]?.responder?.avatarUrl ? (
+                  <Image
+                    src={consultation.replies[0].responder.avatarUrl}
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="rounded-full object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
+                    <span className="text-[8px]">🤖</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-base-300/80 text-base-content rounded-2xl rounded-bl-sm px-3 py-2 max-w-[80%]">
+                <p className="text-[12px] leading-relaxed break-words">
+                  {answerText}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Fade-out at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-base-200/90 to-transparent pointer-events-none" />
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between px-3 py-2 bg-base-300/60 border-t border-base-content/5 flex-shrink-0">
+          {/* Participants */}
+          <div className="flex items-center gap-2 min-w-0">
+            {participants.length > 0 && (
+              <div className="flex items-center -space-x-1.5">
+                {participants.slice(0, 4).map((p, i) => (
+                  <div
+                    key={p.id || i}
+                    className="w-5 h-5 rounded-full overflow-hidden border-2 border-base-300/60 flex-shrink-0"
+                    title={p.displayName || p.handle}
+                  >
+                    {p.avatarUrl ? (
+                      <Image src={p.avatarUrl} alt="" width={20} height={20} className="rounded-full object-cover w-full h-full" />
+                    ) : (
+                      <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[8px] font-bold">
+                        {(p.displayName || p.handle || "?").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {participants.length > 4 && (
+                  <div className="w-5 h-5 rounded-full bg-base-content/10 border-2 border-base-300/60 flex items-center justify-center text-[8px] text-base-content/50 flex-shrink-0">
+                    +{participants.length - 4}
+                  </div>
+                )}
+              </div>
+            )}
+            <span className="text-[10px] text-base-content/40 truncate">
+              {replyCount}件の返信
+            </span>
+          </div>
+
+          {/* Bookmark */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <BookmarkButton sessionId={consultation.sessionId} className="!btn-xs !p-0 !min-h-0 !h-6 !w-6" />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function ExploreFeed() {
-  const [currentUserHandle, setCurrentUserHandle] = useState<string>();
   const [consultations, setConsultations] = useState<TimelineConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string>();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver>();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -52,17 +224,27 @@ export function ExploreFeed() {
     }
   }, []);
 
-  // Initial fetch
   useEffect(() => {
     fetchExplore();
-    // Get current user handle from localStorage
-    const handle = localStorage.getItem("yamix_handle");
-    if (handle) {
-      setCurrentUserHandle(handle);
-    }
   }, [fetchExplore]);
 
-  // Infinite scroll with IntersectionObserver
+  // Horizontal scroll: load more when near end
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      if (hasMore && !loadingMore && el.scrollLeft > maxScroll - 400) {
+        fetchExplore(cursor);
+      }
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [hasMore, loadingMore, cursor, fetchExplore]);
+
+  // IntersectionObserver fallback
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -90,7 +272,7 @@ export function ExploreFeed() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center h-full">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -98,7 +280,7 @@ export function ExploreFeed() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="flex flex-col items-center justify-center h-full text-center px-4">
         <div className="alert alert-error max-w-md">
           <span>{error}</span>
         </div>
@@ -111,8 +293,7 @@ export function ExploreFeed() {
 
   if (consultations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        {/* Yui mascot image */}
+      <div className="flex flex-col items-center justify-center h-full text-center">
         <img
           src="https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yui/yui-256x256.webp"
           alt="Yui"
@@ -120,36 +301,26 @@ export function ExploreFeed() {
           draggable={false}
         />
         <h3 className="text-lg font-medium text-base-content/70 mb-2">
-          相談がありません
+          ルームがありません
         </h3>
       </div>
     );
   }
 
   return (
-    <div className="bg-base-100/50 backdrop-blur-sm rounded-xl border border-base-content/10 overflow-hidden">
+    <div
+      ref={scrollRef}
+      className="flex gap-4 sm:gap-6 h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory py-4 px-4 sm:px-8"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    >
       {consultations.map((consultation) => (
-        <ConsultationCard
-          key={consultation.id}
-          consultation={consultation}
-          currentUserHandle={currentUserHandle}
-        />
+        <PhoneChatCard key={consultation.id} consultation={consultation} />
       ))}
 
       {/* Load more trigger */}
-      <div ref={loadMoreRef} className="h-4" />
-
-      {loadingMore && (
-        <div className="flex justify-center py-4">
-          <LoadingSpinner size="md" />
-        </div>
-      )}
-
-      {!hasMore && consultations.length > 0 && (
-        <div className="text-center py-4 text-base-content/50 text-sm">
-          すべての相談を読み込みました
-        </div>
-      )}
+      <div ref={loadMoreRef} className="w-4 flex-shrink-0 flex items-center">
+        {loadingMore && <LoadingSpinner size="md" />}
+      </div>
     </div>
   );
 }
