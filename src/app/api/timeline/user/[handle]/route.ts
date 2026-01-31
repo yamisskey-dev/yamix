@@ -16,7 +16,7 @@ interface PrismaUser {
 interface PrismaSessionWithMessages {
   id: string;
   title: string | null;
-  consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
+  consultType: "PRIVATE" | "PUBLIC";
   isAnonymous: boolean;
   createdAt: Date;
   messages: Array<{
@@ -67,7 +67,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       select: {
         id: true,
-        title: true,
         consultType: true,
         isAnonymous: true,
         createdAt: true,
