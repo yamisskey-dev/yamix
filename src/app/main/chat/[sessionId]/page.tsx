@@ -326,6 +326,7 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Auto-send initial message
   useEffect(() => {
+    let cancelled = false;
     const initialMessage = searchParams.get("initialMessage");
 
     // 多重ガード: ref、state、送信中フラグの3重チェック
@@ -367,12 +368,22 @@ export default function ChatSessionPage({ params }: PageProps) {
     window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
 
     (async () => {
+      if (cancelled) {
+        console.log('[DEBUG] Initial message send cancelled (cleanup)');
+        return;
+      }
+
       try {
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: content }),
         });
+
+        if (cancelled) {
+          console.log('[DEBUG] Initial message response cancelled (cleanup)');
+          return;
+        }
 
         if (!res.ok) {
           const data = await res.json();
@@ -382,18 +393,26 @@ export default function ChatSessionPage({ params }: PageProps) {
         console.log('[DEBUG] Initial message sent successfully');
         await handleSSEResponse(res, userMessage.id, sseCallbacks);
 
-        // メッセージ送信成功後にURL書き換え
-        window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+        if (!cancelled) {
+          // メッセージ送信成功後にURL書き換え
+          window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+        }
       } catch (err) {
-        console.log('[DEBUG] Initial message send error:', err);
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
-        setIsLoading(false);
+        if (!cancelled) {
+          console.log('[DEBUG] Initial message send error:', err);
+          setError(err instanceof Error ? err.message : "エラーが発生しました");
+          setIsLoading(false);
+        }
         // エラー時もsendingフラグはリセットしない（無限ループ防止）
       } finally {
         // 送信完了後もフラグは維持（二重送信防止）
         sendingInitialMessageRef.current = true;
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, sessionId, sessionInfo]);
 
