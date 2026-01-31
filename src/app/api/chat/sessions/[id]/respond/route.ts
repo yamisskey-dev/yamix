@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
@@ -9,22 +9,7 @@ import { notifyResponse } from "@/lib/notifications";
 import { encryptMessage, decryptMessage } from "@/lib/encryption";
 
 import { checkCrisisKeywords } from "@/lib/crisis";
-
-// Prismaのメッセージ型
-interface PrismaMessage {
-  role: string;
-  content: string;
-}
-
-// Check if message starts with @yamii mention
-function hasMentionYamii(message: string): boolean {
-  return /^@yamii(\s|$)/i.test(message.trim());
-}
-
-// Remove @yamii mention from message
-function removeMentionYamii(message: string): string {
-  return message.trim().replace(/^@yamii\s*/i, "");
-}
+import { QUERY_LIMITS, PrismaMessage, hasMentionYamii, removeMentionYamii } from "@/lib/constants";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -32,25 +17,15 @@ interface RouteParams {
 
 // POST /api/chat/sessions/[id]/respond - Submit a human response to a public consultation
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const authResult = await authenticateRequest(req);
+  if ("error" in authResult) return authResult.error;
+  const { payload } = authResult;
 
   const { id } = await params;
 
-  let body: { content: string; isAnonymous?: boolean };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ content: string; isAnonymous?: boolean }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   if (!body.content || body.content.trim().length === 0) {
     return NextResponse.json({ error: "Content is required" }, { status: 400 });
@@ -66,7 +41,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         user: true,
         messages: {
           orderBy: { createdAt: "asc" },
-          take: 10,
+          take: QUERY_LIMITS.RECENT_MESSAGES,
         },
       },
     });
@@ -373,9 +348,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     logger.error("Human response error", { sessionId: id }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

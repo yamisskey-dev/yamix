@@ -1,28 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 
 // POST /api/tokens/purchase - Initiate YAMI purchase with Optimism ETH
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (checkRateLimit(`purchase:${payload.userId}`, RateLimits.AUTH)) {
+    return ErrorResponses.rateLimitExceeded();
   }
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { walletId?: string; amount?: number };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ walletId?: string; amount?: number }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   const { walletId, amount } = body;
 
@@ -88,25 +83,15 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     logger.error("YAMI purchase error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // GET /api/tokens/purchase - Get purchase history
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   const { searchParams } = new URL(req.url);
   const walletId = searchParams.get("walletId");
@@ -141,9 +126,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(purchases);
   } catch (error) {
     logger.error("Get purchase history error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

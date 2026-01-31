@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { yamiiClient } from "@/lib/yamii-client";
 import { logger } from "@/lib/logger";
+import { authenticateRequest } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
-  const payload = await verifyJWT(token);
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const profile = await yamiiClient.getUserProfile(payload.userId);
@@ -38,23 +24,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
-  const payload = await verifyJWT(token);
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const body = await req.json();
@@ -75,23 +47,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
-  const payload = await verifyJWT(token);
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const result = await yamiiClient.deleteUserData(payload.userId);

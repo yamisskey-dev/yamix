@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { decryptMessage } from "@/lib/encryption";
@@ -17,8 +17,7 @@ export async function GET(req: NextRequest) {
   const cursor = searchParams.get("cursor");
 
   // Optional auth - if logged in, also show DIRECTED sessions targeting this user
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-  const payload = token ? await verifyJWT(token) : null;
+  const payload = await optionalAuth(req);
 
   try {
     // Build session filter: PUBLIC + DIRECTED sessions targeting this user
@@ -173,9 +172,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     logger.error("Get timeline error", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

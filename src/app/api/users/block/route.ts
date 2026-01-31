@@ -1,27 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 
 // POST /api/users/block - Block a user
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (checkRateLimit(`block:${payload.userId}`, RateLimits.GENERAL)) {
+    return ErrorResponses.rateLimitExceeded();
   }
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { blockedUserId: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ blockedUserId: string }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   if (!body.blockedUserId || typeof body.blockedUserId !== "string") {
     return NextResponse.json({ error: "blockedUserId is required" }, { status: 400 });
@@ -69,25 +64,15 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Block user error", { blockedUserId: body.blockedUserId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // GET /api/users/block - Get all blocked users
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const blocks = await prisma.userBlock.findMany({
@@ -116,9 +101,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get blocks error", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

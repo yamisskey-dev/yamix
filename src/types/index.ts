@@ -21,7 +21,6 @@ export const TOKEN_ECONOMY = {
   DIRECTED_CONSULT_COST: 3,      // 指名相談（指名ユーザーのみ回答可能）
   AI_CONSULT_COST: 1,            // AI相談コスト（安い）- 後方互換
   HUMAN_CONSULT_COST: 5,         // 人間相談コスト（高い）- 後方互換
-  ANY_CONSULT_COST: 3,           // どちらでも可（中間）- 後方互換
   DISCUSSION_COST: 0,            // 一般投稿（無料）
 
   // 回答コストと報酬（アンチスパム + ハイブリッド設計）
@@ -49,12 +48,9 @@ export const TOKEN_ECONOMY = {
   // 後方互換性エイリアス
   COST_CONSULT_AI: 1,            // → AI_CONSULT_COST
   COST_CONSULT_HUMAN: 5,         // → HUMAN_CONSULT_COST
-  COST_CONSULT_ANY: 3,           // → ANY_CONSULT_COST
   COST_DISCUSSION: 0,            // → DISCUSSION_COST
   REWARD_RESPONSE_AI: 0,         // AIは報酬なし
   REWARD_RESPONSE_HUMAN: 3,      // → RESPONSE_REWARD
-  REWARD_RESPONSE_SELF: 0,       // 自己返信報酬なし
-  DAILY_FREE_GRANT: 10,          // → DAILY_GRANT_AMOUNT
   ETH_PER_YAMI: "0.0001",        // → ETH_PER_TOKEN
   TOKEN_NAME: "YAMI",            // UI表示用
   TOKEN_SYMBOL: "YAMI",          // UI表示用
@@ -214,18 +210,6 @@ export interface YamiWithdrawal {
   createdAt: Date;
   processedAt: Date | null;
 }
-
-// 後方互換性のためのエイリアス
-export type TokenPurchase = YamiPurchase;
-export type TokenWithdrawal = YamiWithdrawal;
-
-// ============================================
-// Follow types - DEPRECATED
-// フォロー機能は廃止され、ブラキャニ風の発見型タイムラインに移行
-// ============================================
-// export interface Follow {
-//   削除済み
-// }
 
 // ============================================
 // Paginated response types

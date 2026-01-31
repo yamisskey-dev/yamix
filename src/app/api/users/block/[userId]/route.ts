@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 
 interface RouteParams {
@@ -9,16 +9,9 @@ interface RouteParams {
 
 // DELETE /api/users/block/[userId] - Unblock a user
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   const { userId: blockedUserId } = await params;
 
@@ -54,9 +47,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     }
   } catch (error) {
     logger.error("Unblock user error", { blockedUserId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

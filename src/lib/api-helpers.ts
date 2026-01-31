@@ -73,3 +73,15 @@ export const ErrorResponses = {
   internalError: (message = "Internal server error") =>
     NextResponse.json({ error: message }, { status: 500 }),
 } as const;
+
+/**
+ * Optional authentication — returns payload or null (no error)
+ * Use for public endpoints that show extra data for logged-in users
+ */
+export async function optionalAuth(
+  req: NextRequest
+): Promise<JWTPayload | null> {
+  const token = getTokenFromCookie(req.headers.get("cookie"));
+  if (!token) return null;
+  return verifyJWT(token);
+}

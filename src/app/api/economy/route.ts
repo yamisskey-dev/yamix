@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import {
   getEconomyConfig,
@@ -8,21 +7,15 @@ import {
   getRemainingRewardCapacity,
   processDailyEconomy,
 } from "@/lib/economy";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 
 /**
  * GET /api/economy - 経済パラメータと現在の状態を取得
  */
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const config = await getEconomyConfig();
@@ -57,10 +50,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get economy config error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
@@ -68,16 +58,9 @@ export async function GET(req: NextRequest) {
  * POST /api/economy - 日次経済処理を手動実行（BI付与・減衰）
  */
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   if (!payload.walletId) {
     return NextResponse.json({ error: "Wallet not found" }, { status: 404 });
@@ -94,9 +77,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Process daily economy error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

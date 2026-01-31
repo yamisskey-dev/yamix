@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
 
 // POST /api/transactions - Send tokens to a post (reaction)
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { postId?: string; amount?: number };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ postId?: string; amount?: number }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   const { postId } = body;
   const senderId = payload.walletId; // Use walletId from JWT (1:1 user-wallet)
@@ -106,10 +96,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
     logger.error("Create transaction error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
@@ -129,9 +116,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(transactions);
   } catch (error) {
     logger.error("Get transactions error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

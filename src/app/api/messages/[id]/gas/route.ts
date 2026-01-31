@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { notifyGasReceived } from "@/lib/notifications";
@@ -19,16 +19,9 @@ interface RouteParams {
 export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     const { id: messageId } = await params;
-    const token = getTokenFromCookie(req.headers.get("cookie"));
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const payload = await verifyJWT(token);
-    if (!payload?.userId) {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
+    const auth = await authenticateRequest(req);
+    if ("error" in auth) return auth.error;
+    const { payload } = auth;
 
     // レート制限チェック
     const rateLimitKey = `gas:${payload.userId}`;
@@ -162,9 +155,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     logger.error("Send gas error", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

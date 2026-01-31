@@ -1,26 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json(
-      { error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
-  const payload = await verifyJWT(token);
-
-  if (!payload) {
-    return NextResponse.json(
-      { error: "Invalid or expired token" },
-      { status: 401 }
-    );
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     let user: {
@@ -64,31 +50,19 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get profile error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // PATCH /api/auth/me - Update profile settings
 export async function PATCH(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { allowDirectedConsult?: boolean };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ allowDirectedConsult?: boolean }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   try {
     await prisma.profile.update({
@@ -101,6 +75,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("Update profile error", {}, error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return ErrorResponses.internalError();
   }
 }

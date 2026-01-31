@@ -5,6 +5,7 @@ import { RedisService } from "@/lib/redis";
 import { logger } from "@/lib/logger";
 import { createJWT, createTokenCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
+import { parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 
 // Generate an ETH-style address (0x + 40 hex chars)
 function generateAddress(): string {
@@ -24,16 +25,9 @@ interface MisskeyUser {
 }
 
 export async function POST(req: NextRequest) {
-  let data: CallbackRequest;
-
-  try {
-    data = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
-    );
-  }
+  const bodyResult = await parseJsonBody<CallbackRequest>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const data = bodyResult.data;
 
   if (!data.token || !data.host) {
     return NextResponse.json(
@@ -178,9 +172,6 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     logger.error("Callback error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

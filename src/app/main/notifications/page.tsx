@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { clientLogger } from "@/lib/client-logger";
 
 interface Notification {
   id: string;
@@ -27,7 +28,7 @@ export default function NotificationsPage() {
         setNotifications(data.notifications);
       }
     } catch (error) {
-      console.error("Failed to fetch notifications:", error);
+      clientLogger.error("Failed to fetch notifications:", error);
     } finally {
       setLoading(false);
     }
@@ -51,7 +52,7 @@ export default function NotificationsPage() {
         );
       }
     } catch (error) {
-      console.error("Failed to mark as read:", error);
+      clientLogger.error("Failed to mark as read:", error);
     }
   };
 
@@ -67,7 +68,7 @@ export default function NotificationsPage() {
         setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       }
     } catch (error) {
-      console.error("Failed to mark all as read:", error);
+      clientLogger.error("Failed to mark all as read:", error);
     }
   };
 

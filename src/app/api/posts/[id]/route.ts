@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 
 interface RouteParams {
@@ -75,26 +75,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json(post);
   } catch (error) {
     logger.error("Get post error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // DELETE /api/posts/[id] - Delete post (owner only)
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     const post = await prisma.post.findUnique({
@@ -118,9 +108,6 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     logger.error("Delete post error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

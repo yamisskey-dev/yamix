@@ -4,6 +4,7 @@ import { RedisService } from "@/lib/redis";
 import { detectInstance, isMisskeyLike } from "@/lib/detect-instance";
 import { logger } from "@/lib/logger";
 import type { MiAuthSession } from "@/types";
+import { parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 
 const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
 
@@ -19,16 +20,9 @@ interface ServerRecord {
 }
 
 export async function POST(req: NextRequest) {
-  let data: LoginRequest;
-
-  try {
-    data = await req.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
-    );
-  }
+  const bodyResult = await parseJsonBody<LoginRequest>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const data = bodyResult.data;
 
   if (!data.host || typeof data.host !== "string") {
     return NextResponse.json(
@@ -146,9 +140,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(authSession);
   } catch (error) {
     logger.error("Misskey login error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

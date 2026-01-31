@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { createChatSessionSchema, validateBody, parseLimit } from "@/lib/validation";
 import { decryptMessage } from "@/lib/encryption";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 
 // Prismaのセッション取得結果の型
 interface PrismaSessionResult {
@@ -22,16 +22,9 @@ interface PrismaSessionResult {
 
 // GET /api/chat/sessions - List user's chat sessions
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const authResult = await authenticateRequest(req);
+  if ("error" in authResult) return authResult.error;
+  const { payload } = authResult;
 
   const { searchParams } = new URL(req.url);
   const limit = parseLimit(searchParams.get("limit"));
@@ -138,25 +131,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     logger.error("Get chat sessions error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // POST /api/chat/sessions - Create new chat session
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const authResult = await authenticateRequest(req);
+  if ("error" in authResult) return authResult.error;
+  const { payload } = authResult;
 
   // レート制限チェック
   const rateLimitKey = `chat-create:${payload.userId}`;
@@ -287,25 +270,15 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     logger.error("Create chat session error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // DELETE /api/chat/sessions?type=private - Delete all sessions (or only private sessions)
 export async function DELETE(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const authResult = await authenticateRequest(req);
+  if ("error" in authResult) return authResult.error;
+  const { payload } = authResult;
 
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // "private" or "all"
@@ -329,9 +302,6 @@ export async function DELETE(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Delete chat sessions error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

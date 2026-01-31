@@ -6,6 +6,7 @@ import { ConsultationCard } from "@/components/Timeline";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
 import type { TimelineConsultation, TimelineResponse, UserStats } from "@/types";
+import { clientLogger } from "@/lib/client-logger";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
@@ -89,7 +90,7 @@ export default function UserProfilePage({ params }: PageProps) {
 
       setItems(allItems);
     } catch (err) {
-      console.error("Error fetching user timeline:", err);
+      clientLogger.error("Error fetching user timeline:", err);
       setError("読み込みに失敗しました");
     } finally {
       setLoading(false);
@@ -111,7 +112,7 @@ export default function UserProfilePage({ params }: PageProps) {
           setCurrentUserHandle(data.handle);
         }
       } catch (err) {
-        console.error("Failed to fetch current user:", err);
+        clientLogger.error("Failed to fetch current user:", err);
       }
     };
     fetchCurrentUser();
@@ -134,7 +135,7 @@ export default function UserProfilePage({ params }: PageProps) {
           setStats(await statsRes.json());
         }
       } catch (err) {
-        console.error("Failed to fetch wallet/stats:", err);
+        clientLogger.error("Failed to fetch wallet/stats:", err);
       }
     };
     fetchWalletAndStats();
@@ -155,7 +156,7 @@ export default function UserProfilePage({ params }: PageProps) {
           setIsBlocked(blocked);
         }
       } catch (err) {
-        console.error("Failed to check block status:", err);
+        clientLogger.error("Failed to check block status:", err);
       }
     };
     checkBlockStatus();
@@ -203,7 +204,7 @@ export default function UserProfilePage({ params }: PageProps) {
         }
       }
     } catch (err) {
-      console.error("Block toggle error:", err);
+      clientLogger.error("Block toggle error:", err);
       toast.error("操作に失敗しました");
     } finally {
       setIsBlockLoading(false);

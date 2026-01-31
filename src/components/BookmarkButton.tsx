@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { LoadingSpinner } from "./LoadingSpinner";
+import { clientLogger } from "@/lib/client-logger";
 
 interface BookmarkButtonProps {
   sessionId: string;
@@ -29,7 +30,7 @@ export function BookmarkButton({
         if (res.ok) {
           setIsBookmarked(false);
         } else {
-          console.error("Failed to remove bookmark");
+          clientLogger.error("Failed to remove bookmark");
         }
       } else {
         // ブックマークを追加
@@ -42,11 +43,11 @@ export function BookmarkButton({
         if (res.ok) {
           setIsBookmarked(true);
         } else {
-          console.error("Failed to add bookmark");
+          clientLogger.error("Failed to add bookmark");
         }
       }
     } catch (error) {
-      console.error("Bookmark error:", error);
+      clientLogger.error("Bookmark error:", error);
     } finally {
       setLoading(false);
     }

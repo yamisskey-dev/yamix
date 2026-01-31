@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { decryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
 
@@ -10,16 +11,9 @@ import { parseLimit } from "@/lib/validation";
  * ユーザーのブックマーク一覧を取得
  */
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   const { searchParams } = new URL(req.url);
   const limit = parseLimit(searchParams.get("limit"));
@@ -77,10 +71,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get bookmarks error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
@@ -89,23 +80,17 @@ export async function GET(req: NextRequest) {
  * セッションをブックマークに追加
  */
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (checkRateLimit(`bookmark:${payload.userId}`, RateLimits.GENERAL)) {
+    return ErrorResponses.rateLimitExceeded();
   }
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { sessionId: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ sessionId: string }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   if (!body.sessionId) {
     return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
@@ -151,10 +136,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Create bookmark error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
@@ -163,16 +145,9 @@ export async function POST(req: NextRequest) {
  * ブックマークを削除
  */
 export async function DELETE(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   const { searchParams } = new URL(req.url);
   const sessionId = searchParams.get("sessionId");
@@ -193,9 +168,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("Delete bookmark error", { userId: payload.userId }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

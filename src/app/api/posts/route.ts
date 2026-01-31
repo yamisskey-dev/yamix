@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
 import { parseLimit, parsePage } from "@/lib/validation";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 
 // GET /api/posts - Get all posts (with pagination)
 export async function GET(req: NextRequest) {
@@ -46,32 +47,23 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get posts error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
 
 // POST /api/posts - Create a new post or reply
 export async function POST(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (checkRateLimit(`post:${payload.userId}`, RateLimits.MESSAGE_SEND)) {
+    return ErrorResponses.rateLimitExceeded();
   }
 
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
-
-  let body: { content?: string; parentId?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody<{ content?: string; parentId?: string }>(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   const { content, parentId } = body;
   const walletId = payload.walletId; // Use walletId from JWT (1:1 user-wallet)
@@ -193,9 +185,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(post, { status: 201 });
   } catch (error) {
     logger.error("Create post error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

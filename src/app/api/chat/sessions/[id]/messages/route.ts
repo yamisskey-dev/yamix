@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
 import { logger } from "@/lib/logger";
 import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
@@ -11,11 +10,8 @@ import { encryptMessage, decryptMessage } from "@/lib/encryption";
 import { notifyDirectedRequest } from "@/lib/notifications";
 import { checkCrisisKeywords } from "@/lib/crisis";
 import type { JWTPayload } from "@/lib/jwt";
-
-interface PrismaMessage {
-  role: string;
-  content: string;
-}
+import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
+import { QUERY_LIMITS, PrismaMessage, hasMentionYamii, removeMentionYamii } from "@/lib/constants";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,16 +24,6 @@ interface SessionData {
   isAnonymous: boolean;
   isPublic: boolean;
   messages: PrismaMessage[];
-}
-
-// Check if message starts with @yamii mention
-function hasMentionYamii(message: string): boolean {
-  return /^@yamii(\s|$)/i.test(message.trim());
-}
-
-// Remove @yamii mention from message
-function removeMentionYamii(message: string): string {
-  return message.trim().replace(/^@yamii\s*/i, "");
 }
 
 // ============================================
@@ -323,15 +309,9 @@ async function handleNonStreamingResponse(opts: {
 // POST /api/chat/sessions/[id]/messages
 // ============================================
 export async function POST(req: NextRequest, { params }: RouteParams) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const authResult = await authenticateRequest(req);
+  if ("error" in authResult) return authResult.error;
+  const { payload } = authResult;
 
   const rateLimitKey = `message:${payload.userId}`;
   if (checkRateLimit(rateLimitKey, RateLimits.MESSAGE_SEND)) {
@@ -343,12 +323,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   const { id: sessionId } = await params;
 
-  let body;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
-  }
+  const bodyResult = await parseJsonBody(req);
+  if ("error" in bodyResult) return bodyResult.error;
+  const body = bodyResult.data;
 
   const validation = validateBody(sendMessageSchema, body);
   if (!validation.success) {
@@ -362,7 +339,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const session = await prisma.chatSession.findUnique({
       where: { id: sessionId },
       include: {
-        messages: { orderBy: { createdAt: "asc" }, take: 10 },
+        messages: { orderBy: { createdAt: "asc" }, take: QUERY_LIMITS.RECENT_MESSAGES },
       },
     });
 
@@ -418,6 +395,6 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     logger.error("Send message error", { sessionId }, error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return ErrorResponses.internalError();
   }
 }

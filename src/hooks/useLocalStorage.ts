@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { clientLogger } from "@/lib/client-logger";
 
 /**
  * localStorage用のキー定義
@@ -39,7 +40,7 @@ export function useLocalStorage<T>(
         setStoredValue(JSON.parse(item) as T);
       }
     } catch (error) {
-      console.warn(`Failed to read localStorage key "${key}":`, error);
+      clientLogger.warn(`Failed to read localStorage key "${key}":`, error);
     }
     setIsInitialized(true);
   }, [key]);
@@ -53,7 +54,7 @@ export function useLocalStorage<T>(
         setStoredValue(valueToStore);
         localStorage.setItem(key, JSON.stringify(valueToStore));
       } catch (error) {
-        console.warn(`Failed to set localStorage key "${key}":`, error);
+        clientLogger.warn(`Failed to set localStorage key "${key}":`, error);
       }
     },
     [key, storedValue]
@@ -65,7 +66,7 @@ export function useLocalStorage<T>(
       localStorage.removeItem(key);
       setStoredValue(initialValue);
     } catch (error) {
-      console.warn(`Failed to remove localStorage key "${key}":`, error);
+      clientLogger.warn(`Failed to remove localStorage key "${key}":`, error);
     }
   }, [key, initialValue]);
 

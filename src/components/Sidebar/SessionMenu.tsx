@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { ChatSessionListItem } from "@/types";
 import { useToast } from "@/components/Toast";
+import { clientLogger } from "@/lib/client-logger";
 
 interface SessionLike {
   id: string;
@@ -60,7 +61,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       await navigator.clipboard.writeText(shareUrl);
       toast.success("共有URLをコピーしました");
     } catch (error) {
-      console.error("Failed to copy share URL:", error);
+      clientLogger.error("Failed to copy share URL:", error);
       toast.error("URLのコピーに失敗しました");
     } finally {
       setLoading(false);
@@ -82,7 +83,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       toast.success("公開相談に変更しました");
       onUpdate();
     } catch (error) {
-      console.error("Failed to make public:", error);
+      clientLogger.error("Failed to make public:", error);
       toast.error("公開に失敗しました");
     } finally {
       setLoading(false);
@@ -106,7 +107,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
       onUpdate();
       setIsRenaming(false);
     } catch (error) {
-      console.error("Failed to rename:", error);
+      clientLogger.error("Failed to rename:", error);
       toast.error("名前の変更に失敗しました");
     } finally {
       setLoading(false);
@@ -135,7 +136,7 @@ export function SessionMenu({ session, onDelete, onUpdate, isBookmarked, onUnboo
         setIsOpen(false);
       }
     } catch (error) {
-      console.error("Failed to toggle bookmark:", error);
+      clientLogger.error("Failed to toggle bookmark:", error);
       toast.error("ブックマーク操作に失敗しました");
     } finally {
       setLoading(false);

@@ -8,6 +8,7 @@ import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { BookmarkButton } from "@/components/BookmarkButton";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { ConfirmModal } from "@/components/Modal";
+import { clientLogger } from "@/lib/client-logger";
 import { useToast } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 
@@ -171,7 +172,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           })
         );
       } catch (err) {
-        console.error("Error fetching session:", err);
+        clientLogger.error("Error fetching session:", err);
         setError("セッションの読み込みに失敗しました");
       } finally {
         setIsFetching(false);
@@ -463,7 +464,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         toast.error(data.error || "ブロックに失敗しました");
       }
     } catch (error) {
-      console.error("Block error:", error);
+      clientLogger.error("Block error:", error);
       toast.error("ブロックに失敗しました");
     } finally {
       setIsBlocking(false);
@@ -491,7 +492,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         toast.error(data.error || "💜の送信に失敗しました");
       }
     } catch (error) {
-      console.error("Send gas error:", error);
+      clientLogger.error("Send gas error:", error);
       toast.error("💜の送信に失敗しました");
     }
   };
@@ -512,7 +513,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         toast.error(data.error || "削除に失敗しました");
       }
     } catch (error) {
-      console.error("Delete session error:", error);
+      clientLogger.error("Delete session error:", error);
       toast.error("削除に失敗しました");
     } finally {
       setIsDeleting(false);
@@ -742,9 +743,9 @@ export default function ChatSessionPage({ params }: PageProps) {
           // Show reward message if applicable
           if (data.reward && data.reward > 0) {
             // Could add a toast notification here
-            console.log(`+${data.reward} YAMI を獲得しました！`);
+            clientLogger.info(`+${data.reward} YAMI を獲得しました！`);
           } else if (data.rewardCapped) {
-            console.log("本日の報酬上限に達しています");
+            clientLogger.info("本日の報酬上限に達しています");
           }
         }
       } catch (err) {

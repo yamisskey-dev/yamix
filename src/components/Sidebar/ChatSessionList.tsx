@@ -6,6 +6,7 @@ import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { SessionMenu } from "./SessionMenu";
 import { ConfirmModal } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
+import { clientLogger } from "@/lib/client-logger";
 
 // Group sessions by date
 function groupSessionsByDate(sessions: ChatSessionListItem[]) {
@@ -80,7 +81,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
         setBookmarkedSessionIds(ids);
       }
     } catch (error) {
-      console.error("Error fetching bookmarks:", error);
+      clientLogger.error("Error fetching bookmarks:", error);
     }
   }, []);
 
@@ -105,7 +106,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
     } catch (error) {
-      console.error("Error fetching sessions:", error);
+      clientLogger.error("Error fetching sessions:", error);
     } finally {
       setLoading(false);
     }
@@ -162,7 +163,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
         router.push("/main");
       }
     } catch (error) {
-      console.error("Error deleting session:", error);
+      clientLogger.error("Error deleting session:", error);
     } finally {
       setIsDeleting(false);
       setDeleteTargetId(null);
@@ -182,7 +183,7 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
         return newSet;
       });
     } catch (error) {
-      console.error("Error removing bookmark:", error);
+      clientLogger.error("Error removing bookmark:", error);
     }
   };
 

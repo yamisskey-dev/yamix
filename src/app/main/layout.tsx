@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserContext } from "@/contexts/UserContext";
 import { authApi } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
+import { clientLogger } from "@/lib/client-logger";
 import type { UserProfile } from "@/types";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
@@ -44,7 +45,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           setUnreadNotificationCount(data.unreadCount || 0);
         }
       } catch (error) {
-        console.error("Failed to fetch unread count:", error);
+        clientLogger.error("Failed to fetch unread count:", error);
       }
     };
     fetchUnreadCount();

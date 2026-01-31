@@ -7,6 +7,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { ConfirmModal, Modal } from "@/components/Modal";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/components/Toast";
+import { clientLogger } from "@/lib/client-logger";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -50,7 +51,7 @@ export default function SettingsPage() {
           }
         }
       } catch (error) {
-        console.error("Failed to fetch profile:", error);
+        clientLogger.error("Failed to fetch profile:", error);
       }
     };
     fetchProfile();
@@ -68,7 +69,7 @@ export default function SettingsPage() {
           }
         }
       } catch (error) {
-        console.error("Failed to fetch directed setting:", error);
+        clientLogger.error("Failed to fetch directed setting:", error);
       }
     };
     fetchDirectedSetting();
@@ -86,7 +87,7 @@ export default function SettingsPage() {
         setAllowDirectedConsult(value);
       }
     } catch (error) {
-      console.error("Failed to update directed setting:", error);
+      clientLogger.error("Failed to update directed setting:", error);
     } finally {
       setIsSavingDirected(false);
     }
@@ -101,7 +102,7 @@ export default function SettingsPage() {
           setBlockedUsers(data.blocks);
         }
       } catch (error) {
-        console.error("Failed to fetch blocked users:", error);
+        clientLogger.error("Failed to fetch blocked users:", error);
       } finally {
         setIsLoadingBlocks(false);
       }
@@ -126,7 +127,7 @@ export default function SettingsPage() {
         setPromptError(data.error || "保存に失敗しました");
       }
     } catch (error) {
-      console.error("Failed to save custom prompt:", error);
+      clientLogger.error("Failed to save custom prompt:", error);
       setPromptError("保存に失敗しました");
     } finally {
       setIsSavingPrompt(false);
@@ -143,7 +144,7 @@ export default function SettingsPage() {
         exportModalRef.current?.showModal();
       }
     } catch (error) {
-      console.error("Export error:", error);
+      clientLogger.error("Export error:", error);
     } finally {
       setIsExporting(false);
     }
@@ -158,7 +159,7 @@ export default function SettingsPage() {
         successModalRef.current?.showModal();
       }
     } catch (error) {
-      console.error("Delete error:", error);
+      clientLogger.error("Delete error:", error);
     } finally {
       setIsDeleting(false);
     }
@@ -173,7 +174,7 @@ export default function SettingsPage() {
         setBlockedUsers(blockedUsers.filter((b) => b.blockedUser?.id !== userId));
       }
     } catch (error) {
-      console.error("Failed to unblock user:", error);
+      clientLogger.error("Failed to unblock user:", error);
     }
   };
 
@@ -192,7 +193,7 @@ export default function SettingsPage() {
         toast.error(data.error || "削除に失敗しました");
       }
     } catch (error) {
-      console.error("Delete sessions error:", error);
+      clientLogger.error("Delete sessions error:", error);
       toast.error("削除に失敗しました");
     } finally {
       setIsDeletingSessions(false);

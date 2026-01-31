@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { ConsultationCard } from "./ConsultationCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
+import { clientLogger } from "@/lib/client-logger";
 
 export function ExploreFeed() {
   const [currentUserHandle, setCurrentUserHandle] = useState<string>();
@@ -43,7 +44,7 @@ export function ExploreFeed() {
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
     } catch (err) {
-      console.error("Error fetching explore:", err);
+      clientLogger.error("Error fetching explore:", err);
       setError("探すの読み込みに失敗しました");
     } finally {
       setLoading(false);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { clientLogger } from "@/lib/client-logger";
 
 interface BookmarkItem {
   id: string;
@@ -45,7 +46,7 @@ export function BookmarkList({ onSessionClick }: Props) {
         setBookmarks(data.bookmarks);
       }
     } catch (error) {
-      console.error("Failed to fetch bookmarks:", error);
+      clientLogger.error("Failed to fetch bookmarks:", error);
     } finally {
       setLoading(false);
     }

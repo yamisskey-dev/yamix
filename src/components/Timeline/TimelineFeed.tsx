@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { ConsultationCard } from "./ConsultationCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
+import { clientLogger } from "@/lib/client-logger";
 
 export function TimelineFeed() {
   const [currentUserHandle, setCurrentUserHandle] = useState<string>();
@@ -43,7 +44,7 @@ export function TimelineFeed() {
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
     } catch (err) {
-      console.error("Error fetching timeline:", err);
+      clientLogger.error("Error fetching timeline:", err);
       setError("タイムラインの読み込みに失敗しました");
     } finally {
       setLoading(false);

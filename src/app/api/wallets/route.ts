@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 import { processDailyEconomy, getEquilibriumBalance } from "@/lib/economy";
 import { logger } from "@/lib/logger";
 
 // GET /api/wallets - Get current user's wallet (single wallet per user)
 // 日次経済処理（BI付与・減衰）を自動実行
 export async function GET(req: NextRequest) {
-  const token = getTokenFromCookie(req.headers.get("cookie"));
-
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const payload = await verifyJWT(token);
-  if (!payload) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-  }
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+  const { payload } = auth;
 
   try {
     // まずウォレットを取得
@@ -69,9 +62,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     logger.error("Get wallet error:", {}, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }

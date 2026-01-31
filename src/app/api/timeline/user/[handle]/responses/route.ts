@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import { verifyJWT, getTokenFromCookie } from "@/lib/jwt";
+import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { decryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
@@ -21,14 +21,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
   try {
     // Check if the viewer is authenticated and viewing their own profile
-    const token = getTokenFromCookie(req.headers.get("cookie"));
-    let currentUserId: string | null = null;
-    if (token) {
-      const payload = await verifyJWT(token);
-      if (payload) {
-        currentUserId = payload.userId;
-      }
-    }
+    const payload = await optionalAuth(req);
+    const currentUserId = payload?.userId ?? null;
 
     // Find user by handle
     const user = await prisma.user.findUnique({
@@ -128,9 +122,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     logger.error("Get user responses error", { handle: decodedHandle }, error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ErrorResponses.internalError();
   }
 }
