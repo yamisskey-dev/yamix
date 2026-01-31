@@ -263,13 +263,18 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Fetch session data
   useEffect(() => {
-    const fetchSession = async () => {
+    const fetchSession = async (retryCount = 0) => {
       try {
         const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
         setCurrentUser(currentUserData);
 
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
         if (!res.ok) {
+          if (res.status === 404 && retryCount < 3) {
+            // Session not found - might be DB transaction lag, retry after 100ms
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return fetchSession(retryCount + 1);
+          }
           if (res.status === 404) {
             router.replace("/main");
             return;
