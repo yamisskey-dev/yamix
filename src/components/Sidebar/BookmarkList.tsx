@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { useBookmarks } from "@/contexts/BookmarkContext";
 import { clientLogger } from "@/lib/client-logger";
 
 interface BookmarkItem {
@@ -32,25 +33,25 @@ interface Props {
 export function BookmarkList({ onSessionClick }: Props) {
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { revision } = useBookmarks();
 
   useEffect(() => {
-    fetchBookmarks();
-  }, []);
-
-  const fetchBookmarks = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/bookmarks?limit=10");
-      if (res.ok) {
-        const data = await res.json();
-        setBookmarks(data.bookmarks);
+    const fetchBookmarks = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/bookmarks?limit=10");
+        if (res.ok) {
+          const data = await res.json();
+          setBookmarks(data.bookmarks);
+        }
+      } catch (error) {
+        clientLogger.error("Failed to fetch bookmarks:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      clientLogger.error("Failed to fetch bookmarks:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    fetchBookmarks();
+  }, [revision]);
 
   if (loading) {
     return (

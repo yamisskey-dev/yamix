@@ -2,52 +2,25 @@
 
 import { useState } from "react";
 import { LoadingSpinner } from "./LoadingSpinner";
-import { clientLogger } from "@/lib/client-logger";
+import { useBookmarks } from "@/contexts/BookmarkContext";
 
 interface BookmarkButtonProps {
   sessionId: string;
-  initialBookmarked?: boolean;
   className?: string;
 }
 
 export function BookmarkButton({
   sessionId,
-  initialBookmarked = false,
   className = "",
 }: BookmarkButtonProps) {
-  const [isBookmarked, setIsBookmarked] = useState(initialBookmarked);
+  const { bookmarkedIds, toggle } = useBookmarks();
+  const isBookmarked = bookmarkedIds.has(sessionId);
   const [loading, setLoading] = useState(false);
 
-  const toggleBookmark = async () => {
+  const handleToggle = async () => {
     setLoading(true);
     try {
-      if (isBookmarked) {
-        // ブックマークを削除
-        const res = await fetch(`/api/bookmarks?sessionId=${sessionId}`, {
-          method: "DELETE",
-        });
-
-        if (res.ok) {
-          setIsBookmarked(false);
-        } else {
-          clientLogger.error("Failed to remove bookmark");
-        }
-      } else {
-        // ブックマークを追加
-        const res = await fetch("/api/bookmarks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        });
-
-        if (res.ok) {
-          setIsBookmarked(true);
-        } else {
-          clientLogger.error("Failed to add bookmark");
-        }
-      }
-    } catch (error) {
-      clientLogger.error("Bookmark error:", error);
+      await toggle(sessionId);
     } finally {
       setLoading(false);
     }
@@ -55,7 +28,7 @@ export function BookmarkButton({
 
   return (
     <button
-      onClick={toggleBookmark}
+      onClick={handleToggle}
       disabled={loading}
       className={`btn btn-ghost btn-sm ${className}`}
       title={isBookmarked ? "ブックマークを解除" : "ブックマークに追加"}

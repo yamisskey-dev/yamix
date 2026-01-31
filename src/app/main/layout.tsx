@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { MobileDrawer, MobileBottomNav } from "@/components/MobileDrawer";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { UserContext } from "@/contexts/UserContext";
+import { BookmarkProvider } from "@/contexts/BookmarkContext";
 import { authApi } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
 import { clientLogger } from "@/lib/client-logger";
@@ -83,6 +84,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   return (
     <UserContext.Provider value={{ user, loading, refetch: fetchUser }}>
+    <BookmarkProvider>
       {/* Skip link for keyboard users */}
       <a href="#main-content" className="skip-link">
         メインコンテンツにスキップ
@@ -122,6 +124,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           </nav>
         </MobileDrawer>
       </div>
+    </BookmarkProvider>
     </UserContext.Provider>
   );
 }

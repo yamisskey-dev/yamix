@@ -59,7 +59,7 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
   return (
     <article
       onClick={() => router.push(`/main/chat/${consultation.sessionId}`)}
-      className="w-[85vw] sm:w-auto sm:aspect-[9/19] h-full flex-shrink-0 snap-center cursor-pointer group"
+      className="w-[calc(100vw-2rem)] sm:w-auto sm:aspect-[9/19] h-full flex-shrink-0 snap-center cursor-pointer group"
     >
       <div className="bg-base-300/80 rounded-[20px] border border-base-content/10 overflow-hidden shadow-lg group-hover:shadow-xl group-hover:border-base-content/15 transition-all duration-200 h-full flex flex-col">
         {/* Status bar */}
