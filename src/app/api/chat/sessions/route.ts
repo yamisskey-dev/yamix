@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    const [ownedSessions, directedTargets] = await Promise.all([
+    const [ownedSessions, directedTargets, bookmarkedSessions] = await Promise.all([
       prisma.chatSession.findMany({
         where: { userId: payload.userId },
         orderBy: { updatedAt: "desc" },
@@ -61,6 +61,15 @@ export async function GET(req: NextRequest) {
       }),
       // Sessions where current user is a target
       prisma.chatSessionTarget.findMany({
+        where: { userId: payload.userId },
+        select: {
+          session: {
+            select: sessionSelect,
+          },
+        },
+      }),
+      // Bookmarked sessions (including public sessions from others)
+      prisma.bookmark.findMany({
         where: { userId: payload.userId },
         select: {
           session: {
@@ -83,7 +92,12 @@ export async function GET(req: NextRequest) {
         return true;
       });
 
-    const allSessions = [...ownedSessions, ...directedSessions]
+    // Add bookmarked sessions (excluding duplicates)
+    const bookmarkedSessionList = bookmarkedSessions
+      .map((b) => b.session)
+      .filter((s) => !ownedIds.has(s.id) && !directedSessionIds.has(s.id));
+
+    const allSessions = [...ownedSessions, ...directedSessions, ...bookmarkedSessionList]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     // Apply cursor-based pagination on merged result
