@@ -144,20 +144,13 @@ export default function NewChatPage() {
         return createRes.json();
       })
       .then((session) => {
-        console.log('[DEBUG] Session created:', session.id);
-        alert('[DEBUG] Session created: ' + session.id);
-
         // Store initial message in sessionStorage for the chat page to pick up
         sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
-        console.log('[DEBUG] Message stored in sessionStorage');
 
         // Navigate immediately while still in user interaction context
-        console.log('[DEBUG] Navigating to:', `/main/chat/${session.id}`);
-        alert('[DEBUG] About to navigate with location.replace');
         location.replace(`/main/chat/${session.id}`);
       })
       .catch((err) => {
-        console.error('[DEBUG] Error:', err);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
         submittingRef.current = false;
