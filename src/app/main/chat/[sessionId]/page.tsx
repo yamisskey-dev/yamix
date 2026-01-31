@@ -265,22 +265,28 @@ export default function ChatSessionPage({ params }: PageProps) {
   useEffect(() => {
     const fetchSession = async (retryCount = 0) => {
       try {
+        console.log('[DEBUG] Fetching session, attempt:', retryCount + 1);
         const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
         setCurrentUser(currentUserData);
 
         const res = await fetch(`/api/chat/sessions/${sessionId}`);
+        console.log('[DEBUG] Session fetch response:', res.status, res.statusText);
         if (!res.ok) {
           if (res.status === 404 && retryCount < 3) {
             // Session not found - might be DB transaction lag, retry after 100ms
+            console.log('[DEBUG] Session not found, retrying...');
             await new Promise(resolve => setTimeout(resolve, 100));
             return fetchSession(retryCount + 1);
           }
           if (res.status === 404) {
+            console.log('[DEBUG] Session not found after retries, redirecting to /main');
             router.replace("/main");
             return;
           }
+          console.error('[DEBUG] Session fetch failed:', res.status, res.statusText);
           throw new Error("Failed to fetch session");
         }
+        console.log('[DEBUG] Session fetched successfully');
 
         const session: ChatSessionWithMessages = await res.json();
         const isOwner = currentUserData ? session.userId === currentUserData.id : false;
