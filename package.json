@@ -31,6 +31,7 @@
     "test:unit:coverage": "vitest run --coverage",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
+    "generate:yamii-types": "npx tsx scripts/generate-yamii-types.ts",
     "test:report": "playwright show-report",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

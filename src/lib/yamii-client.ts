@@ -1,8 +1,9 @@
 import type {
-  YamiiCounselingRequest,
-  YamiiCounselingResponse,
+  CounselingRequest,
+  CounselingResponse,
   ConversationMessage,
-} from "@/types";
+  HealthResponse,
+} from "@/types/yamii-api.generated";
 
 const YAMII_API_URL = process.env.YAMII_API_URL || "http://localhost:8000";
 const YAMII_API_KEY = process.env.YAMII_API_KEY || "";
@@ -50,8 +51,8 @@ export class YamiiClient {
       sessionId?: string;
       conversationHistory?: ConversationMessage[];
     }
-  ): Promise<YamiiCounselingResponse> {
-    const body: YamiiCounselingRequest = {
+  ): Promise<CounselingResponse> {
+    const body: CounselingRequest = {
       message,
       user_id: userId,
       user_name: options?.userName,
@@ -59,7 +60,7 @@ export class YamiiClient {
       conversation_history: options?.conversationHistory,
     };
 
-    return this.request<YamiiCounselingResponse>("/v1/counseling", {
+    return this.request<CounselingResponse>("/v1/counseling", {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -74,7 +75,7 @@ export class YamiiClient {
       conversationHistory?: ConversationMessage[];
     }
   ): Promise<Response> {
-    const body: YamiiCounselingRequest = {
+    const body: CounselingRequest = {
       message,
       user_id: userId,
       user_name: options?.userName,
@@ -119,8 +120,8 @@ export class YamiiClient {
     }
   }
 
-  async healthCheck(): Promise<{ status: string; version: string }> {
-    return this.request<{ status: string; version: string }>("/v1/health");
+  async healthCheck(): Promise<HealthResponse> {
+    return this.request<HealthResponse>("/v1/health");
   }
 
   async getUserProfile(userId: string): Promise<{

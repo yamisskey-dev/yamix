@@ -231,40 +231,21 @@ export interface PaginatedPostsResponse {
 }
 
 // ============================================
-// Yamii API types
-export interface YamiiCounselingRequest {
-  message: string;
-  user_id: string;
-  user_name?: string;
-  session_id?: string;
-  conversation_history?: ConversationMessage[];
-}
+// Yamii API types (generated from OpenAPI schema)
+// Regenerate with: pnpm generate:yamii-types
+// ============================================
+import type {
+  CounselingRequest,
+  CounselingResponse,
+  EmotionAnalysisResponse,
+} from "./yamii-api.generated";
 
-export interface ConversationMessage {
-  role: "user" | "assistant";
-  content: string;
-}
+export type { ConversationMessage } from "./yamii-api.generated";
+export type YamiiCounselingRequest = CounselingRequest;
+export type YamiiCounselingResponse = CounselingResponse;
+export type EmotionAnalysis = EmotionAnalysisResponse;
 
-export interface YamiiCounselingResponse {
-  response: string;
-  session_id: string;
-  timestamp: string;
-  emotion_analysis: EmotionAnalysis;
-  advice_type: AdviceType;
-  follow_up_questions: string[];
-  is_crisis: boolean;
-  crisis_resources?: CrisisResource[];
-}
-
-export interface EmotionAnalysis {
-  primary_emotion: EmotionType;
-  intensity: number; // 0.0 - 1.0
-  stability: number;
-  is_crisis: boolean;
-  all_emotions: Record<string, number>;
-  confidence: number;
-}
-
+// Yamix-specific refinements (stricter than Yamii's generic string types)
 export type EmotionType =
   | "happiness"
   | "sadness"
