@@ -303,21 +303,22 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
   const initialMessageSentRef = useRef<boolean>(false);
-  // Ref to track if session has been fetched (prevent double execution in Strict Mode)
-  const sessionFetchedRef = useRef<boolean>(false);
 
   // Fetch session data
   useEffect(() => {
     console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
 
-    // Prevent double execution in React Strict Mode
-    if (sessionFetchedRef.current) {
-      console.log('[CHAT DEBUG] Session already fetched, skipping');
+    // Prevent double execution in React Strict Mode using sessionStorage
+    const fetchKey = `yamix_session_fetched_${sessionId}`;
+    if (typeof window !== 'undefined' && sessionStorage.getItem(fetchKey)) {
+      console.log('[CHAT DEBUG] Session already fetched (from sessionStorage), skipping');
       return;
     }
 
     // Mark as fetching immediately to prevent double execution
-    sessionFetchedRef.current = true;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(fetchKey, 'true');
+    }
 
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
@@ -407,6 +408,11 @@ export default function ChatSessionPage({ params }: PageProps) {
     return () => {
       console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
+
+      // Clear the fetch flag for this session when component unmounts or sessionId changes
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem(fetchKey);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
