@@ -140,6 +140,30 @@ async function handleSSEResponse(
     const streamingMsgId = crypto.randomUUID();
     let streamStarted = false;
     let chunkCount = 0;
+    let contentBuffer = "";
+    let rafId: number | null = null;
+
+    // Batch chunk updates using requestAnimationFrame
+    const flushContentBuffer = () => {
+      if (contentBuffer.length > 0) {
+        const bufferedContent = contentBuffer;
+        contentBuffer = "";
+        callbacks.setMessages((prev) =>
+          prev.map((m) =>
+            m.id === streamingMsgId
+              ? { ...m, content: m.content + bufferedContent }
+              : m
+          )
+        );
+      }
+      rafId = null;
+    };
+
+    const scheduleUpdate = () => {
+      if (rafId === null) {
+        rafId = requestAnimationFrame(flushContentBuffer);
+      }
+    };
 
     try {
       console.log('[SSE DEBUG] Starting SSE stream processing');
@@ -172,17 +196,21 @@ async function handleSSEResponse(
               timestamp: new Date(),
             }]);
           } else {
-            callbacks.setMessages((prev) =>
-              prev.map((m) =>
-                m.id === streamingMsgId
-                  ? { ...m, content: m.content + chunk }
-                  : m
-              )
-            );
+            // Buffer the chunk and schedule an update
+            contentBuffer += chunk;
+            scheduleUpdate();
           }
         },
         onDone(event) {
           console.log('[SSE DEBUG] onDone called, total chunks:', chunkCount, 'event:', event);
+
+          // Cancel any pending RAF and flush remaining buffer
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          flushContentBuffer();
+
           const realMsgId = event.assistantMessageId || streamingMsgId;
           callbacks.setMessages((prev) =>
             prev.map((m) =>
@@ -199,12 +227,22 @@ async function handleSSEResponse(
         },
         onError(error) {
           console.error('[SSE DEBUG] onError called, error:', error);
+          // Clean up RAF on error
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
           throw new Error(error);
         },
       });
       console.log('[SSE DEBUG] SSE stream processing completed');
     } finally {
       console.log('[SSE DEBUG] Finally block, setting isLoading to false');
+      // Clean up RAF in finally block
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        flushContentBuffer();
+      }
       callbacks.setIsLoading(false);
     }
   } else {
