@@ -1,4 +1,4 @@
-"use client";
+import { yamiiClient } from "@/lib/yamii-client";
 
 // Misskey風のFormLinkコンポーネント
 function FormLink({
@@ -70,7 +70,18 @@ function MkKeyValue({
   );
 }
 
-export default function AboutPage() {
+async function getYamiiVersion(): Promise<string> {
+  try {
+    const health = await yamiiClient.healthCheck();
+    return health.version;
+  } catch {
+    return "取得失敗";
+  }
+}
+
+export default async function AboutPage() {
+  const yamixVersion = process.env.NEXT_PUBLIC_YAMIX_VERSION || "unknown";
+  const yamiiVersion = await getYamiiVersion();
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
       <div className="max-w-xl mx-auto space-y-4 my-8">
@@ -173,8 +184,8 @@ export default function AboutPage() {
         {/* バージョン情報 */}
         <FormSection label="バージョン情報">
           <div className="grid grid-cols-2 gap-4">
-            <MkKeyValue label="Yamix (Frontend)">v1.0.0</MkKeyValue>
-            <MkKeyValue label="Yamii (Backend)">v1.0.0</MkKeyValue>
+            <MkKeyValue label="Yamix (Frontend)">v{yamixVersion}</MkKeyValue>
+            <MkKeyValue label="Yamii (Backend)">v{yamiiVersion}</MkKeyValue>
           </div>
         </FormSection>
 
