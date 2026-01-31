@@ -46,7 +46,7 @@ services:
       - internal_network
       - external_network
     volumes:
-      - ./data/yamii:/app/data
+      - yamii_data:/app/data
       - ./yamii/config/YAMII.md:/app/config/YAMII.md:ro
     restart: unless-stopped
     healthcheck:
@@ -91,6 +91,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+volumes:
+  yamii_data:
+    driver: local
 
 networks:
   internal_network:

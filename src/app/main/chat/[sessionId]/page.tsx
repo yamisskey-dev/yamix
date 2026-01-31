@@ -227,6 +227,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const toast = useToast();
   const initialMessageRef = useRef<string | null>(null);
   const [initialMessageSent, setInitialMessageSent] = useState(false);
+  const sendingInitialMessageRef = useRef<boolean>(false);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -326,10 +327,21 @@ export default function ChatSessionPage({ params }: PageProps) {
   // Auto-send initial message
   useEffect(() => {
     const initialMessage = searchParams.get("initialMessage");
-    if (!initialMessage || initialMessageRef.current || initialMessageSent || !sessionInfo || isFetching || isLoading) return;
 
-    // 二重送信を防ぐため、refとstateの両方でガード
+    // 多重ガード: ref、state、送信中フラグの3重チェック
+    if (!initialMessage ||
+        initialMessageRef.current ||
+        initialMessageSent ||
+        sendingInitialMessageRef.current ||
+        !sessionInfo ||
+        isFetching ||
+        isLoading) {
+      return;
+    }
+
+    // 即座に全てのガードを設定（同期的に実行される）
     initialMessageRef.current = initialMessage;
+    sendingInitialMessageRef.current = true;
     setInitialMessageSent(true);
 
     const content = decodeURIComponent(initialMessage);
@@ -364,7 +376,10 @@ export default function ChatSessionPage({ params }: PageProps) {
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
-        // エラー時はフラグをリセットしない（無限ループ防止）
+        // エラー時もsendingフラグはリセットしない（無限ループ防止）
+      } finally {
+        // 送信完了後もフラグは維持（二重送信防止）
+        sendingInitialMessageRef.current = true;
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
