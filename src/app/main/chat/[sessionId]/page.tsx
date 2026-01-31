@@ -303,22 +303,22 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
   const initialMessageSentRef = useRef<boolean>(false);
+  // Ref to track if session has been fetched (prevent double execution in Strict Mode)
+  const sessionFetchedRef = useRef<boolean>(false);
 
   // Fetch session data
   useEffect(() => {
     console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
 
-    // Prevent double execution in React Strict Mode using sessionStorage
-    const fetchKey = `yamix_session_fetched_${sessionId}`;
-    if (typeof window !== 'undefined' && sessionStorage.getItem(fetchKey)) {
-      console.log('[CHAT DEBUG] Session already fetched (from sessionStorage), skipping');
+    // Prevent double execution in React Strict Mode
+    // Note: This only affects development mode with Strict Mode enabled
+    if (sessionFetchedRef.current) {
+      console.log('[CHAT DEBUG] Session already fetched (from ref), skipping');
       return;
     }
 
     // Mark as fetching immediately to prevent double execution
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem(fetchKey, 'true');
-    }
+    sessionFetchedRef.current = true;
 
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
@@ -408,11 +408,6 @@ export default function ChatSessionPage({ params }: PageProps) {
     return () => {
       console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
-
-      // Clear the fetch flag for this session when component unmounts or sessionId changes
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem(fetchKey);
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
@@ -923,20 +918,28 @@ export default function ChatSessionPage({ params }: PageProps) {
             </div>
           )}
 
-          {messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-              timestamp={msg.timestamp}
-              responder={msg.responder || undefined}
-              isSessionOwner={sessionInfo?.isOwner}
-              onBlock={openBlockModal}
-              messageId={msg.id}
-              gasAmount={msg.gasAmount}
-              onSendGas={handleSendGas}
-            />
-          ))}
+          {messages.map((msg, index) => {
+            console.log(`[CHAT DEBUG] Rendering message ${index + 1}/${messages.length}:`, {
+              id: msg.id,
+              role: msg.role,
+              contentLength: msg.content?.length || 0,
+              contentPreview: msg.content?.substring(0, 50) || '(empty)',
+            });
+            return (
+              <ChatBubble
+                key={msg.id}
+                role={msg.role}
+                content={msg.content}
+                timestamp={msg.timestamp}
+                responder={msg.responder || undefined}
+                isSessionOwner={sessionInfo?.isOwner}
+                onBlock={openBlockModal}
+                messageId={msg.id}
+                gasAmount={msg.gasAmount}
+                onSendGas={handleSendGas}
+              />
+            );
+          })}
 
           {isLoading && <ChatBubble role="assistant" content="" isLoading />}
 
