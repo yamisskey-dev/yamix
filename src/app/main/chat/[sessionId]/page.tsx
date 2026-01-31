@@ -353,6 +353,10 @@ export default function ChatSessionPage({ params }: PageProps) {
     initialMessageRef.current = initialMessage;
     sendingInitialMessageRef.current = true;
     setInitialMessageSent(true);
+
+    // React Strict Mode対策: 即座にURLパラメータを削除して二重実行を防止
+    window.history.replaceState({}, "", `/main/chat/${sessionId}`);
+
     console.log('[DEBUG] Sending initial message:', decodeURIComponent(initialMessage));
 
     const content = decodeURIComponent(initialMessage);
@@ -392,11 +396,6 @@ export default function ChatSessionPage({ params }: PageProps) {
 
         console.log('[DEBUG] Initial message sent successfully');
         await handleSSEResponse(res, userMessage.id, sseCallbacks);
-
-        if (!cancelled) {
-          // メッセージ送信成功後にURL書き換え
-          window.history.replaceState({}, "", `/main/chat/${sessionId}`);
-        }
       } catch (err) {
         if (!cancelled) {
           console.log('[DEBUG] Initial message send error:', err);
