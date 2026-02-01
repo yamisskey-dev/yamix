@@ -389,25 +389,10 @@ export default function ChatSessionPage({ params }: PageProps) {
       import('@/lib/sync-session').then(({ syncSessionToServer }) => {
         syncSessionToServer({
           localId: localSession.id,
-          onSuccess: async (serverId) => {
+          onSuccess: (serverId) => {
             console.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
-
-            // Send initial message to server if we have one
-            if (localSession.messages.length > 0) {
-              const initialMessage = localSession.messages[0];
-              console.log('[LOCAL SESSION] Sending initial message to server');
-
-              try {
-                await fetch(`/api/chat/sessions/${serverId}/messages`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ message: initialMessage.content }),
-                });
-              } catch (err) {
-                console.error('[LOCAL SESSION] Failed to send initial message:', err);
-              }
-            }
-
+            // Store the local session ID before navigation
+            sessionStorage.setItem(`pendingInitialMessage-${serverId}`, localSession.id);
             // Replace URL with server session ID (without adding to history)
             router.replace(`/main/chat/${serverId}`);
           },
@@ -474,6 +459,72 @@ export default function ChatSessionPage({ params }: PageProps) {
       );
     });
   }, [sessionData, currentUser, isLoading]);
+
+  // Send pending initial message after sync completes
+  const pendingMessageSentRef = useRef(false);
+  useEffect(() => {
+    if (!sessionInfo || !sessionData || pendingMessageSentRef.current || isLoading) return;
+
+    // Check if there's a pending initial message for this session
+    const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
+    if (!pendingLocalId) return;
+
+    // Only proceed if session has no messages yet
+    if (sessionData.messages.length > 0) {
+      sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
+      return;
+    }
+
+    // Get the local session to retrieve the initial message
+    const localSession = localSessionStore.get(pendingLocalId);
+    if (!localSession || localSession.messages.length === 0) {
+      sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
+      return;
+    }
+
+    const initialMessage = localSession.messages[0];
+    console.log('[CHAT DEBUG] Auto-sending pending initial message');
+
+    // Mark as sent
+    pendingMessageSentRef.current = true;
+    sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
+
+    // Create optimistic user message
+    const userMessage: LocalMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: initialMessage.content,
+      timestamp: new Date(),
+    };
+
+    setMessages([userMessage]);
+    setIsLoading(true);
+
+    // Send message and handle SSE response
+    fetch(`/api/chat/sessions/${sessionId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: initialMessage.content }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Failed to send initial message");
+        }
+
+        await handleSSEResponse(res, userMessage.id, {
+          setMessages,
+          setIsLoading,
+          setSessionInfo,
+          setShowCrisisAlert,
+          showToast: toast.showToast,
+        });
+      })
+      .catch((err) => {
+        console.error('[CHAT DEBUG] Initial message send failed:', err);
+        setIsLoading(false);
+        setError(err instanceof Error ? err.message : "エラーが発生しました");
+      });
+  }, [sessionInfo, sessionData, sessionId, isLoading, toast]);
 
   // Auto-scroll
   useEffect(() => {
