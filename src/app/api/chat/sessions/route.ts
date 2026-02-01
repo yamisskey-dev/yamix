@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { createChatSessionSchema, validateBody, parseLimit } from "@/lib/validation";
-import { decryptMessage } from "@/lib/encryption";
+import { decryptMessage, encryptMessage } from "@/lib/encryption";
 import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 
 // Prismaのセッション取得結果の型
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const { consultType, isAnonymous, allowAnonymousResponses, category, targetUserHandles } = validation.data;
+    const { consultType, isAnonymous, allowAnonymousResponses, category, targetUserHandles, initialMessage } = validation.data;
 
     // DIRECTED: 指名先ユーザーを検索
     let targetUserIds: string[] = [];
@@ -253,29 +253,47 @@ export async function POST(req: NextRequest) {
 
     }
 
-    const session = await prisma.chatSession.create({
-      data: {
-        userId: payload.userId,
-        consultType,
-        isAnonymous,
-        allowAnonymousResponses,
-        category,
-        ...(consultType === "DIRECTED" && targetUserIds.length > 0 && {
-          targets: {
-            create: targetUserIds.map((uid) => ({ userId: uid })),
+    // Create session (with initial message if provided)
+    const session = await prisma.$transaction(async (tx) => {
+      const newSession = await tx.chatSession.create({
+        data: {
+          userId: payload.userId,
+          consultType,
+          isAnonymous,
+          allowAnonymousResponses,
+          category,
+          ...(consultType === "DIRECTED" && targetUserIds.length > 0 && {
+            targets: {
+              create: targetUserIds.map((uid) => ({ userId: uid })),
+            },
+          }),
+        },
+        select: {
+          id: true,
+          title: true,
+          consultType: true,
+          isAnonymous: true,
+          category: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { targets: true } },
+        },
+      });
+
+      // If initialMessage provided, create it
+      if (initialMessage) {
+        const encryptedContent = encryptMessage(initialMessage, payload.userId);
+        await tx.message.create({
+          data: {
+            sessionId: newSession.id,
+            role: "USER",
+            content: encryptedContent,
+            userId: payload.userId,
           },
-        }),
-      },
-      select: {
-        id: true,
-        title: true,
-        consultType: true,
-        isAnonymous: true,
-        category: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { targets: true } },
-      },
+        });
+      }
+
+      return newSession;
     });
 
     return NextResponse.json(

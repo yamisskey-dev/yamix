@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
+import { localSessionStore, type OptimisticSession } from "@/lib/local-session-store";
 
 // 動的インポートで初期ロードを高速化
 const BookmarkButton = lazy(() => import("@/components/BookmarkButton").then(mod => ({ default: mod.BookmarkButton })));
@@ -289,9 +290,13 @@ export default function ChatSessionPage({ params }: PageProps) {
   const router = useRouter();
   const toast = useToastActions();
 
-  // SWR for session data fetching
+  // Check if this is a local session (local-first approach)
+  const isLocalSession = sessionId.startsWith('local-');
+  const localSession = isLocalSession ? localSessionStore.get(sessionId) : null;
+
+  // SWR for session data fetching (skip for local sessions)
   const { data: sessionData, error: sessionError, isLoading: isFetching } = useSWR<ChatSessionWithMessages>(
-    `/api/chat/sessions/${sessionId}`,
+    isLocalSession ? null : `/api/chat/sessions/${sessionId}`,
     fetcher,
     {
       dedupingInterval: 2000, // Prevent duplicate requests within 2 seconds
@@ -344,8 +349,60 @@ export default function ChatSessionPage({ params }: PageProps) {
   const pollFailCountRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
-  const initialMessageSentRef = useRef<boolean>(false);
+  // Handle local session (local-first approach)
+  useEffect(() => {
+    if (!isLocalSession || !localSession || !currentUser) return;
+
+    console.log('[LOCAL SESSION] Detected local session:', localSession.id);
+
+    // Set session info from local data
+    setSessionInfo({
+      consultType: localSession.consultType as "PRIVATE" | "PUBLIC" | "DIRECTED",
+      userId: currentUser.id,
+      isOwner: true,
+      isAnonymous: localSession.isAnonymous,
+      currentUserId: currentUser.id,
+      title: null,
+      responseCount: 0,
+    });
+
+    // Display local messages immediately (instant UX)
+    const localMessages: LocalMessage[] = localSession.messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      timestamp: m.timestamp,
+      responder: m.role === 'user' ? {
+        displayName: currentUser.displayName,
+        avatarUrl: currentUser.avatarUrl,
+        handle: currentUser.handle,
+      } : null,
+    }));
+    setMessages(localMessages);
+
+    // Start background sync if not already synced
+    if (!localSession.synced && !localSession.syncing) {
+      console.log('[LOCAL SESSION] Starting background sync...');
+
+      import('@/lib/sync-session').then(({ syncSessionToServer }) => {
+        syncSessionToServer({
+          localId: localSession.id,
+          onSuccess: (serverId) => {
+            console.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
+            // Replace URL with server session ID (without adding to history)
+            router.replace(`/main/chat/${serverId}`);
+          },
+          onError: (error) => {
+            console.error('[LOCAL SESSION] Sync failed:', error);
+            toast.error('サーバーとの同期に失敗しました');
+          },
+        });
+      });
+    } else if (localSession.synced && localSession.serverId) {
+      // Already synced, redirect to server session
+      router.replace(`/main/chat/${localSession.serverId}`);
+    }
+  }, [isLocalSession, localSession, currentUser, router, toast]);
 
   // Process session data from SWR
   useEffect(() => {
@@ -398,75 +455,6 @@ export default function ChatSessionPage({ params }: PageProps) {
       );
     });
   }, [sessionData, currentUser, isLoading]);
-
-  // Auto-send message from sessionStorage
-  useEffect(() => {
-    console.log('[CHAT DEBUG] Auto-send effect triggered, sessionInfo:', !!sessionInfo, 'isFetching:', isFetching, 'isLoading:', isLoading);
-
-    // Prevent double execution in React Strict Mode
-    if (initialMessageSentRef.current) {
-      console.log('[CHAT DEBUG] Auto-send skipped: already sent');
-      return;
-    }
-
-    // Only proceed if session is loaded (not fetching and not loading)
-    if (isFetching || isLoading) {
-      console.log('[CHAT DEBUG] Auto-send skipped: not ready');
-      return;
-    }
-
-    // Check for pending message in sessionStorage
-    const pendingMessage = sessionStorage.getItem(`pendingMessage-${sessionId}`);
-    console.log('[CHAT DEBUG] Pending message from sessionStorage:', pendingMessage ? 'found' : 'not found');
-    if (!pendingMessage) {
-      return;
-    }
-
-    // Mark as sent and remove from sessionStorage
-    console.log('[CHAT DEBUG] Sending initial message:', pendingMessage.substring(0, 50) + '...');
-    initialMessageSentRef.current = true;
-    sessionStorage.removeItem(`pendingMessage-${sessionId}`);
-
-    const userMessage: LocalMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: pendingMessage,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-    setError(undefined);
-    window.dispatchEvent(new CustomEvent("newChatSessionCreated"));
-    console.log('[CHAT DEBUG] User message added to UI, starting API call...');
-
-    (async () => {
-      try {
-        const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: pendingMessage }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "メッセージの送信に失敗しました");
-        }
-
-        await handleSSEResponse(res, userMessage.id, {
-          setMessages,
-          setIsLoading,
-          setSessionInfo,
-          setShowCrisisAlert,
-          showToast: toast.showToast,
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
-        setIsLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, isFetching, isLoading]);
 
   // Auto-scroll
   useEffect(() => {

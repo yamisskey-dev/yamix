@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback, memo, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
+import { localSessionStore } from "@/lib/local-session-store";
 
 const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
 
@@ -120,45 +121,29 @@ export default function NewChatPage() {
 
     const messageContent = inputValue.trim();
     setInputValue("");
-    setIsLoading(true);
     setError(undefined);
 
-    // Create new session (don't await to keep in user interaction context)
-    fetch("/api/chat/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      // Create local session immediately (local-first approach)
+      const localSession = localSessionStore.create({
         consultType,
+        initialMessage: messageContent,
         isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
-        allowAnonymousResponses: consultType !== "PRIVATE" ? allowAnonymousResponses : true,
-        ...(consultType === "DIRECTED" && {
-          targetUserHandles: targetUsers.map((u) => u.handle),
-        }),
-      }),
-    })
-      .then(async (createRes) => {
-        if (!createRes.ok) {
-          const errorData = await createRes.json();
-          throw new Error(errorData.error || "セッションの作成に失敗しました");
-        }
-        return createRes.json();
-      })
-      .then((session) => {
-        console.log('[MAIN DEBUG] Session created successfully:', session.id);
-        // Store initial message in sessionStorage for the chat page to pick up
-        sessionStorage.setItem(`pendingMessage-${session.id}`, messageContent);
-        console.log('[MAIN DEBUG] Stored message in sessionStorage');
-
-        // Navigate immediately for better UX - chat page will handle retries if needed
-        console.log('[MAIN DEBUG] About to navigate to:', `/main/chat/${session.id}`);
-        router.push(`/main/chat/${session.id}`);
-        console.log('[MAIN DEBUG] router.push() called');
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
-        setIsLoading(false);
-        submittingRef.current = false;
+        targetUserIds: consultType === "DIRECTED" ? targetUsers.map((u) => u.handle) : undefined,
       });
+
+      console.log('[MAIN DEBUG] Local session created:', localSession.id);
+
+      // Navigate immediately for instant UX
+      router.push(`/main/chat/${localSession.id}`);
+
+      // Reset state
+      submittingRef.current = false;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "エラーが発生しました");
+      setIsLoading(false);
+      submittingRef.current = false;
+    }
   }, [inputValue, isLoading, consultType, isAnonymous, allowAnonymousResponses, targetUsers, router]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
