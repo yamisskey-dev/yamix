@@ -27,4 +27,19 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  // Background Sync for offline message queue
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/.*\/api\/chat\/sessions\/.*\/messages$/,
+      handler: "NetworkOnly",
+      options: {
+        backgroundSync: {
+          name: "message-queue",
+          options: {
+            maxRetentionTime: 24 * 60, // Retry for max of 24 Hours (in minutes)
+          },
+        },
+      },
+    },
+  ],
 })(nextConfig);

@@ -18,6 +18,8 @@ import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
 import { useToastActions } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
+import { messageQueue } from "@/lib/message-queue";
+import { indexedDB } from "@/lib/indexed-db";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -295,7 +297,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const localSession = isLocalSession ? localSessionStore.get(sessionId) : null;
 
   // SWR for session data fetching (skip for local sessions)
-  const { data: sessionData, error: sessionError, isLoading: isFetching } = useSWR<ChatSessionWithMessages>(
+  const { data: sessionData, error: sessionError, isLoading: isFetching, mutate: mutateSession } = useSWR<ChatSessionWithMessages>(
     isLocalSession ? null : `/api/chat/sessions/${sessionId}`,
     fetcher,
     {
@@ -614,6 +616,38 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
   }, [inputValue]);
 
+  // Online/Offline event handling for message queue
+  useEffect(() => {
+    const handleOnline = async () => {
+      clientLogger.info("Online - processing message queue");
+      toast.showToast("オンラインに復帰しました。未送信メッセージを送信中...", "info");
+
+      try {
+        await messageQueue.processQueue();
+
+        // Reload messages after queue is processed
+        if (!isLocalSession) {
+          mutateSession();
+        }
+      } catch (err) {
+        clientLogger.error("Failed to process queue:", err);
+      }
+    };
+
+    const handleOffline = () => {
+      clientLogger.info("Offline - messages will be queued");
+      toast.showToast("オフラインです。メッセージはキューに保存されます", "warning");
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [sessionId, isLocalSession]);
+
   const openBlockModal = (userId: string) => {
     setBlockTargetId(userId);
     blockModalRef.current?.showModal();
@@ -680,10 +714,25 @@ export default function ChatSessionPage({ params }: PageProps) {
         timestamp: new Date(),
       };
 
+      // Optimistic update: show immediately
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
       setIsLoading(true);
       setError(undefined);
+
+      // Persist to IndexedDB immediately
+      try {
+        await indexedDB.saveMessage({
+          id: userMessage.id,
+          role: userMessage.role,
+          content: userMessage.content,
+          timestamp: userMessage.timestamp,
+          sessionId: sessionId,
+          synced: false,
+        });
+      } catch (err) {
+        clientLogger.error("Failed to save message to IndexedDB:", err);
+      }
 
       try {
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
@@ -704,9 +753,35 @@ export default function ChatSessionPage({ params }: PageProps) {
           setShowCrisisAlert,
           showToast: toast.showToast,
         });
+
+        // Mark as synced in IndexedDB
+        await indexedDB.saveMessage({
+          id: userMessage.id,
+          role: userMessage.role,
+          content: userMessage.content,
+          timestamp: userMessage.timestamp,
+          sessionId: sessionId,
+          synced: true,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "エラーが発生しました");
         setIsLoading(false);
+
+        // Add to offline queue for retry
+        try {
+          await messageQueue.enqueue({
+            id: userMessage.id,
+            role: userMessage.role,
+            content: userMessage.content,
+            timestamp: userMessage.timestamp,
+            sessionId: sessionId,
+          });
+
+          // Show offline indicator
+          toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
+        } catch (queueErr) {
+          clientLogger.error("Failed to enqueue message:", queueErr);
+        }
       }
     } else if (canRespond) {
       const responseContent = inputValue.trim();
@@ -731,6 +806,21 @@ export default function ChatSessionPage({ params }: PageProps) {
       setInputValue("");
       setIsLoading(true);
       setError(undefined);
+
+      // Persist to IndexedDB immediately
+      try {
+        await indexedDB.saveMessage({
+          id: optimisticId,
+          role: "assistant",
+          content: responseContent,
+          timestamp: optimisticResponse.timestamp,
+          sessionId: sessionId,
+          synced: false,
+          responderId: currentUser?.id,
+        });
+      } catch (err) {
+        clientLogger.error("Failed to save response to IndexedDB:", err);
+      }
 
       try {
         const data = await api.post<{
@@ -766,6 +856,40 @@ export default function ChatSessionPage({ params }: PageProps) {
           };
           // Remove optimistic message and add real messages
           setMessages((prev) => [...prev.filter(m => !m.id.startsWith('optimistic-')), userMsg, aiMessage]);
+
+          // Update IndexedDB: remove optimistic, add synced messages
+          try {
+            const db = await indexedDB.init();
+            const tx = db.transaction('messages', 'readwrite');
+            const store = tx.objectStore('messages');
+
+            // Delete optimistic message
+            await new Promise<void>((resolve, reject) => {
+              const deleteReq = store.delete(optimisticId);
+              deleteReq.onsuccess = () => resolve();
+              deleteReq.onerror = () => reject(deleteReq.error);
+            });
+
+            // Save real messages as synced
+            await indexedDB.saveMessage({
+              id: userMsg.id,
+              role: userMsg.role,
+              content: userMsg.content,
+              timestamp: userMsg.timestamp,
+              sessionId: sessionId,
+              synced: true,
+            });
+            await indexedDB.saveMessage({
+              id: aiMessage.id,
+              role: aiMessage.role,
+              content: aiMessage.content,
+              timestamp: aiMessage.timestamp,
+              sessionId: sessionId,
+              synced: true,
+            });
+          } catch (err) {
+            clientLogger.error("Failed to update IndexedDB after AI response:", err);
+          }
         } else {
           const responseMessage: LocalMessage = {
             id: data.message.id,
@@ -776,14 +900,58 @@ export default function ChatSessionPage({ params }: PageProps) {
           // Remove optimistic message and add real message
           setMessages((prev) => [...prev.filter(m => !m.id.startsWith('optimistic-')), responseMessage]);
 
+          // Update IndexedDB: remove optimistic, add synced message
+          try {
+            const db = await indexedDB.init();
+            const tx = db.transaction('messages', 'readwrite');
+            const store = tx.objectStore('messages');
+
+            // Delete optimistic message
+            await new Promise<void>((resolve, reject) => {
+              const deleteReq = store.delete(optimisticId);
+              deleteReq.onsuccess = () => resolve();
+              deleteReq.onerror = () => reject(deleteReq.error);
+            });
+
+            // Save real message as synced
+            await indexedDB.saveMessage({
+              id: responseMessage.id,
+              role: responseMessage.role,
+              content: responseMessage.content,
+              timestamp: responseMessage.timestamp,
+              sessionId: sessionId,
+              synced: true,
+            });
+          } catch (err) {
+            clientLogger.error("Failed to update IndexedDB after response:", err);
+          }
+
           if (data.reward && data.reward > 0) {
             clientLogger.info(`+${data.reward} YAMI を獲得しました！`);
           }
         }
       } catch (err) {
-        // Remove optimistic message on error
-        setMessages((prev) => prev.filter(m => !m.id.startsWith('optimistic-')));
         setError(err instanceof Error ? err.message : "エラーが発生しました");
+
+        // Add to offline queue for retry (keep optimistic message visible)
+        try {
+          await messageQueue.enqueue({
+            id: optimisticId,
+            role: "assistant",
+            content: responseContent,
+            timestamp: optimisticResponse.timestamp,
+            sessionId: sessionId,
+            responderId: currentUser?.id,
+            isAnonymous: isAnonymousResponse,
+          });
+
+          // Show offline indicator
+          toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
+        } catch (queueErr) {
+          // If queueing also fails, remove the optimistic message
+          setMessages((prev) => prev.filter(m => !m.id.startsWith('optimistic-')));
+          clientLogger.error("Failed to enqueue response:", queueErr);
+        }
       } finally {
         setIsLoading(false);
       }
