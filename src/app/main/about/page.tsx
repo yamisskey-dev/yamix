@@ -83,84 +83,29 @@ export default async function AboutPage() {
   const yamixVersion = process.env.NEXT_PUBLIC_YAMIX_VERSION || "unknown";
   const yamiiVersion = await getYamiiVersion();
   return (
-    <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto flex flex-col justify-center">
+    <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto">
       <div className="max-w-xl mx-auto space-y-4 my-8">
-        {/* バナー */}
-        <div
-          className="relative rounded-xl overflow-hidden h-36 bg-cover bg-center bg-base-200"
-          style={{
-            backgroundImage:
-              "url(https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yami.ski/yami-banner.gif)",
-          }}
-        >
-          <div className="absolute inset-0 bottom-10 flex flex-col items-center justify-center">
-            <img
-              src="/app-icon.png"
-              alt="Yamix"
-              width={64}
-              height={64}
-              className="rounded-lg"
-            />
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent">
-            <span className="text-sm font-bold text-white drop-shadow-md">
-              やみっくす
-            </span>
-          </div>
-        </div>
-
-        {/* 世界観と理念 */}
-        <FormSection label="世界観と理念">
-          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
+        {/* Yamixについて */}
+        <FormSection label="Yamixについて">
+          <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
             <p>
-              Yamixは、<strong className="text-base-content/90">健全な相談関係</strong>を築くためのプラットフォームです。
+              AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>健全な相談プラットフォームです。
             </p>
-            <p>
-              AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>コミュニティを目指しています。
-            </p>
-          </div>
-        </FormSection>
-
-        {/* YAMIトークン経済 */}
-        <FormSection label="YAMIトークン経済">
-          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
-            <ul className="ml-4 space-y-1.5 list-disc list-outside">
-              <li>
-                <strong>相談にはYAMIを消費</strong> - 限りある資源として大切に使う仕組み
-              </li>
-              <li>
-                <strong>回答で報酬を獲得</strong> - 助け合いが正当に評価される設計
-              </li>
-              <li>
-                <strong>💜で感謝を伝える</strong> - 良い回答には💜を送って応援
-              </li>
-              <li>
-                <strong>毎日のYAMI支給</strong> - 誰でも参加できるベーシックインカム
-              </li>
+            <ul className="text-base-content/60 space-y-1 ml-4 list-disc">
+              <li>相談にはYAMIトークンを消費、回答で報酬を獲得</li>
+              <li>毎日YAMIが支給され、誰でも参加できます</li>
             </ul>
           </div>
         </FormSection>
 
-        {/* プライバシー・セキュリティ */}
-        <FormSection label="プライバシー・セキュリティ">
+        {/* プライバシー・機能 */}
+        <FormSection label="プライバシー・機能">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
             <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
-              <li>メッセージは<strong className="text-base-content/80">暗号化</strong>されて安全に保存されます</li>
-              <li>非公開の相談は、<strong className="text-base-content/80">あなただけ</strong>が見られます</li>
-              <li>IPアドレスは<strong className="text-base-content/80">記録しません</strong></li>
-              <li>AI相談はOpenAI APIで処理されます</li>
-              <li>危険な内容は自動検出され、非公開化されることがあります</li>
-            </ul>
-          </div>
-        </FormSection>
-
-        {/* オフライン機能 */}
-        <FormSection label="オフライン機能">
-          <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
-            <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
-              <li>データは<strong className="text-base-content/80">あなたのデバイスに保存</strong>され、オフラインでも閲覧可能です</li>
-              <li>アプリ全体がデバイスにキャッシュされ、<strong className="text-base-content/80">完全オフライン</strong>で動作します（ページリロード時も含む）</li>
-              <li>オフライン時もメッセージを送信でき、オンライン復帰時に自動同期されます</li>
+              <li>メッセージは<strong className="text-base-content/80">暗号化</strong>され安全に保存されます</li>
+              <li>デバイスに保存され、<strong className="text-base-content/80">オフライン</strong>でも動作します</li>
+              <li>IPアドレスは記録しません</li>
+              <li>危険な内容はAIが自動検出し、非公開化されることがあります</li>
             </ul>
           </div>
         </FormSection>
