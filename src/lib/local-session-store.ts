@@ -1,7 +1,9 @@
 /**
  * ローカルファーストセッション管理
- * サーバー同期前のセッションをメモリで管理
+ * サーバー同期前のセッションをメモリとIndexedDBで管理
  */
+
+import { indexedDB } from './indexed-db';
 
 export interface OptimisticMessage {
   id: string;
@@ -56,6 +58,10 @@ class LocalSessionStore {
     };
 
     this.sessions.set(localId, session);
+
+    // Persist to IndexedDB
+    indexedDB.saveSession(session).catch(console.error);
+
     return session;
   }
 
@@ -76,6 +82,9 @@ class LocalSessionStore {
       session.synced = true;
       session.syncing = false;
       this.sessions.set(localId, session);
+
+      // Persist to IndexedDB
+      indexedDB.saveSession(session).catch(console.error);
     }
   }
 
@@ -87,6 +96,9 @@ class LocalSessionStore {
     if (session) {
       session.syncing = syncing;
       this.sessions.set(localId, session);
+
+      // Persist to IndexedDB
+      indexedDB.saveSession(session).catch(console.error);
     }
   }
 
@@ -99,6 +111,9 @@ class LocalSessionStore {
       session.error = error;
       session.syncing = false;
       this.sessions.set(localId, session);
+
+      // Persist to IndexedDB
+      indexedDB.saveSession(session).catch(console.error);
     }
   }
 
@@ -107,6 +122,27 @@ class LocalSessionStore {
    */
   delete(id: string): void {
     this.sessions.delete(id);
+
+    // Remove from IndexedDB
+    indexedDB.deleteSession(id).catch(console.error);
+  }
+
+  /**
+   * IndexedDBからセッションをロード（起動時）
+   */
+  async loadFromIndexedDB(): Promise<void> {
+    try {
+      const sessions = await indexedDB.getAllSessions();
+      sessions.forEach((session) => {
+        // Only load local sessions that haven't been synced yet
+        if (session.id.startsWith('local-') && !session.synced) {
+          this.sessions.set(session.id, session);
+        }
+      });
+      console.log('[LocalSessionStore] Loaded', sessions.length, 'sessions from IndexedDB');
+    } catch (error) {
+      console.error('[LocalSessionStore] Failed to load from IndexedDB:', error);
+    }
   }
 
   /**
@@ -127,6 +163,9 @@ export const localSessionStore = new LocalSessionStore();
 
 // 定期的なクリーンアップ（5分ごと）
 if (typeof window !== 'undefined') {
+  // Load from IndexedDB on startup
+  localSessionStore.loadFromIndexedDB();
+
   setInterval(() => {
     localSessionStore.cleanup();
   }, 5 * 60 * 1000);
