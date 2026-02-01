@@ -38,14 +38,14 @@ export async function syncSessionToServer({
     // Mark as syncing
     localSessionStore.setSyncing(localId, true);
 
-    // Create session on server with initial message
+    // Create session on server (without initial message - will be sent after sync)
     const response = await fetch('/api/chat/sessions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         consultType: localSession.consultType,
         isAnonymous: localSession.isAnonymous,
-        initialMessage: localSession.messages[0]?.content,
+        // Don't send initialMessage - it will be sent after sync completes
         ...(localSession.targetUserIds && {
           targetUserHandles: localSession.targetUserIds,
         }),

@@ -389,8 +389,25 @@ export default function ChatSessionPage({ params }: PageProps) {
       import('@/lib/sync-session').then(({ syncSessionToServer }) => {
         syncSessionToServer({
           localId: localSession.id,
-          onSuccess: (serverId) => {
+          onSuccess: async (serverId) => {
             console.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
+
+            // Send initial message to server if we have one
+            if (localSession.messages.length > 0) {
+              const initialMessage = localSession.messages[0];
+              console.log('[LOCAL SESSION] Sending initial message to server');
+
+              try {
+                await fetch(`/api/chat/sessions/${serverId}/messages`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ message: initialMessage.content }),
+                });
+              } catch (err) {
+                console.error('[LOCAL SESSION] Failed to send initial message:', err);
+              }
+            }
+
             // Replace URL with server session ID (without adding to history)
             router.replace(`/main/chat/${serverId}`);
           },
