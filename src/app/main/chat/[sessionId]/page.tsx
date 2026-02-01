@@ -323,8 +323,9 @@ export default function ChatSessionPage({ params }: PageProps) {
     const lastFetchTime = sessionStorage.getItem(fetchKey);
     if (lastFetchTime) {
       const elapsed = Date.now() - parseInt(lastFetchTime, 10);
-      // Skip if fetched within last 5 seconds (prevents Strict Mode double execution)
-      if (elapsed < 5000) {
+      // Skip if fetched within last 500ms (prevents Strict Mode double execution)
+      // Short timeout ensures session switching doesn't skip fetch
+      if (elapsed < 500) {
         console.log('[CHAT DEBUG] Session already fetched recently (', elapsed, 'ms ago), skipping');
         setIsFetching(false);
         return;
