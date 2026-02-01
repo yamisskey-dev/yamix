@@ -788,25 +788,17 @@ export default function ChatSessionPage({ params }: PageProps) {
         timestamp: new Date(),
       };
 
-      // Optimistic update: show immediately
+      // 楽観的更新: ローカルストアを使用して統一的に処理
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
       setIsLoading(true);
       setError(undefined);
 
-      // Persist to IndexedDB immediately
-      try {
-        await indexedDB.saveMessage({
-          id: userMessage.id,
-          role: userMessage.role,
-          content: userMessage.content,
-          timestamp: userMessage.timestamp,
-          sessionId: sessionId,
-          synced: false,
-        });
-      } catch (err) {
-        clientLogger.error("Failed to save message to IndexedDB:", err);
-      }
+      // ローカルストアに追加（IndexedDB永続化 + リアクティブ更新）
+      await localSessionStore.addMessage(sessionId, {
+        ...userMessage,
+        synced: false,
+      });
 
       try {
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
@@ -828,13 +820,8 @@ export default function ChatSessionPage({ params }: PageProps) {
           showToast: toast.showToast,
         });
 
-        // Mark as synced in IndexedDB
-        await indexedDB.saveMessage({
-          id: userMessage.id,
-          role: userMessage.role,
-          content: userMessage.content,
-          timestamp: userMessage.timestamp,
-          sessionId: sessionId,
+        // 同期完了をマーク（統一的な処理）
+        await localSessionStore.updateMessage(sessionId, userMessage.id, {
           synced: true,
         });
       } catch (err) {
@@ -881,20 +868,12 @@ export default function ChatSessionPage({ params }: PageProps) {
       setIsLoading(true);
       setError(undefined);
 
-      // Persist to IndexedDB immediately
-      try {
-        await indexedDB.saveMessage({
-          id: optimisticId,
-          role: "assistant",
-          content: responseContent,
-          timestamp: optimisticResponse.timestamp,
-          sessionId: sessionId,
-          synced: false,
-          responderId: currentUser?.id,
-        });
-      } catch (err) {
-        clientLogger.error("Failed to save response to IndexedDB:", err);
-      }
+      // ローカルストアに追加（統一的な処理）
+      await localSessionStore.addMessage(sessionId, {
+        ...optimisticResponse,
+        synced: false,
+        responderId: currentUser?.id,
+      });
 
       try {
         const data = await api.post<{
