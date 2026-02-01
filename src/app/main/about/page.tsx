@@ -147,6 +147,7 @@ export default async function AboutPage() {
             <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
               <li>メッセージは<strong className="text-base-content/80">暗号化</strong>して保存されます</li>
               <li>データは<strong className="text-base-content/80">あなたのデバイスに保存</strong>され、オフラインでも閲覧可能です</li>
+              <li>アプリ全体がデバイスにキャッシュされ、<strong className="text-base-content/80">完全オフライン</strong>で動作します（ページリロード時も含む）</li>
               <li>IPアドレスは<strong className="text-base-content/80">記録しません</strong></li>
               <li>非公開の相談は、あなた本人のみが閲覧できます</li>
               <li>オフライン時もメッセージを送信でき、オンライン復帰時に自動同期されます</li>
