@@ -283,12 +283,11 @@ export async function POST(req: NextRequest) {
       // If initialMessage provided, create it
       if (initialMessage) {
         const encryptedContent = encryptMessage(initialMessage, payload.userId);
-        await tx.message.create({
+        await tx.chatMessage.create({
           data: {
             sessionId: newSession.id,
             role: "USER",
             content: encryptedContent,
-            userId: payload.userId,
           },
         });
       }
