@@ -10,6 +10,7 @@ import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIc
 import { useBookmarks } from "@/contexts/BookmarkContext";
 import { chatApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
+import { localSessionStore } from "@/lib/local-session-store";
 
 // Group sessions by date
 function groupSessionsByDate(sessions: ChatSessionListItem[]) {
@@ -77,12 +78,32 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
 
   const fetchSessions = useCallback(async (cursorId?: string | null) => {
     try {
+      // Fetch server sessions
       const data = await chatApi.getSessions(cursorId);
 
+      // Get local sessions (unsynced)
+      const localSessions = await localSessionStore.getAllSessions();
+      const unsyncedLocalSessions = localSessions
+        .filter((s) => s.id.startsWith('local-') && !s.synced)
+        .map((s) => ({
+          id: s.id,
+          title: s.messages[0]?.content.slice(0, 30) || "新しい相談",
+          preview: s.messages[0]?.content.slice(0, 50) || null,
+          consultType: s.consultType,
+          isAnonymous: s.isAnonymous,
+          targetCount: s.targetUserIds?.length || 0,
+          isReceived: false,
+          isCrisisPrivatized: false,
+          updatedAt: new Date(s.updatedAt || s.createdAt),
+        } as ChatSessionListItem));
+
+      // Merge: local sessions first (most recent), then server sessions
+      const mergedSessions = [...unsyncedLocalSessions, ...data.sessions];
+
       if (cursorId) {
-        setSessions((prev) => [...prev, ...data.sessions]);
+        setSessions((prev) => [...prev, ...mergedSessions]);
       } else {
-        setSessions(data.sessions);
+        setSessions(mergedSessions);
       }
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
@@ -105,10 +126,43 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       setSessions((prev) => prev.filter((s) => s.id !== detail.sessionId));
     };
 
+    // リアクティブなローカルセッション更新
+    const unsubscribe = localSessionStore.onChange((sessionId, session) => {
+      if (!session) {
+        // 削除された
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      } else {
+        // 作成/更新された
+        setSessions((prev) => {
+          const exists = prev.some((s) => s.id === sessionId);
+          const sessionItem: ChatSessionListItem = {
+            id: session.id,
+            title: session.messages[0]?.content.slice(0, 30) || "新しい相談",
+            preview: session.messages[0]?.content.slice(0, 50) || null,
+            consultType: session.consultType,
+            isAnonymous: session.isAnonymous,
+            targetCount: session.targetUserIds?.length || 0,
+            isReceived: false,
+            isCrisisPrivatized: false,
+            updatedAt: new Date(session.updatedAt || session.createdAt),
+          };
+
+          if (exists) {
+            // 更新
+            return prev.map((s) => (s.id === sessionId ? sessionItem : s));
+          } else {
+            // 新規追加（先頭に）
+            return [sessionItem, ...prev];
+          }
+        });
+      }
+    });
+
     window.addEventListener("newChatSessionCreated", handleNewSession);
     window.addEventListener("chatSessionDeleted", handleSessionDeleted);
 
     return () => {
+      unsubscribe();
       window.removeEventListener("newChatSessionCreated", handleNewSession);
       window.removeEventListener("chatSessionDeleted", handleSessionDeleted);
     };
@@ -129,9 +183,19 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
     setIsDeleting(true);
 
     try {
-      await chatApi.deleteSession(deleteTargetId);
+      // ローカルセッションかサーバーセッションかを判定
+      if (deleteTargetId.startsWith('local-')) {
+        // ローカルセッション削除
+        await localSessionStore.delete(deleteTargetId);
+      } else {
+        // サーバーセッション削除
+        await chatApi.deleteSession(deleteTargetId);
+      }
+
+      // UIから削除（リアクティブ更新でも削除されるが、即座に反映）
       setSessions((prev) => prev.filter((s) => s.id !== deleteTargetId));
 
+      // 現在表示中のセッションを削除した場合はメインページへ
       if (currentSessionId === deleteTargetId) {
         router.push("/main");
       }
@@ -196,10 +260,14 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       </div>
 
       {/* Title */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
         <span className={`text-[13px] font-medium truncate block ${currentSessionId === session.id ? "text-primary" : ""}`}>
           {session.title || "新しい相談"}
         </span>
+        {/* ローカルセッション（同期中）インジケーター */}
+        {session.id.startsWith('local-') && (
+          <span className="shrink-0 loading loading-spinner loading-xs opacity-50" title="サーバーと同期中" />
+        )}
       </div>
 
       {/* Action buttons */}
