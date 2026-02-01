@@ -124,8 +124,8 @@ export default function NewChatPage() {
     setError(undefined);
 
     try {
-      // Create local session immediately (local-first approach)
-      const localSession = localSessionStore.create({
+      // Create local session immediately (local-first approach with IndexedDB)
+      const localSession = await localSessionStore.create({
         consultType,
         initialMessage: messageContent,
         isAnonymous: consultType !== "PRIVATE" ? isAnonymous : false,
@@ -134,7 +134,7 @@ export default function NewChatPage() {
 
       console.log('[MAIN DEBUG] Local session created:', localSession.id);
 
-      // Navigate immediately for instant UX
+      // Navigate immediately for instant UX (0ms latency!)
       router.push(`/main/chat/${localSession.id}`);
 
       // Reset state
