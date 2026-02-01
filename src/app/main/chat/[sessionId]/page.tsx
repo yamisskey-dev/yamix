@@ -381,6 +381,11 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Update messages (SWR handles deduplication automatically)
     setMessages((prev) => {
+      // Don't overwrite messages while loading (message is being sent)
+      if (isLoading) {
+        console.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
+        return prev;
+      }
       // If there are already messages (e.g., user just sent a message), don't overwrite them
       if (prev.length > 0 && sessionData.messages.length === 0) {
         console.log('[CHAT DEBUG] Skipping setMessages: prev has messages but session is empty (race condition)');
@@ -390,7 +395,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
       );
     });
-  }, [sessionData, currentUser]);
+  }, [sessionData, currentUser, isLoading]);
 
   // Auto-send message from sessionStorage
   useEffect(() => {
