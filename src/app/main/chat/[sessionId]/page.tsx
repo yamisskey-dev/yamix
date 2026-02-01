@@ -814,6 +814,12 @@ export default function ChatSessionPage({ params }: PageProps) {
     e.preventDefault();
     if (!inputValue.trim() || isLoading || !sessionInfo) return;
 
+    // ローカルセッション同期中は送信を無効化（403エラー防止）
+    if (isLocalSession && localSession && !localSession.synced) {
+      toast.showToast("サーバーと同期中です。少々お待ちください", "info");
+      return;
+    }
+
     const { isOwner } = sessionInfo;
     const canRespond = sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED";
 
@@ -1268,7 +1274,7 @@ export default function ChatSessionPage({ params }: PageProps) {
               <button
                 onClick={handleSubmit}
                 className="btn btn-primary btn-circle btn-sm"
-                disabled={isLoading || !inputValue.trim()}
+                disabled={isLoading || !inputValue.trim() || !!(isLocalSession && localSession && !localSession.synced)}
                 aria-label="送信"
               >
                 {isLoading ? (
