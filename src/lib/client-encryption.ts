@@ -9,6 +9,8 @@
  * - AI メッセージは技術的制約により除外 (サーバーサイド暗号化のまま)
  */
 
+import { devLog } from './dev-logger';
+
 // 暗号化されたデータの型
 export interface EncryptedData {
   ciphertext: string; // Base64 エンコードされた暗号文
@@ -206,7 +208,7 @@ export async function initializeMasterKey(userHandle: string): Promise<void> {
 
       const rawKey = await crypto.subtle.exportKey('raw', masterKey);
       cachedMasterKey = { key: masterKey, rawKey };
-      console.log('[E2EE] Master key loaded from server');
+      devLog.log('[E2EE] Master key loaded from server');
     } else if (response.status === 404) {
       // 初回ログイン: 新しいマスター鍵を生成
       const masterKey = await generateMasterKey();
@@ -222,7 +224,7 @@ export async function initializeMasterKey(userHandle: string): Promise<void> {
       });
 
       cachedMasterKey = masterKey;
-      console.log('[E2EE] New master key generated and saved');
+      devLog.log('[E2EE] New master key generated and saved');
     } else {
       throw new Error('Failed to fetch master key');
     }
@@ -309,5 +311,5 @@ export function isMasterKeyInitialized(): boolean {
  */
 export function clearMasterKey(): void {
   cachedMasterKey = null;
-  console.log('[E2EE] Master key cleared');
+  devLog.log('[E2EE] Master key cleared');
 }

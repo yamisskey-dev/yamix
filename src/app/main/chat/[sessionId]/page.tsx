@@ -17,6 +17,7 @@ const ConfirmModal = lazy(() => import("@/components/Modal").then(mod => ({ defa
 import { chatApi, userApi, messageApi, api } from "@/lib/api-client";
 import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
+import { devLog } from "@/lib/dev-logger";
 import { useToastActions } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
@@ -351,7 +352,7 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   const [messages, setMessages] = useState<LocalMessage[]>([]);
 
-  console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
+  devLog.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
   const [isLoading, setIsLoading] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
@@ -377,7 +378,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   useEffect(() => {
     if (!isLocalSession || !localSession || !currentUser) return;
 
-    console.log('[LOCAL SESSION] Detected local session:', localSession.id);
+    devLog.log('[LOCAL SESSION] Detected local session:', localSession.id);
 
     // Set session info from local data
     setSessionInfo({
@@ -404,13 +405,13 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Start background sync if not already synced
     if (!localSession.synced && !localSession.syncing) {
-      console.log('[LOCAL SESSION] Starting background sync...');
+      devLog.log('[LOCAL SESSION] Starting background sync...');
 
       import('@/lib/sync-session').then(({ syncSessionToServer }) => {
         syncSessionToServer({
           localId: localSession.id,
           onSuccess: (serverId) => {
-            console.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
+            devLog.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
             // Store the local session ID before navigation
             sessionStorage.setItem(`pendingInitialMessage-${serverId}`, localSession.id);
             // Replace URL with server session ID (without adding to history)
@@ -467,7 +468,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     const processMessages = async () => {
       // Don't overwrite messages while loading (message is being sent)
       if (isLoading) {
-        console.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
+        devLog.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
         return;
       }
 
@@ -482,7 +483,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       setMessages((prev) => {
         // If local state has more messages than server data, don't overwrite (race condition)
         if (prev.length > decryptedMessages.length) {
-          console.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', decryptedMessages.length, ')');
+          devLog.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', decryptedMessages.length, ')');
           return prev;
         }
         return decryptedMessages.map((m) =>
@@ -512,7 +513,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     if (!currentUser) return;
 
     const initialMessage = localSession.messages[0];
-    console.log('[CHAT DEBUG] Auto-sending pending initial message (optimistic UI)');
+    devLog.log('[CHAT DEBUG] Auto-sending pending initial message (optimistic UI)');
 
     // Mark as sent immediately to prevent duplicate sends
     pendingMessageSentRef.current = true;
@@ -1199,7 +1200,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           )}
 
           {messages.map((msg, index) => {
-            console.log(`[CHAT DEBUG] Rendering message ${index + 1}/${messages.length}:`, {
+            devLog.log(`[CHAT DEBUG] Rendering message ${index + 1}/${messages.length}:`, {
               id: msg.id,
               role: msg.role,
               contentLength: msg.content?.length || 0,

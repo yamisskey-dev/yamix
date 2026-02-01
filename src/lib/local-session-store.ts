@@ -6,6 +6,7 @@
 
 import { indexedDB, type StoredMessage } from './indexed-db';
 import { encrypt, decrypt, isEncrypted, type EncryptedData } from './client-encryption';
+import { devLog } from './dev-logger';
 
 export interface OptimisticMessage {
   id: string;
@@ -49,7 +50,7 @@ class LocalSessionStore {
       sessions.forEach((session) => {
         this.sessions.set(session.id, session);
       });
-      console.log('[LocalSessionStore] Initialized with', sessions.length, 'sessions from IndexedDB');
+      devLog.log('[LocalSessionStore] Initialized with', sessions.length, 'sessions from IndexedDB');
       this.initialized = true;
     } catch (error) {
       console.error('[LocalSessionStore] Failed to initialize from IndexedDB:', error);
@@ -453,7 +454,7 @@ class LocalSessionStore {
     await Promise.all(toDelete.map((id) => this.delete(id)));
 
     if (toDelete.length > 0) {
-      console.log('[LocalSessionStore] Cleaned up', toDelete.length, 'old sessions');
+      devLog.log('[LocalSessionStore] Cleaned up', toDelete.length, 'old sessions');
     }
   }
 }
