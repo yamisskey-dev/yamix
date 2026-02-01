@@ -395,11 +395,8 @@ export default function ChatSessionPage({ params }: PageProps) {
       role: m.role,
       content: typeof m.content === 'string' ? m.content : '[復号中...]',
       timestamp: m.timestamp,
-      responder: m.role === 'user' ? {
-        displayName: currentUser.displayName,
-        avatarUrl: currentUser.avatarUrl,
-        handle: currentUser.handle,
-      } : null,
+      // ローカルセッションの初期メッセージは相談者（自分）のメッセージなので responder は設定しない
+      responder: undefined,
     }));
     setMessages(localMessages);
 
