@@ -460,20 +460,12 @@ export default function ChatSessionPage({ params }: PageProps) {
     });
   }, [sessionData, currentUser, isLoading]);
 
-  // Send pending initial message after sync completes
+  // Send pending initial message after sync completes (optimistic UI approach)
   const pendingMessageSentRef = useRef(false);
   useEffect(() => {
-    if (!sessionInfo || !sessionData || pendingMessageSentRef.current || isLoading) return;
-
     // Check if there's a pending initial message for this session
     const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
-    if (!pendingLocalId) return;
-
-    // Only proceed if session has no messages yet
-    if (sessionData.messages.length > 0) {
-      sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
-      return;
-    }
+    if (!pendingLocalId || pendingMessageSentRef.current || isLoading) return;
 
     // Get the local session to retrieve the initial message
     const localSession = localSessionStore.get(pendingLocalId);
@@ -482,25 +474,38 @@ export default function ChatSessionPage({ params }: PageProps) {
       return;
     }
 
-    const initialMessage = localSession.messages[0];
-    console.log('[CHAT DEBUG] Auto-sending pending initial message');
+    // Wait for currentUser to be loaded
+    if (!currentUser) return;
 
-    // Mark as sent
+    const initialMessage = localSession.messages[0];
+    console.log('[CHAT DEBUG] Auto-sending pending initial message (optimistic UI)');
+
+    // Mark as sent immediately to prevent duplicate sends
     pendingMessageSentRef.current = true;
     sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
 
-    // Create optimistic user message
+    // Display local message immediately (optimistic UI)
     const userMessage: LocalMessage = {
-      id: crypto.randomUUID(),
+      id: initialMessage.id, // Use local message ID
       role: "user",
       content: initialMessage.content,
-      timestamp: new Date(),
+      timestamp: initialMessage.timestamp,
+      responder: {
+        displayName: currentUser.displayName,
+        avatarUrl: currentUser.avatarUrl,
+        handle: currentUser.handle,
+      },
     };
 
-    setMessages([userMessage]);
+    // Add message optimistically (preserve any existing messages)
+    setMessages((prev) => {
+      // Avoid duplicates
+      if (prev.some((m) => m.id === userMessage.id)) return prev;
+      return [userMessage];
+    });
     setIsLoading(true);
 
-    // Send message and handle SSE response
+    // Send message to server in background
     fetch(`/api/chat/sessions/${sessionId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -511,6 +516,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           throw new Error("Failed to send initial message");
         }
 
+        // Handle SSE response for AI reply
         await handleSSEResponse(res, userMessage.id, {
           setMessages,
           setIsLoading,
@@ -524,7 +530,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         setIsLoading(false);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
       });
-  }, [sessionInfo, sessionData, sessionId, isLoading, toast]);
+  }, [sessionId, isLoading, currentUser, toast]);
 
   // Auto-scroll
   useEffect(() => {
