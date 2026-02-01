@@ -85,6 +85,30 @@ export default async function AboutPage() {
   return (
     <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto">
       <div className="max-w-xl mx-auto space-y-4 my-8">
+        {/* バナー */}
+        <div
+          className="relative rounded-xl overflow-hidden h-36 bg-cover bg-center bg-base-200"
+          style={{
+            backgroundImage:
+              "url(https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yami.ski/yami-banner.gif)",
+          }}
+        >
+          <div className="absolute inset-0 bottom-10 flex flex-col items-center justify-center">
+            <img
+              src="/app-icon.png"
+              alt="Yamix"
+              width={64}
+              height={64}
+              className="rounded-lg"
+            />
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent">
+            <span className="text-sm font-bold text-white drop-shadow-md">
+              やみっくす
+            </span>
+          </div>
+        </div>
+
         {/* Yamixについて */}
         <FormSection label="Yamixについて">
           <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
