@@ -877,23 +877,32 @@ export default function ChatSessionPage({ params }: PageProps) {
           synced: true,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
+        const errorMessage = err instanceof Error ? err.message : "エラーが発生しました";
+        setError(errorMessage);
         setIsLoading(false);
 
-        // Add to offline queue for retry
-        try {
-          await messageQueue.enqueue({
-            id: userMessage.id,
-            role: userMessage.role,
-            content: userMessage.content,
-            timestamp: userMessage.timestamp,
-            sessionId: sessionId,
-          });
+        // ネットワークエラーの場合のみオフラインキューに追加
+        // TypeError は fetch のネットワーク接続失敗を示す
+        const isNetworkError = err instanceof TypeError || !navigator.onLine;
 
-          // Show offline indicator
-          toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
-        } catch (queueErr) {
-          clientLogger.error("Failed to enqueue message:", queueErr);
+        if (isNetworkError) {
+          // ネットワークエラー: オフラインキューに追加
+          try {
+            await messageQueue.enqueue({
+              id: userMessage.id,
+              role: userMessage.role,
+              content: userMessage.content,
+              timestamp: userMessage.timestamp,
+              sessionId: sessionId,
+            });
+
+            toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
+          } catch (queueErr) {
+            clientLogger.error("Failed to enqueue message:", queueErr);
+          }
+        } else {
+          // APIエラー（YAMIトークン不足、認証エラー等）: エラーメッセージを表示
+          toast.showToast(errorMessage, "error");
         }
       }
     } else if (canRespond) {
@@ -1036,26 +1045,35 @@ export default function ChatSessionPage({ params }: PageProps) {
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "エラーが発生しました");
+        const errorMessage = err instanceof Error ? err.message : "エラーが発生しました";
+        setError(errorMessage);
 
-        // Add to offline queue for retry (keep optimistic message visible)
-        try {
-          await messageQueue.enqueue({
-            id: optimisticId,
-            role: "assistant",
-            content: responseContent,
-            timestamp: optimisticResponse.timestamp,
-            sessionId: sessionId,
-            responderId: currentUser?.id,
-            isAnonymous: isAnonymousResponse,
-          });
+        // ネットワークエラーの場合のみオフラインキューに追加
+        const isNetworkError = err instanceof TypeError || !navigator.onLine;
 
-          // Show offline indicator
-          toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
-        } catch (queueErr) {
-          // If queueing also fails, remove the optimistic message
+        if (isNetworkError) {
+          // ネットワークエラー: オフラインキューに追加（楽観的UIを維持）
+          try {
+            await messageQueue.enqueue({
+              id: optimisticId,
+              role: "assistant",
+              content: responseContent,
+              timestamp: optimisticResponse.timestamp,
+              sessionId: sessionId,
+              responderId: currentUser?.id,
+              isAnonymous: isAnonymousResponse,
+            });
+
+            toast.showToast("オフラインです。オンライン復帰時に自動送信します", "info");
+          } catch (queueErr) {
+            // If queueing also fails, remove the optimistic message
+            setMessages((prev) => prev.filter(m => !m.id.startsWith('optimistic-')));
+            clientLogger.error("Failed to enqueue response:", queueErr);
+          }
+        } else {
+          // APIエラー: 楽観的UIを削除してエラーメッセージを表示
           setMessages((prev) => prev.filter(m => !m.id.startsWith('optimistic-')));
-          clientLogger.error("Failed to enqueue response:", queueErr);
+          toast.showToast(errorMessage, "error");
         }
       } finally {
         setIsLoading(false);
