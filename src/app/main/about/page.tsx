@@ -145,13 +145,21 @@ export default async function AboutPage() {
         <FormSection label="プライバシーポリシー">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
             <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
-              <li>メッセージは<strong className="text-base-content/80">暗号化</strong>して保存されます</li>
+              <li>
+                公開・指名相談は<strong className="text-base-content/80">E2EE（エンドツーエンド暗号化）</strong>で保護されます
+                <ul className="mt-1 ml-4 space-y-1 list-circle text-[11px]">
+                  <li>メッセージは送信前にあなたのデバイスで暗号化されます</li>
+                  <li>サーバーは暗号化されたデータのみを保存します</li>
+                  <li>同じアカウントなら全デバイスで復号可能です</li>
+                </ul>
+              </li>
+              <li>非公開相談（AI専用）はサーバーサイド暗号化で保存されます</li>
               <li>データは<strong className="text-base-content/80">あなたのデバイスに保存</strong>され、オフラインでも閲覧可能です</li>
               <li>アプリ全体がデバイスにキャッシュされ、<strong className="text-base-content/80">完全オフライン</strong>で動作します（ページリロード時も含む）</li>
               <li>IPアドレスは<strong className="text-base-content/80">記録しません</strong></li>
               <li>非公開の相談は、あなた本人のみが閲覧できます</li>
               <li>オフライン時もメッセージを送信でき、オンライン復帰時に自動同期されます</li>
-              <li>AI相談はOpenAI APIを通じて処理されます</li>
+              <li>AI相談はOpenAI APIを通じて処理されます（E2EE不可）</li>
               <li>すべての相談はAIによる<strong className="text-base-content/80">自動モデレーション</strong>の対象です</li>
               <li>公開・指名相談で危険な内容が<strong className="text-base-content/80">3回</strong>検出された場合、相談は自動的に<strong className="text-base-content/80">非公開化</strong>されます</li>
             </ul>

@@ -87,16 +87,34 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       },
       messages: session.messages
         .filter((m) => isOwner || !m.isHidden) // Hide moderated messages from non-owners
-        .map((m) => ({
-          ...m,
-          content: decryptMessage(m.content, session.userId), // Decrypt with owner's key
-          responder: m.responder ? {
-            id: m.responder.id,
-            handle: m.responder.handle,
-            displayName: m.responder.profile?.displayName || null,
-            avatarUrl: m.responder.profile?.avatarUrl || null,
-          } : null,
-        })),
+        .map((m) => {
+          // E2EE対応: クライアントサイド暗号化されたメッセージはサーバーで復号しない
+          let content: string | { ciphertext: string; iv: string; salt: string; isEncrypted: true };
+
+          if (m.isE2EE && m.encryptedIv) {
+            // E2EE暗号化メッセージ: 暗号化データとしてクライアントに返す
+            content = {
+              ciphertext: m.content,
+              iv: m.encryptedIv,
+              salt: '', // E2EEではメッセージごとのソルトは使用しない
+              isEncrypted: true as const,
+            };
+          } else {
+            // サーバーサイド暗号化メッセージ: サーバーで復号して返す
+            content = decryptMessage(m.content, session.userId);
+          }
+
+          return {
+            ...m,
+            content,
+            responder: m.responder ? {
+              id: m.responder.id,
+              handle: m.responder.handle,
+              displayName: m.responder.profile?.displayName || null,
+              avatarUrl: m.responder.profile?.avatarUrl || null,
+            } : null,
+          };
+        }),
       targets: session.consultType === "DIRECTED" ? session.targets.map((t) => ({
         userId: t.userId,
         handle: t.user.handle,

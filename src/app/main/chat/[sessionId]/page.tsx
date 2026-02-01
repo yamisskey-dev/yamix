@@ -20,6 +20,7 @@ import { useToastActions } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
 import { indexedDB } from "@/lib/indexed-db";
+import { encrypt, isMasterKeyInitialized, type EncryptedData } from "@/lib/client-encryption";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -66,7 +67,26 @@ const fetcher = async (url: string) => {
 };
 
 /**
+ * E2EE暗号化メッセージを復号（async）
+ */
+async function decryptE2EEContent(content: string | EncryptedData): Promise<string> {
+  // E2EE暗号化データかチェック
+  if (typeof content === 'object' && 'isEncrypted' in content && content.isEncrypted) {
+    try {
+      const { decrypt } = await import('@/lib/client-encryption');
+      return await decrypt(content);
+    } catch (error) {
+      clientLogger.error('[E2EE] Failed to decrypt message:', error);
+      return '[復号エラー]';
+    }
+  }
+  // 平文またはサーバーサイド復号済み
+  return content as string;
+}
+
+/**
  * サーバーメッセージをローカル表示用に変換
+ * 注: E2EE復号は呼び出し元で事前に完了している前提
  */
 function transformMessage(
   m: ChatMessage,
@@ -85,7 +105,7 @@ function transformMessage(
     return {
       id: m.id,
       role: "user",
-      content: m.content,
+      content: m.content as string,
       timestamp: new Date(m.createdAt),
       gasAmount: m.gasAmount,
     };
@@ -95,7 +115,7 @@ function transformMessage(
     return {
       id: m.id,
       role: "assistant",
-      content: m.content,
+      content: m.content as string,
       timestamp: new Date(m.createdAt),
       gasAmount: m.gasAmount,
       responder: {
@@ -110,7 +130,7 @@ function transformMessage(
   return {
     id: m.id,
     role: "assistant",
-    content: m.content,
+    content: m.content as string,
     timestamp: new Date(m.createdAt),
     gasAmount: m.gasAmount,
     responder: m.responder ? {
@@ -369,10 +389,11 @@ export default function ChatSessionPage({ params }: PageProps) {
     });
 
     // Display local messages immediately (instant UX)
+    // E2EE対応: 暗号化されたメッセージは後でサーバーから取得して復号する
     const localMessages: LocalMessage[] = localSession.messages.map((m) => ({
       id: m.id,
       role: m.role,
-      content: m.content,
+      content: typeof m.content === 'string' ? m.content : '[復号中...]',
       timestamp: m.timestamp,
       responder: m.role === 'user' ? {
         displayName: currentUser.displayName,
@@ -442,22 +463,35 @@ export default function ChatSessionPage({ params }: PageProps) {
     anonymousUserMapRef.current = new Map(anonymousUserMap);
 
     // Update messages (SWR handles deduplication automatically)
-    setMessages((prev) => {
+    // E2EE対応: 暗号化メッセージを復号してから変換
+    const processMessages = async () => {
       // Don't overwrite messages while loading (message is being sent)
       if (isLoading) {
         console.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
-        return prev;
+        return;
       }
-      // If local state has more messages than server data, don't overwrite (race condition)
-      // This happens during SSE streaming before the assistant message is saved to DB
-      if (prev.length > sessionData.messages.length) {
-        console.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', sessionData.messages.length, ')');
-        return prev;
-      }
-      return sessionData.messages.map((m: ChatMessage) =>
-        transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
+
+      // Decrypt E2EE messages before transformation
+      const decryptedMessages: ChatMessage[] = await Promise.all(
+        sessionData.messages.map(async (m: ChatMessage) => {
+          const decryptedContent: string = await decryptE2EEContent(m.content);
+          return { ...m, content: decryptedContent } as ChatMessage;
+        })
       );
-    });
+
+      setMessages((prev) => {
+        // If local state has more messages than server data, don't overwrite (race condition)
+        if (prev.length > decryptedMessages.length) {
+          console.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', decryptedMessages.length, ')');
+          return prev;
+        }
+        return decryptedMessages.map((m) =>
+          transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
+        );
+      });
+    };
+
+    processMessages();
   }, [sessionData, currentUser, isLoading]);
 
   // Send pending initial message after sync completes (optimistic UI approach)
@@ -484,11 +518,16 @@ export default function ChatSessionPage({ params }: PageProps) {
     pendingMessageSentRef.current = true;
     sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
 
+    // E2EE対応: 暗号化されたメッセージを復号して表示用に準備
+    const displayContent = typeof initialMessage.content === 'string'
+      ? initialMessage.content
+      : '[暗号化メッセージ]'; // 暗号化データの場合は一時的なプレースホルダー
+
     // Display local message immediately (optimistic UI)
     const userMessage: LocalMessage = {
       id: initialMessage.id, // Use local message ID
       role: "user",
-      content: initialMessage.content,
+      content: displayContent,
       timestamp: initialMessage.timestamp,
       responder: {
         displayName: currentUser.displayName,
@@ -506,6 +545,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     setIsLoading(true);
 
     // Send message to server in background
+    // E2EE対応: 暗号化済みメッセージはそのまま送信
     fetch(`/api/chat/sessions/${sessionId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -795,16 +835,31 @@ export default function ChatSessionPage({ params }: PageProps) {
       setError(undefined);
 
       // ローカルストアに追加（IndexedDB永続化 + リアクティブ更新）
+      // PRIVATE以外はE2EE暗号化される
+      const isAIOnly = sessionInfo.consultType === "PRIVATE";
       await localSessionStore.addMessage(sessionId, {
         ...userMessage,
         synced: false,
-      });
+      }, isAIOnly);
 
       try {
+        // E2EE対応: PUBLIC/DIRECTED相談は暗号化して送信
+        let messageToSend: string | EncryptedData = userMessage.content;
+
+        if (!isAIOnly && isMasterKeyInitialized()) {
+          try {
+            messageToSend = await encrypt(userMessage.content);
+            clientLogger.info('[E2EE] Message encrypted before sending');
+          } catch (encryptError) {
+            clientLogger.error('[E2EE] Encryption failed, sending plaintext:', encryptError);
+            // フォールバック: 暗号化失敗時は平文で送信
+          }
+        }
+
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: userMessage.content }),
+          body: JSON.stringify({ message: messageToSend }),
         });
 
         if (!res.ok) {

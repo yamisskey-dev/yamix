@@ -85,17 +85,25 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
       const localSessions = await localSessionStore.getAllSessions();
       const unsyncedLocalSessions = localSessions
         .filter((s) => s.id.startsWith('local-') && !s.synced)
-        .map((s) => ({
-          id: s.id,
-          title: s.messages[0]?.content.slice(0, 30) || "新しい相談",
-          preview: s.messages[0]?.content.slice(0, 50) || null,
-          consultType: s.consultType,
-          isAnonymous: s.isAnonymous,
-          targetCount: s.targetUserIds?.length || 0,
-          isReceived: false,
-          isCrisisPrivatized: false,
-          updatedAt: new Date(s.updatedAt || s.createdAt),
-        } as ChatSessionListItem));
+        .map((s) => {
+          // E2EE対応: 暗号化されたコンテンツは表示しない
+          const firstMessage = s.messages[0];
+          const contentStr = typeof firstMessage?.content === 'string'
+            ? firstMessage.content
+            : "新しい相談";
+
+          return {
+            id: s.id,
+            title: contentStr.slice(0, 30) || "新しい相談",
+            preview: contentStr.slice(0, 50) || null,
+            consultType: s.consultType,
+            isAnonymous: s.isAnonymous,
+            targetCount: s.targetUserIds?.length || 0,
+            isReceived: false,
+            isCrisisPrivatized: false,
+            updatedAt: new Date(s.updatedAt || s.createdAt),
+          } as ChatSessionListItem;
+        });
 
       // Merge: local sessions first (most recent), then server sessions
       const mergedSessions = [...unsyncedLocalSessions, ...data.sessions];
@@ -135,10 +143,17 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
         // 作成/更新された
         setSessions((prev) => {
           const exists = prev.some((s) => s.id === sessionId);
+
+          // E2EE対応: 暗号化されたコンテンツは表示しない
+          const firstMessage = session.messages[0];
+          const contentStr = typeof firstMessage?.content === 'string'
+            ? firstMessage.content
+            : "新しい相談";
+
           const sessionItem: ChatSessionListItem = {
             id: session.id,
-            title: session.messages[0]?.content.slice(0, 30) || "新しい相談",
-            preview: session.messages[0]?.content.slice(0, 50) || null,
+            title: contentStr.slice(0, 30) || "新しい相談",
+            preview: contentStr.slice(0, 50) || null,
             consultType: session.consultType,
             isAnonymous: session.isAnonymous,
             targetCount: session.targetUserIds?.length || 0,

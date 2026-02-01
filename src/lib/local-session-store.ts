@@ -5,14 +5,16 @@
  */
 
 import { indexedDB, type StoredMessage } from './indexed-db';
+import { encrypt, decrypt, isEncrypted, type EncryptedData } from './client-encryption';
 
 export interface OptimisticMessage {
   id: string;
   role: 'user' | 'assistant';
-  content: string;
+  content: string | EncryptedData; // E2EE対応: 暗号化データまたは平文
   timestamp: Date;
   responderId?: string;
   synced?: boolean; // サーバーに同期済みか
+  isE2EE?: boolean; // E2EE暗号化されているか（AIメッセージは除外）
 }
 
 export interface OptimisticSession {
@@ -56,6 +58,7 @@ class LocalSessionStore {
 
   /**
    * ローカルセッションを作成
+   * E2EE対応: 非AI相談の場合は初期メッセージを暗号化
    */
   async create(params: {
     consultType: "PRIVATE" | "PUBLIC" | "DIRECTED";
@@ -65,18 +68,24 @@ class LocalSessionStore {
   }): Promise<OptimisticSession> {
     const localId = `local-${crypto.randomUUID()}`;
     const now = Date.now();
+
+    // 初期メッセージを作成
+    const initialMessageObj: OptimisticMessage = {
+      id: `local-msg-${crypto.randomUUID()}`,
+      role: 'user',
+      content: params.initialMessage,
+      timestamp: new Date(),
+      synced: false,
+    };
+
+    // PRIVATE相談（AI専用）以外はE2EE暗号化
+    const isAIOnly = params.consultType === 'PRIVATE';
+    const encryptedMessage = await this.encryptMessageIfNeeded(initialMessageObj, isAIOnly);
+
     const session: OptimisticSession = {
       id: localId,
       consultType: params.consultType,
-      messages: [
-        {
-          id: `local-msg-${crypto.randomUUID()}`,
-          role: 'user',
-          content: params.initialMessage,
-          timestamp: new Date(),
-          synced: false,
-        },
-      ],
+      messages: [encryptedMessage],
       isAnonymous: params.isAnonymous,
       targetUserIds: params.targetUserIds,
       syncing: false,
@@ -93,7 +102,7 @@ class LocalSessionStore {
       await indexedDB.saveSession(session);
       // メッセージも保存
       await indexedDB.saveMessage({
-        ...session.messages[0],
+        ...encryptedMessage,
         sessionId: localId,
         synced: false,
       });
@@ -112,6 +121,21 @@ class LocalSessionStore {
    */
   get(id: string): OptimisticSession | undefined {
     return this.sessions.get(id);
+  }
+
+  /**
+   * セッションのメッセージを復号して取得（表示用）
+   */
+  async getDecryptedMessages(sessionId: string): Promise<OptimisticMessage[]> {
+    const session = this.sessions.get(sessionId);
+    if (!session) return [];
+
+    // すべてのメッセージを復号
+    const decryptedMessages = await Promise.all(
+      session.messages.map((msg) => this.decryptMessageIfNeeded(msg))
+    );
+
+    return decryptedMessages;
   }
 
   /**
@@ -162,17 +186,80 @@ class LocalSessionStore {
   }
 
   /**
-   * メッセージを追加（楽観的UI）
+   * メッセージ内容を暗号化（E2EE対応）
+   * AIメッセージは除外（OpenAI APIに送信するため）
    */
-  async addMessage(sessionId: string, message: OptimisticMessage): Promise<void> {
+  private async encryptMessageIfNeeded(message: OptimisticMessage, isAIMessage: boolean): Promise<OptimisticMessage> {
+    // AIメッセージは暗号化しない
+    if (isAIMessage || message.role === 'assistant') {
+      return message;
+    }
+
+    // 既に暗号化されている場合はスキップ
+    if (isEncrypted(message.content)) {
+      return message;
+    }
+
+    // E2EE暗号化
+    try {
+      const encryptedContent = await encrypt(message.content as string);
+      return {
+        ...message,
+        content: encryptedContent,
+        isE2EE: true,
+      };
+    } catch (error) {
+      console.error('[LocalSessionStore] Encryption failed, storing as plaintext:', error);
+      return message;
+    }
+  }
+
+  /**
+   * メッセージ内容を復号（E2EE対応）
+   */
+  private async decryptMessageIfNeeded(message: OptimisticMessage): Promise<OptimisticMessage> {
+    // E2EEフラグがなければそのまま返す
+    if (!message.isE2EE) {
+      return message;
+    }
+
+    // 暗号化データでなければそのまま返す
+    if (!isEncrypted(message.content)) {
+      return message;
+    }
+
+    // 復号
+    try {
+      const decryptedContent = await decrypt(message.content);
+      return {
+        ...message,
+        content: decryptedContent,
+      };
+    } catch (error) {
+      console.error('[LocalSessionStore] Decryption failed:', error);
+      return {
+        ...message,
+        content: '[復号エラー]',
+      };
+    }
+  }
+
+  /**
+   * メッセージを追加（楽観的UI）
+   * E2EE対応: 人間メッセージは暗号化して保存
+   */
+  async addMessage(sessionId: string, message: OptimisticMessage, isAIMessage = false): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) {
       console.error('[LocalSessionStore] Session not found:', sessionId);
       return;
     }
 
+    // E2EE暗号化（必要な場合）
+    const encryptedMessage = await this.encryptMessageIfNeeded(message, isAIMessage);
+
     // メッセージを追加
-    session.messages.push(message);
+    session.messages.push(encryptedMessage);
     session.updatedAt = Date.now();
 
     // メモリを更新
@@ -183,7 +270,7 @@ class LocalSessionStore {
       await Promise.all([
         indexedDB.saveSession(session),
         indexedDB.saveMessage({
-          ...message,
+          ...encryptedMessage,
           sessionId,
           synced: message.synced || false,
         }),

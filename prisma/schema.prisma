@@ -35,6 +35,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // E2EE (End-to-End Encryption) - クロスデバイス対応
+  encryptedMasterKey String? @db.Text // Misskeyトークンで暗号化されたマスター鍵
+  masterKeySalt      String? // マスター鍵暗号化用ソルト
+  masterKeyIv        String? // マスター鍵暗号化用IV
+
   // 将来用: YAMI DAO連携
   ethAddress String? @unique // Optimismアドレス
 
@@ -366,6 +371,11 @@ model ChatMessage {
   responderId String?     // 人間が回答した場合の回答者ID
   isAnonymous Boolean     @default(false) // 匿名回答
   gasAmount   Int         @default(0)     // 受け取った灯（ともしび）の合計
+
+  // E2EE (End-to-End Encryption)
+  isE2EE      Boolean     @default(false) // E2EE暗号化されたメッセージか
+  encryptedIv String?     // E2EE用IV (Base64)
+
   createdAt   DateTime    @default(now())
 
   // Relations

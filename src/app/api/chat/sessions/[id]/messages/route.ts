@@ -25,13 +25,21 @@ interface SessionData {
   messages: PrismaMessage[];
 }
 
+// E2EE encrypted data type
+interface EncryptedData {
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  isEncrypted: true;
+}
+
 // ============================================
 // Shared: Save user message + deduct wallet
 // ============================================
 async function saveUserMessageAndDeduct(opts: {
   sessionId: string;
   userId: string;
-  userMessage: string;
+  userMessage: string | EncryptedData; // E2EE対応: 暗号化データまたは平文
   consultCost: number;
   txType: "CONSULT_AI" | "CONSULT_HUMAN";
   isFirstMessage: boolean;
@@ -54,9 +62,32 @@ async function saveUserMessageAndDeduct(opts: {
       data: { senderId: wallet.id, amount: -consultCost, txType },
     });
 
-    const encryptedContent = encryptMessage(userMessage, userId);
+    // E2EE対応: クライアントから暗号化済みデータが来た場合はそのまま保存
+    let content: string;
+    let isE2EE = false;
+    let encryptedIv: string | null = null;
+
+    if (typeof userMessage === 'object' && 'isEncrypted' in userMessage && userMessage.isEncrypted) {
+      // E2EE暗号化済み: ciphertextをそのまま保存
+      content = userMessage.ciphertext;
+      isE2EE = true;
+      encryptedIv = userMessage.iv;
+    } else {
+      // 平文: サーバーサイド暗号化を適用
+      content = encryptMessage(userMessage as string, userId);
+      isE2EE = false;
+    }
+
     const userMsg = await tx.chatMessage.create({
-      data: { sessionId, role: "USER", content: encryptedContent, isCrisis, isHidden: shouldHide },
+      data: {
+        sessionId,
+        role: "USER",
+        content,
+        isCrisis,
+        isHidden: shouldHide,
+        isE2EE,
+        encryptedIv,
+      },
     });
 
     const sessionUpdate: Record<string, unknown> = { updatedAt: now };

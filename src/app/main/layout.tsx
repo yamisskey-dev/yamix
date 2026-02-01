@@ -10,6 +10,7 @@ import { BookmarkProvider } from "@/contexts/BookmarkContext";
 import { authApi } from "@/lib/api-client";
 import { logger } from "@/lib/logger";
 import { clientLogger } from "@/lib/client-logger";
+import { initializeMasterKey } from "@/lib/client-encryption";
 import type { UserProfile } from "@/types";
 
 export default function MainLayout({ children }: { children: ReactNode }) {
@@ -24,6 +25,15 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     try {
       const userData = await authApi.getMe();
       setUser(userData);
+
+      // E2EE マスター鍵を初期化
+      try {
+        await initializeMasterKey(userData.handle);
+        clientLogger.info('[E2EE] Master key initialized successfully');
+      } catch (e2eeError) {
+        clientLogger.error('[E2EE] Failed to initialize master key:', e2eeError);
+        // E2EE初期化失敗はアプリの使用を妨げない（暗号化なしで続行）
+      }
     } catch (error) {
       logger.warn("Failed to fetch user, redirecting to login", {}, error);
       router.replace("/");
