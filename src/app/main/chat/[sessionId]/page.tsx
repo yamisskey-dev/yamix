@@ -310,21 +310,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   useEffect(() => {
     console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
 
-    // Prevent double execution in React Strict Mode using sessionStorage
-    // sessionStorage persists across component remounts (unlike refs)
-    const fetchKey = `sessionFetched-${sessionId}`;
-    const lastFetchTime = sessionStorage.getItem(fetchKey);
-
-    if (lastFetchTime) {
-      const elapsed = Date.now() - parseInt(lastFetchTime, 10);
-      // Skip if fetched within last 5 seconds (prevents Strict Mode double execution)
-      if (elapsed < 5000) {
-        console.log('[CHAT DEBUG] Session already fetched recently (', elapsed, 'ms ago), skipping');
-        setIsFetching(false);
-        return;
-      }
-    }
-
     // Prevent double execution in React Strict Mode
     // Note: This only affects development mode with Strict Mode enabled
     if (sessionFetchedRef.current) {
@@ -334,7 +319,6 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Mark as fetching immediately to prevent double execution
     sessionFetchedRef.current = true;
-    sessionStorage.setItem(fetchKey, Date.now().toString());
 
     let isMounted = true; // Track if component is still mounted
     const fetchSession = async (retryCount = 0) => {
@@ -430,8 +414,6 @@ export default function ChatSessionPage({ params }: PageProps) {
     return () => {
       console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
-      // Clear sessionStorage fetch key when component unmounts or sessionId changes
-      sessionStorage.removeItem(fetchKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
