@@ -430,6 +430,8 @@ export default function ChatSessionPage({ params }: PageProps) {
     return () => {
       console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
       isMounted = false;
+      // Clear sessionStorage fetch key when component unmounts or sessionId changes
+      sessionStorage.removeItem(fetchKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
