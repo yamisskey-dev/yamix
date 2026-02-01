@@ -297,6 +297,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       dedupingInterval: 2000, // Prevent duplicate requests within 2 seconds
       revalidateOnFocus: false, // Don't refetch on window focus
       revalidateOnReconnect: true, // Refetch on reconnect
+      revalidateIfStale: false, // Don't auto-revalidate stale data (polling handles updates)
       shouldRetryOnError: (error: Error) => {
         // Don't retry on 404
         return error.message !== 'NOT_FOUND';
@@ -386,9 +387,10 @@ export default function ChatSessionPage({ params }: PageProps) {
         console.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
         return prev;
       }
-      // If there are already messages (e.g., user just sent a message), don't overwrite them
-      if (prev.length > 0 && sessionData.messages.length === 0) {
-        console.log('[CHAT DEBUG] Skipping setMessages: prev has messages but session is empty (race condition)');
+      // If local state has more messages than server data, don't overwrite (race condition)
+      // This happens during SSE streaming before the assistant message is saved to DB
+      if (prev.length > sessionData.messages.length) {
+        console.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', sessionData.messages.length, ')');
         return prev;
       }
       return sessionData.messages.map((m: ChatMessage) =>
