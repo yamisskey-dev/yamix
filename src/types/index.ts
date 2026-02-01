@@ -305,6 +305,7 @@ export interface ChatSession {
   isAnonymous: boolean;           // 匿名投稿
   allowAnonymousResponses: boolean; // 匿名回答を許可するか
   category: string | null;        // Phase 2用: カテゴリ
+  crisisCount?: number;           // 危機検出回数（3回で自動非公開化）
   targetCount?: number;           // 指名相談の対象ユーザー数
   createdAt: Date;
   updatedAt: Date;
@@ -358,6 +359,7 @@ export interface ChatSessionListItem {
   targetCount?: number;     // 指名相談の対象ユーザー数
   isReceived?: boolean;     // 指名相談で自分がtargetの場合true
   isCrisisPrivatized?: boolean; // モデレーションにより非公開化された場合true
+  crisisCount?: number;     // 危機検出回数（3回で自動非公開化）
   updatedAt: Date;
 }
 

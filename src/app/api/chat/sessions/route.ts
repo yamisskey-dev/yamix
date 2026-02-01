@@ -15,6 +15,7 @@ interface PrismaSessionResult {
   isAnonymous: boolean;
   userId: string;
   updatedAt: Date;
+  crisisCount: number;
   messages: { content: string; role: string }[];
   _count?: { targets: number; messages?: number };
 }
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
       isAnonymous: true,
       userId: true,
       updatedAt: true,
+      crisisCount: true,
       messages: {
         orderBy: { createdAt: "desc" as const },
         take: 1,
@@ -134,6 +136,7 @@ export async function GET(req: NextRequest) {
           targetCount: s._count?.targets ?? 0,
           isReceived: directedSessionIds.has(s.id),
           isCrisisPrivatized: (s._count?.messages ?? 0) > 0,
+          crisisCount: s.crisisCount,
           updatedAt: s.updatedAt,
         };
       });

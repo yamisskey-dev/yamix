@@ -7,6 +7,7 @@ import useSWR from "swr";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
+import { CrisisStrikeIndicator } from "@/components/CrisisStrikeIndicator";
 import { localSessionStore, type OptimisticSession } from "@/lib/local-session-store";
 
 // 動的インポートで初期ロードを高速化
@@ -51,6 +52,7 @@ interface SessionInfo {
   currentUserId: string | null;
   title: string | null;
   responseCount: number;
+  crisisCount?: number;
   targets?: { userId: string; handle: string; displayName: string | null }[];
 }
 
@@ -445,6 +447,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       currentUserId,
       title: sessionData.title,
       responseCount,
+      crisisCount: sessionData.crisisCount,
       targets: sessionData.targets,
     });
 
@@ -1149,6 +1152,11 @@ export default function ChatSessionPage({ params }: PageProps) {
                 </span>
               </div>
             )}
+            <CrisisStrikeIndicator
+              crisisCount={sessionInfo.crisisCount || 0}
+              consultType={sessionInfo.consultType}
+              className="ml-2"
+            />
           </div>
           <div className="flex items-center gap-2">
             <Suspense fallback={<div className="w-8 h-8" />}>
