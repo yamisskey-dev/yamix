@@ -104,8 +104,8 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile/Tablet Layout - ボトムナビ + ドロワー */}
-      <div className="xl:hidden flex flex-col min-h-screen">
-        <main id="main-content-mobile" className="flex-1 flex flex-col pb-14" role="main">{children}</main>
+      <div className="xl:hidden flex flex-col h-screen">
+        <main id="main-content-mobile" className="flex-1 flex flex-col pb-14 overflow-hidden" role="main">{children}</main>
 
         {/* Mobile Bottom Navigation */}
         <nav aria-label="モバイルナビゲーション">
