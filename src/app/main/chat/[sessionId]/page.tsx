@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, use, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import useSWR from "swr";
 import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
@@ -48,6 +49,18 @@ interface SessionInfo {
   responseCount: number;
   targets?: { userId: string; handle: string; displayName: string | null }[];
 }
+
+// SWR fetcher function
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error('NOT_FOUND');
+    }
+    throw new Error('Failed to fetch');
+  }
+  return res.json();
+};
 
 /**
  * サーバーメッセージをローカル表示用に変換
@@ -275,11 +288,41 @@ export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
   const toast = useToastActions();
+
+  // SWR for session data fetching
+  const { data: sessionData, error: sessionError, isLoading: isFetching } = useSWR<ChatSessionWithMessages>(
+    `/api/chat/sessions/${sessionId}`,
+    fetcher,
+    {
+      dedupingInterval: 2000, // Prevent duplicate requests within 2 seconds
+      revalidateOnFocus: false, // Don't refetch on window focus
+      revalidateOnReconnect: true, // Refetch on reconnect
+      shouldRetryOnError: (error: Error) => {
+        // Don't retry on 404
+        return error.message !== 'NOT_FOUND';
+      },
+      onError: (err: Error) => {
+        if (err.message === 'NOT_FOUND') {
+          router.replace("/main");
+        }
+      }
+    }
+  );
+
+  // SWR for current user
+  const { data: currentUser } = useSWR<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null } | null>(
+    '/api/auth/me',
+    fetcher,
+    {
+      dedupingInterval: 60000, // Cache for 1 minute
+      revalidateOnFocus: false
+    }
+  );
+
   const [messages, setMessages] = useState<LocalMessage[]>([]);
 
   console.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
@@ -292,7 +335,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null } | null>(null);
 
   // Polling refs
   const lastPollTimeRef = useRef<string | null>(null);
@@ -303,143 +345,52 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Ref to track if initial message has been sent (prevent double execution in Strict Mode)
   const initialMessageSentRef = useRef<boolean>(false);
-  // Ref to track if session has been fetched (prevent double execution in Strict Mode)
-  const sessionFetchedRef = useRef<boolean>(false);
 
-  // Fetch session data
+  // Process session data from SWR
   useEffect(() => {
-    console.log('[CHAT DEBUG] Component mounted, sessionId:', sessionId);
+    if (!sessionData || !currentUser) return;
 
-    // Clean up old session fetch keys for other sessions
-    const fetchKey = `sessionFetched-${sessionId}`;
-    Object.keys(sessionStorage).forEach(key => {
-      if (key.startsWith('sessionFetched-') && key !== fetchKey) {
-        sessionStorage.removeItem(key);
-      }
+    const isOwner = sessionData.userId === currentUser.id;
+    const currentUserId = currentUser.id;
+
+    const responseCount = sessionData.messages.filter(
+      (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
+    ).length;
+
+    setSessionInfo({
+      consultType: sessionData.consultType,
+      userId: sessionData.userId,
+      isOwner,
+      isAnonymous: sessionData.isAnonymous,
+      currentUserId,
+      title: sessionData.title,
+      responseCount,
+      targets: sessionData.targets,
     });
 
-    // Prevent double execution in React Strict Mode using sessionStorage
-    // sessionStorage persists across component remounts (unlike refs)
-    const lastFetchTime = sessionStorage.getItem(fetchKey);
-    if (lastFetchTime) {
-      const elapsed = Date.now() - parseInt(lastFetchTime, 10);
-      // Skip if fetched within last 500ms (prevents Strict Mode double execution)
-      // Short timeout ensures session switching doesn't skip fetch
-      if (elapsed < 500) {
-        console.log('[CHAT DEBUG] Session already fetched recently (', elapsed, 'ms ago), skipping');
-        setIsFetching(false);
-        return;
-      }
-    }
-
-    // Prevent double execution in React Strict Mode
-    // Note: This only affects development mode with Strict Mode enabled
-    if (sessionFetchedRef.current) {
-      console.log('[CHAT DEBUG] Session already fetched (from ref), skipping');
-      return;
-    }
-
-    // Mark as fetching immediately to prevent double execution
-    sessionFetchedRef.current = true;
-    sessionStorage.setItem(fetchKey, Date.now().toString());
-
-    let isMounted = true; // Track if component is still mounted
-    const fetchSession = async (retryCount = 0) => {
-      if (!isMounted) {
-        console.log('[CHAT DEBUG] Component unmounted, skipping fetch');
-        return;
-      }
-      try {
-        console.log('[CHAT DEBUG] Fetching session, attempt:', retryCount + 1, 'isMounted:', isMounted);
-        const currentUserData = await fetch("/api/auth/me").then(r => r.ok ? r.json() : null).catch(() => null);
-        setCurrentUser(currentUserData);
-
-        const res = await fetch(`/api/chat/sessions/${sessionId}`);
-        console.log('[CHAT DEBUG] Session fetch response:', res.status, res.statusText, 'isMounted:', isMounted);
-        if (!res.ok) {
-          if (res.status === 404 && retryCount < 3) {
-            // Session not found - might be DB transaction lag, retry after 100ms
-            console.log('[CHAT DEBUG] Session not found, retrying...');
-            await new Promise(resolve => setTimeout(resolve, 100));
-            return fetchSession(retryCount + 1);
-          }
-          if (res.status === 404) {
-            console.log('[CHAT DEBUG] Session not found after retries, redirecting to /main');
-            router.replace("/main");
-            return;
-          }
-          console.error('[CHAT DEBUG] Session fetch failed:', res.status, res.statusText);
-          throw new Error("Failed to fetch session");
+    // Build anonymous user map
+    const anonymousUserMap = new Map<string, string>();
+    sessionData.messages.forEach((m: ChatMessage) => {
+      if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
+        if (!anonymousUserMap.has(m.responderId)) {
+          anonymousUserMap.set(m.responderId, String.fromCharCode(65 + anonymousUserMap.size));
         }
-        console.log('[CHAT DEBUG] Session fetched successfully, parsing JSON...');
-
-        if (!isMounted) {
-          console.log('[CHAT DEBUG] Component unmounted before state update, aborting');
-          return;
-        }
-
-        const session: ChatSessionWithMessages = await res.json();
-        console.log('[CHAT DEBUG] JSON parsed, setting state...');
-        const isOwner = currentUserData ? session.userId === currentUserData.id : false;
-        const currentUserId = currentUserData?.id || null;
-
-        const responseCount = session.messages.filter(
-          (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
-        ).length;
-
-        setSessionInfo({
-          consultType: session.consultType,
-          userId: session.userId,
-          isOwner,
-          isAnonymous: session.isAnonymous,
-          currentUserId,
-          title: session.title,
-          responseCount,
-          targets: session.targets,
-        });
-
-        // Build anonymous user map
-        const anonymousUserMap = new Map<string, string>();
-        session.messages.forEach((m: ChatMessage) => {
-          if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
-            if (!anonymousUserMap.has(m.responderId)) {
-              anonymousUserMap.set(m.responderId, String.fromCharCode(65 + anonymousUserMap.size));
-            }
-          }
-        });
-        anonymousUserMapRef.current = new Map(anonymousUserMap);
-
-        // Only update messages if we don't have any messages yet (to avoid race condition with message sending)
-        setMessages((prev) => {
-          // If there are already messages (e.g., user just sent a message), don't overwrite them
-          if (prev.length > 0 && session.messages.length === 0) {
-            console.log('[CHAT DEBUG] Skipping setMessages: prev has messages but session is empty (race condition)');
-            return prev;
-          }
-          return session.messages.map((m: ChatMessage) =>
-            transformMessage(m, isOwner, currentUserId, session.isAnonymous, session.user, anonymousUserMap)
-          );
-        });
-        console.log('[CHAT DEBUG] All state set successfully, setting isFetching to false');
-      } catch (err) {
-        clientLogger.error("Error fetching session:", err);
-        setError("セッションの読み込みに失敗しました");
-        console.log('[CHAT DEBUG] Error in fetchSession:', err);
-      } finally {
-        setIsFetching(false);
-        console.log('[CHAT DEBUG] fetchSession completed, isFetching:', false);
       }
-    };
+    });
+    anonymousUserMapRef.current = new Map(anonymousUserMap);
 
-    fetchSession();
-
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      console.log('[CHAT DEBUG] Component UNMOUNTING for sessionId:', sessionId);
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]);
+    // Update messages (SWR handles deduplication automatically)
+    setMessages((prev) => {
+      // If there are already messages (e.g., user just sent a message), don't overwrite them
+      if (prev.length > 0 && sessionData.messages.length === 0) {
+        console.log('[CHAT DEBUG] Skipping setMessages: prev has messages but session is empty (race condition)');
+        return prev;
+      }
+      return sessionData.messages.map((m: ChatMessage) =>
+        transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
+      );
+    });
+  }, [sessionData, currentUser]);
 
   // Auto-send message from sessionStorage
   useEffect(() => {

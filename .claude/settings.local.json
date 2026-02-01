@@ -27,7 +27,11 @@
       "Bash(docker ps:*)",
       "Bash(npm run build:*)",
       "Bash(git add:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(npx eslint:*)",
+      "Bash(pnpm test:unit:run:*)"
     ],
     "deny": [],
     "ask": []
