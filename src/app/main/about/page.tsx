@@ -128,6 +128,7 @@ export default async function AboutPage() {
             <ol className="text-base-content/60 space-y-1.5 ml-4 list-decimal">
               <li><strong className="text-base-content/80">相談する</strong>：公開か指名で他人に相談するか、非公開でAIに相談</li>
               <li><strong className="text-base-content/80">回答する</strong>：他のユーザーの相談に答えて、YAMIトークンを回復</li>
+              <li><strong className="text-base-content/80">💜を送る</strong>：良い回答に応援を送って、回答者にYAMIトークンを付与</li>
             </ol>
           </div>
         </FormSection>
