@@ -1315,7 +1315,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             );
           })}
 
-          {isLoading && <ChatBubble role="assistant" content="" isLoading />}
+          {isLoading && !messages.some(m => m.role === 'assistant') && <ChatBubble role="assistant" content="" isLoading />}
 
           {error && (
             <div className="alert alert-error text-sm" role="alert" aria-live="polite">
