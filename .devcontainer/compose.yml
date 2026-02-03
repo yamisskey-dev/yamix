@@ -17,6 +17,13 @@ services:
       JWT_SECRET: devcontainer-secret-key
       WEB_URL: http://localhost:3000
       YAMII_API_URL: http://yamii:8000
+    depends_on:
+      yamii:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   yamii:
     build:
@@ -26,12 +33,14 @@ services:
       - internal_network
       - external_network
     env_file:
-      - ../.env
+      - ../yamii/.env
     environment:
       YAMII_DATA_DIR: /app/data
     volumes:
       - yamii-data:/app/data
       - ../yamii/config:/app/config:ro
+    ports:
+      - "8000:8000"
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:8000/v1/health']
       interval: 30s
