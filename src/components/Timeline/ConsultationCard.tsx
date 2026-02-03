@@ -55,8 +55,14 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
       <div className="flex-shrink-0 mr-3.5">
         <div className="w-[46px] h-[46px] rounded-full overflow-hidden shadow-soft">
           {isAIResponse ? (
-            <div className="bg-base-200 flex items-center justify-center w-full h-full text-xl">
-              🤖
+            <div className="bg-base-200 flex items-center justify-center w-full h-full overflow-hidden">
+              <Image
+                src="/yamii.svg"
+                alt="Yamii"
+                width={44}
+                height={44}
+                className="w-full h-full object-cover"
+              />
             </div>
           ) : isAnonymous ? (
             <div className="bg-base-300 flex items-center justify-center w-full h-full text-xl">

@@ -104,8 +104,14 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
                         className="rounded-full object-cover w-full h-full"
                       />
                     ) : (
-                      <div className="bg-base-content/10 flex items-center justify-center w-full h-full">
-                        <span className="text-[8px]">🤖</span>
+                      <div className="bg-base-content/10 flex items-center justify-center w-full h-full overflow-hidden">
+                        <Image
+                          src="/yamii.svg"
+                          alt="Yamii"
+                          width={20}
+                          height={20}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                     )}
                   </div>
