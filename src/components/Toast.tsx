@@ -244,14 +244,16 @@ function ToastItem({ toast, onClose }: ToastItemProps) {
 
   return (
     <div
-      className={`alert ${alertClass} shadow-lg animate-slide-in-right`}
+      className={`alert ${alertClass} shadow-soft animate-slide-in-right backdrop-blur-medium border border-base-content/10 transition-shadow duration-200 ease-smooth`}
       role="alert"
     >
-      {icon}
+      <div>
+        {icon}
+      </div>
       <span className="text-sm">{toast.message}</span>
       <button
         onClick={() => onClose(toast.id)}
-        className="btn btn-ghost btn-xs"
+        className="btn btn-ghost btn-xs transition-opacity duration-150 hover:opacity-70"
         aria-label="閉じる"
       >
         <svg

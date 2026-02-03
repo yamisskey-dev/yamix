@@ -55,8 +55,8 @@ export const ChatBubble = memo(function ChatBubble({
 
   if (isLoading) {
     return (
-      <div className={`chat ${isUser ? "chat-end" : "chat-start"}`}>
-        <div className="chat-bubble chat-assistant-loading flex items-center gap-1.5 min-h-[2.5rem] px-4">
+      <div className={`chat ${isUser ? "chat-end" : "chat-start"} animate-fade-in`}>
+        <div className="chat-bubble chat-assistant-loading flex items-center gap-1.5 min-h-[2.5rem] px-4 shadow-soft">
           <div className="typing-dot-gradient" />
           <div className="typing-dot-gradient" />
           <div className="typing-dot-gradient" />
@@ -66,7 +66,7 @@ export const ChatBubble = memo(function ChatBubble({
   }
 
   return (
-    <div className={`chat ${isUser ? "chat-end" : "chat-start"} group`}>
+    <div className={`chat ${isUser ? "chat-end" : "chat-start"} group animate-slide-up`}>
       {/* Avatar for assistant or human */}
       {!isUser && (
         <div className="chat-image avatar">
@@ -112,7 +112,7 @@ export const ChatBubble = memo(function ChatBubble({
               // Clickable user avatar
               <Link
                 href={`/main/user/${encodeHandle(responder!.handle)}`}
-                className="w-8 h-8 rounded-full ring-2 ring-secondary/30 block hover:ring-4 hover:ring-secondary/40 transition-all"
+                className="w-8 h-8 rounded-full ring-2 ring-secondary/30 block hover:ring-4 hover:ring-secondary/40 transition-all duration-200 ease-smooth"
               >
                 {responder!.avatarUrl ? (
                   // User with avatar
@@ -135,7 +135,7 @@ export const ChatBubble = memo(function ChatBubble({
             )
           ) : (
             // AI avatar - Yamii icon
-            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary/30">
+            <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-primary/30 hover:ring-primary/50 transition-all duration-200 ease-smooth">
               <Image
                 src="/yamii.svg"
                 alt="Yamii"
@@ -156,9 +156,9 @@ export const ChatBubble = memo(function ChatBubble({
         </div>
       )}
 
-      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-sm`}>
+      <div className={`chat-bubble ${isUser ? "chat-user" : "chat-assistant"} ${isHuman ? "chat-human-response" : ""} shadow-soft transition-shadow duration-200 ease-smooth`}>
         <p className="whitespace-pre-wrap break-words leading-relaxed">
-          {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
+          {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium transition-colors duration-150")}
         </p>
       </div>
 
@@ -192,7 +192,7 @@ export const ChatBubble = memo(function ChatBubble({
             {canSendGas && (
               <button
                 onClick={() => onSendGas!(messageId!)}
-                className={`btn btn-xs btn-ghost transition-colors gap-1 ${
+                className={`btn btn-xs btn-ghost transition-colors duration-150 gap-1 ${
                   (gasAmount && gasAmount > 0) || hasSentGas ? "text-amber-500" : "hover:text-amber-500"
                 }`}
                 title="このユーザーを応援する"
@@ -216,7 +216,7 @@ export const ChatBubble = memo(function ChatBubble({
             {canBlock && (
               <button
                 onClick={() => onBlock!(responder!.responderId!)}
-                className={`btn btn-xs transition-colors ${
+                className={`btn btn-xs transition-colors duration-150 ${
                   isBlockingUser ? "btn-error" : "btn-ghost hover:btn-error"
                 }`}
                 title="このユーザーをブロック"
@@ -253,7 +253,7 @@ interface CrisisAlertProps {
 
 export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: CrisisAlertProps) {
   return (
-    <div className="chat chat-start">
+    <div className="chat chat-start animate-fade-in">
       <div className="chat-image avatar">
         <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-warning/30">
           <Image
@@ -266,18 +266,18 @@ export const CrisisAlert = memo(function CrisisAlert({ onClose, onDisable }: Cri
           />
         </div>
       </div>
-      <div className="chat-bubble chat-assistant shadow-sm">
+      <div className="chat-bubble chat-assistant shadow-soft border border-warning/20">
         <p className="whitespace-pre-wrap break-words leading-relaxed">
           つらい気持ちを感じていませんか？ 24時間チャット相談:{" "}
-          <a href="https://talkme.jp/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+          <a href="https://talkme.jp/" target="_blank" rel="noopener noreferrer" className="link link-primary link-hover-underline">
             あなたのいばしょ
           </a>
         </p>
         <div className="flex justify-end gap-2 mt-2">
-          <button className="btn btn-xs btn-ghost opacity-60" onClick={onDisable}>
+          <button className="btn btn-xs btn-ghost opacity-60 hover:opacity-100 transition-opacity duration-150" onClick={onDisable}>
             今後表示しない
           </button>
-          <button className="btn btn-xs btn-ghost" onClick={onClose}>
+          <button className="btn btn-xs btn-ghost transition-opacity duration-150" onClick={onClose}>
             閉じる
           </button>
         </div>

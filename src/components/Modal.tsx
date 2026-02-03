@@ -22,16 +22,16 @@ export const Modal = forwardRef<HTMLDialogElement, ModalProps>(
 
     return (
       <dialog ref={ref} className="modal" aria-labelledby={titleId}>
-        <div className="modal-box">
+        <div className="modal-box animate-fade-in shadow-soft glass-card-enhanced border border-base-content/10">
           <h3 id={titleId} className="font-bold text-base">{title}</h3>
           <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
           <div className="modal-action">
-            <button className="btn btn-sm" onClick={handleClick}>
+            <button className="btn btn-sm transition-opacity duration-150 hover:opacity-80" onClick={handleClick}>
               {buttonText}
             </button>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop">
+        <form method="dialog" className="modal-backdrop backdrop-blur-medium bg-black/50">
           <button onClick={onClick} tabIndex={-1}>close</button>
         </form>
       </dialog>
@@ -82,19 +82,19 @@ export const ConfirmModal = forwardRef<HTMLDialogElement, ConfirmModalProps>(
 
     return (
       <dialog ref={ref} className="modal" aria-labelledby={titleId}>
-        <div className="modal-box">
+        <div className="modal-box animate-fade-in shadow-soft glass-card-enhanced border border-base-content/10">
           <h3 id={titleId} className="font-bold text-base">{title}</h3>
           <p className="py-3 text-[13px] whitespace-pre-line">{body}</p>
-          <div className="modal-action">
-            <button className={`btn btn-sm ${confirmButtonClass}`} onClick={handleConfirm}>
+          <div className="modal-action gap-2">
+            <button className={`btn btn-sm ${confirmButtonClass} transition-opacity duration-150 hover:opacity-80`} onClick={handleConfirm}>
               {confirmText}
             </button>
-            <button className="btn btn-sm" onClick={handleCancel}>
+            <button className="btn btn-sm transition-opacity duration-150 hover:opacity-80" onClick={handleCancel}>
               {cancelText}
             </button>
           </div>
         </div>
-        <form method="dialog" className="modal-backdrop">
+        <form method="dialog" className="modal-backdrop backdrop-blur-medium bg-black/50">
           <button onClick={handleCancel} tabIndex={-1}>close</button>
         </form>
       </dialog>

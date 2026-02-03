@@ -36,6 +36,97 @@ const config: Config = {
           "sans-serif",
         ],
       },
+      animation: {
+        "fade-in": "fadeIn 0.3s ease-out",
+        "slide-up": "slideUp 0.3s ease-out",
+        "slide-in-right": "slideInRight 0.3s ease-out",
+        "slide-in-bottom": "slideInBottom 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        "scale-in": "scaleIn 0.2s ease-out",
+        "bounce-in": "bounceIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "dropdown-in": "dropdownIn 0.15s ease-out",
+        "float-up": "float-up 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "shimmer": "shimmer 2s infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "gradient-shift": "gradient-shift 6s ease infinite",
+        "page-enter": "page-enter 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        "ripple": "ripple 600ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "focus-ring-pulse": "focus-ring-pulse 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        slideUp: {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        slideInRight: {
+          "0%": { opacity: "0", transform: "translateX(100%)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        slideInBottom: {
+          "0%": { opacity: "0", transform: "translateY(30px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        scaleIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+        bounceIn: {
+          "0%": { opacity: "0", transform: "scale(0.3)" },
+          "50%": { opacity: "1", transform: "scale(1.05)" },
+          "70%": { transform: "scale(0.9)" },
+          "100%": { transform: "scale(1)" },
+        },
+        dropdownIn: {
+          "0%": { opacity: "0", transform: "translateY(-4px) scale(0.95)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-1000px 0" },
+          "100%": { backgroundPosition: "1000px 0" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 5px rgba(163, 116, 255, 0.3)" },
+          "50%": { boxShadow: "0 0 20px rgba(163, 116, 255, 0.6)" },
+        },
+        "gradient-shift": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        "page-enter": {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        ripple: {
+          "0%": { transform: "scale(0)", opacity: "0.6" },
+          "100%": { transform: "scale(4)", opacity: "0" },
+        },
+        "focus-ring-pulse": {
+          "0%": { boxShadow: "0 0 0 0px var(--background), 0 0 0 0px var(--accent-purple)" },
+          "100%": { boxShadow: "0 0 0 3px var(--background), 0 0 0 5px var(--accent-purple)" },
+        },
+      },
+      boxShadow: {
+        soft: "0 2px 8px -1px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04)",
+        elevated: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+        "glow-purple": "0 4px 14px rgba(163, 116, 255, 0.25), 0 2px 6px rgba(163, 116, 255, 0.15)",
+        "glow-pink": "0 4px 14px rgba(179, 45, 182, 0.25), 0 2px 6px rgba(179, 45, 182, 0.15)",
+        "card-hover": "0 10px 20px -5px rgba(163, 116, 255, 0.15), 0 4px 8px -2px rgba(0, 0, 0, 0.1)",
+      },
+      backdropBlur: {
+        xs: "2px",
+        strong: "24px",
+        medium: "12px",
+      },
+      transitionTimingFunction: {
+        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        smooth: "cubic-bezier(0.4, 0, 0.2, 1)",
+        bounce: "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        elastic: "cubic-bezier(0.68, -0.6, 0.32, 1.6)",
+      },
     },
   },
   plugins: [daisyui],

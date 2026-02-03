@@ -56,18 +56,18 @@ export function MobileDrawer({ isOpen, onClose, children }: MobileDrawerProps) {
       aria-modal="true"
       aria-hidden={!isOpen}
     >
-      {/* Overlay */}
+      {/* Overlay - Enhanced with blur */}
       <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-black/50 backdrop-blur-strong transition-opacity duration-300 ease-smooth ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Drawer Panel */}
+      {/* Drawer Panel - Enhanced with glassmorphism and animation */}
       <div
-        className={`absolute left-0 top-0 h-full w-60 bg-base-300/95 shadow-xl transition-transform duration-300 ease-out ${
+        className={`absolute left-0 top-0 h-full w-60 glass-card-enhanced shadow-elevated transition-all duration-300 ease-spring ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -203,7 +203,7 @@ interface BottomNavProps {
 
 export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotificationCount = 0 }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-14 bg-base-100/95 backdrop-blur-sm border-t border-base-300 flex items-center justify-around px-2 z-40">
+    <nav className="fixed bottom-0 left-0 right-0 h-14 bg-base-100/95 backdrop-blur-medium border-t border-base-300 flex items-center justify-around px-2 z-40 shadow-soft">
       {/* Menu (Burger) Button */}
       <button
         onClick={onMenuClick}
@@ -248,7 +248,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* New Consultation Button (Right, Gradient) */}
       <button
         onClick={() => onNavigate("/main")}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-lg"
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 ease-smooth focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-soft"
         aria-label="新しい相談"
       >
         <ChatIcon className="h-5 w-5" />

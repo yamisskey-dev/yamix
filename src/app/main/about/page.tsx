@@ -1,6 +1,6 @@
 import { yamiiClient } from "@/lib/yamii-client";
 
-// Misskey風のFormLinkコンポーネント
+// Misskey風のFormLinkコンポーネント - Enhanced with micro-interactions
 function FormLink({
   href,
   icon,
@@ -17,11 +17,11 @@ function FormLink({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
-      className="flex items-center w-full px-3.5 py-2.5 bg-base-300/50 hover:bg-base-300 rounded-md text-sm transition-colors"
+      className="group flex items-center w-full px-3.5 py-2.5 bg-base-300/50 hover:bg-base-300 rounded-md text-sm transition-colors duration-150 ease-smooth"
     >
       <span className="mr-3 text-base-content/75">{icon}</span>
       <span className="flex-1">{children}</span>
-      <span className="text-base-content/50">
+      <span className="text-base-content/50 transition-all duration-150 group-hover:text-base-content/75">
         {external ? (
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -36,18 +36,20 @@ function FormLink({
   );
 }
 
-// Misskey風のFormSectionコンポーネント
+// Misskey風のFormSectionコンポーネント - Enhanced with glassmorphism
 function FormSection({
   label,
   children,
+  className = "",
 }: {
   label?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl bg-base-200 p-4">
+    <div className={`rounded-xl bg-base-200 p-4 transition-all duration-300 ease-smooth hover:shadow-soft backdrop-blur-medium border border-base-content/5 ${className}`}>
       {label && (
-        <div className="text-xs text-base-content/50 font-medium mb-3">{label}</div>
+        <div className="text-xs text-base-content/50 font-medium mb-3 tracking-wide uppercase">{label}</div>
       )}
       <div className="space-y-2">{children}</div>
     </div>
@@ -83,11 +85,11 @@ export default async function AboutPage() {
   const yamixVersion = process.env.NEXT_PUBLIC_YAMIX_VERSION || "unknown";
   const yamiiVersion = await getYamiiVersion();
   return (
-    <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto">
+    <div className="flex-1 p-4 pb-20 window:pb-4 overflow-y-auto page-enter">
       <div className="max-w-xl mx-auto space-y-4 my-8">
         {/* バナー */}
         <div
-          className="relative rounded-xl overflow-hidden h-36 bg-cover bg-center bg-base-200"
+          className="relative rounded-xl overflow-hidden h-36 bg-cover bg-center bg-base-200 stagger-item"
           style={{
             backgroundImage:
               "url(https://raw.githubusercontent.com/yamisskey-dev/yamisskey-assets/main/yami.ski/yami-banner.gif)",
@@ -102,7 +104,7 @@ export default async function AboutPage() {
               className="rounded-lg"
             />
           </div>
-          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent">
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent backdrop-blur-xs">
             <span className="text-sm font-bold text-white drop-shadow-md">
               やみっくす
             </span>
@@ -110,7 +112,7 @@ export default async function AboutPage() {
         </div>
 
         {/* Yamixについて */}
-        <FormSection label="このアプリについて">
+        <FormSection label="このアプリについて" className="stagger-item">
           <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
             <p>
               AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しない</strong>相談プラットフォーム
@@ -123,7 +125,7 @@ export default async function AboutPage() {
         </FormSection>
 
         {/* 使いかた */}
-        <FormSection label="使いかた">
+        <FormSection label="使いかた" className="stagger-item">
           <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
             <ol className="text-base-content/60 space-y-1.5 ml-4 list-decimal">
               <li><strong className="text-base-content/80">相談する</strong>：公開か指名で他人に相談するか、非公開でAIに相談</li>
@@ -134,7 +136,7 @@ export default async function AboutPage() {
         </FormSection>
 
         {/* プライバシー・機能 */}
-        <FormSection label="プライバシー・機能">
+        <FormSection label="プライバシー・機能" className="stagger-item">
           <div className="text-xs text-base-content/70 space-y-3 leading-relaxed">
             <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
               <li>メッセージは<strong className="text-base-content/80">暗号化</strong>され安全に保存されます</li>
@@ -146,7 +148,7 @@ export default async function AboutPage() {
         </FormSection>
 
         {/* ソースコード・バージョン */}
-        <FormSection label="ソースコード">
+        <FormSection label="ソースコード" className="stagger-item">
           <FormLink
             href="https://github.com/yamisskey-dev/yamix"
             icon={
@@ -172,15 +174,15 @@ export default async function AboutPage() {
         </FormSection>
 
         {/* 管理者・連絡先 */}
-        <FormSection>
+        <FormSection className="stagger-item">
           <div className="grid grid-cols-2 gap-4">
             <MkKeyValue label="管理者">
-              <a href="https://dao.yami.ski/" target="_blank" rel="noopener noreferrer" className="link link-primary">
+              <a href="https://dao.yami.ski/" target="_blank" rel="noopener noreferrer" className="link link-primary link-hover-underline">
                 YAMI DAO
               </a>
             </MkKeyValue>
             <MkKeyValue label="連絡先">
-              <a href="mailto:admin@yami.ski" className="link link-primary">
+              <a href="mailto:admin@yami.ski" className="link link-primary link-hover-underline">
                 admin@yami.ski
               </a>
             </MkKeyValue>

@@ -49,11 +49,11 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
   return (
     <article
       onClick={handleClick}
-      className="note-article group flex py-6 px-8 bg-base-200/60 border-b border-base-content/10 hover:bg-base-200/80 transition-colors cursor-pointer relative"
+      className="note-article group flex py-6 px-8 bg-base-200/60 border-b border-base-content/10 hover:bg-base-200/80 transition-all duration-200 ease-smooth cursor-pointer relative"
     >
       {/* Avatar */}
       <div className="flex-shrink-0 mr-3.5">
-        <div className="w-[46px] h-[46px] rounded-full overflow-hidden">
+        <div className="w-[46px] h-[46px] rounded-full overflow-hidden shadow-soft">
           {isAIResponse ? (
             <div className="bg-base-200 flex items-center justify-center w-full h-full text-xl">
               🤖
@@ -100,7 +100,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation, c
             <>
               <Link
                 href={`/main/user/${encodeHandle(displayUser.handle)}`}
-                className="font-bold text-[13px] hover:underline truncate max-w-[180px]"
+                className="font-bold text-[13px] hover:text-primary truncate max-w-[180px] transition-colors duration-200 link-hover-underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {displayName}

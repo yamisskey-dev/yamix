@@ -14,7 +14,7 @@ interface Props {
   unreadNotificationCount?: number;
 }
 
-// Misskey-style navigation item component
+// Misskey-style navigation item component - Enhanced with micro-interactions
 function NavItem({
   icon,
   label,
@@ -35,16 +35,22 @@ function NavItem({
         className={`
           group relative w-full h-10 rounded-full px-4
           flex items-center gap-3
-          transition-colors duration-150
+          transition-colors duration-150 ease-smooth
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-200
-          ${isActive ? "bg-primary/10 text-primary" : "text-base-content/70 hover:bg-primary/10 hover:text-primary"}
+          ${isActive
+            ? "bg-primary/10 text-primary"
+            : "text-base-content/70 hover:bg-primary/10 hover:text-primary"
+          }
         `}
         aria-current={isActive ? "page" : undefined}
       >
         <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
         <span className="text-[13px] font-medium flex-1 text-left">{label}</span>
         {indicator && (
-          <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+          </span>
         )}
       </button>
     </div>
@@ -70,7 +76,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
         <Link
           href="/main/about"
           onClick={onClose}
-          className="flex items-center justify-center hover:opacity-80 transition-opacity"
+          className="flex items-center justify-center transition-opacity duration-150 hover:opacity-80"
         >
           <img
             src="/app-icon.png"
@@ -181,12 +187,12 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
       {/* Divider */}
       <div className="mx-5 my-3 border-t border-base-content/10 flex-shrink-0" />
 
-      {/* Search input - Fixed */}
+      {/* Search input */}
       <div className="px-5 pb-2 flex-shrink-0">
-        <div className="relative">
+        <div className="relative group">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40"
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 transition-all duration-150 group-focus-within:text-primary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -203,12 +209,12 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="検索..."
-            className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-colors"
+            className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-all duration-150 ease-smooth"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+              className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle hover:bg-error/10 hover:text-error transition-all duration-150"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -246,7 +252,8 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
               text-primary-content text-sm font-medium
               flex items-center gap-3
               hover:brightness-110
-              transition-all duration-150
+              transition-all duration-150 ease-smooth
+              group
             "
           >
             <svg
@@ -275,11 +282,11 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
               onClose?.();
             }}
             className="
-              flex items-center w-full
-              py-2.5 px-4
+              group flex items-center w-full
+              py-2.5 px-4 rounded-lg mx-2
               text-left
               hover:bg-base-content/5
-              transition-colors duration-150
+              transition-colors duration-150 ease-smooth
             "
           >
             {/* Avatar */}
@@ -300,7 +307,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
             </div>
             {/* User info */}
             <div className="flex-1 min-w-0 ml-2.5 truncate">
-              <span className="text-sm text-base-content">
+              <span className="text-sm text-base-content transition-colors duration-150 group-hover:text-primary">
                 @{user.account}@{user.hostName}
               </span>
             </div>
