@@ -26,6 +26,8 @@ interface ChatBubbleProps {
   gasAmount?: number; // 受け取った灯の合計
   onSendGas?: (messageId: string) => void; // 灯を送るコールバック
   isCrisis?: boolean; // 危機判定されたメッセージ
+  hasSentGas?: boolean; // このメッセージにGasを送信済みかどうか
+  isBlockingUser?: boolean; // このユーザーをブロック処理中かどうか
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -39,6 +41,8 @@ export const ChatBubble = memo(function ChatBubble({
   messageId,
   onSendGas,
   isCrisis,
+  hasSentGas,
+  isBlockingUser,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
@@ -187,7 +191,9 @@ export const ChatBubble = memo(function ChatBubble({
             {canSendGas && (
               <button
                 onClick={() => onSendGas!(messageId!)}
-                className="btn btn-xs btn-ghost hover:text-amber-500 transition-colors"
+                className={`btn btn-xs btn-ghost transition-colors ${
+                  hasSentGas ? "text-amber-500" : "hover:text-amber-500"
+                }`}
                 title="このユーザーを応援する"
                 aria-label="応援する"
               >
@@ -206,9 +212,12 @@ export const ChatBubble = memo(function ChatBubble({
             {canBlock && (
               <button
                 onClick={() => onBlock!(responder!.responderId!)}
-                className="btn btn-xs btn-ghost hover:btn-error transition-colors"
+                className={`btn btn-xs transition-colors ${
+                  isBlockingUser ? "btn-error" : "btn-ghost hover:btn-error"
+                }`}
                 title="このユーザーをブロック"
                 aria-label="ブロック"
+                disabled={isBlockingUser}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

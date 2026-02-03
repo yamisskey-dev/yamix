@@ -417,6 +417,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [blockTargetId, setBlockTargetId] = useState<string | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
+  const [sentGasMessageIds, setSentGasMessageIds] = useState<Set<string>>(new Set());
 
   // Track server session ID for local sessions (triggers initial message send)
   const [pendingServerSessionId, setPendingServerSessionId] = useState<string | null>(() => {
@@ -992,6 +993,8 @@ export default function ChatSessionPage({ params }: PageProps) {
           m.id === messageId ? { ...m, gasAmount: data.gasAmount } : m
         )
       );
+      // 送信済みメッセージIDを記録
+      setSentGasMessageIds((prev) => new Set(prev).add(messageId));
       toast.success("💜を送りました（3 YAMI）");
     } catch (error) {
       clientLogger.error("Send gas error:", error);
@@ -1435,6 +1438,8 @@ export default function ChatSessionPage({ params }: PageProps) {
                 gasAmount={msg.gasAmount}
                 onSendGas={handleSendGas}
                 isCrisis={sessionInfo?.consultType !== "PRIVATE" ? msg.isCrisis : undefined}
+                hasSentGas={sentGasMessageIds.has(msg.id)}
+                isBlockingUser={msg.responder?.responderId === blockTargetId && isBlocking}
               />
             );
           })}
