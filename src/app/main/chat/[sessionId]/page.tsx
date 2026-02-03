@@ -43,6 +43,7 @@ interface LocalMessage {
   timestamp: Date;
   responder?: ResponderInfo | null;
   gasAmount?: number;
+  isCrisis?: boolean;
 }
 
 interface SessionInfo {
@@ -111,6 +112,7 @@ function transformMessage(
       content: m.content as string,
       timestamp: new Date(m.createdAt),
       gasAmount: m.gasAmount,
+      isCrisis: m.isCrisis,
     };
   }
 
@@ -121,6 +123,7 @@ function transformMessage(
       content: m.content as string,
       timestamp: new Date(m.createdAt),
       gasAmount: m.gasAmount,
+      isCrisis: m.isCrisis,
       responder: {
         displayName: sessionIsAnonymous ? null : (sessionUser?.displayName || null),
         avatarUrl: sessionIsAnonymous ? null : (sessionUser?.avatarUrl || null),
@@ -136,6 +139,7 @@ function transformMessage(
     content: m.content as string,
     timestamp: new Date(m.createdAt),
     gasAmount: m.gasAmount,
+    isCrisis: m.isCrisis,
     responder: m.responder ? {
       displayName: m.isAnonymous
         ? `User ${anonymousUserMap.get(m.responderId!)}`
@@ -610,6 +614,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           content: m.content,
           timestamp: new Date(m.createdAt),
           gasAmount: m.gasAmount,
+          isCrisis: m.isCrisis,
         };
       }
 
@@ -620,6 +625,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           content: m.content,
           timestamp: new Date(m.createdAt),
           gasAmount: m.gasAmount,
+          isCrisis: m.isCrisis,
           responder: {
             displayName: null,
             avatarUrl: null,
@@ -644,6 +650,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         content: m.content,
         timestamp: new Date(m.createdAt),
         gasAmount: m.gasAmount,
+        isCrisis: m.isCrisis,
         responder: m.responder
           ? {
               displayName: m.isAnonymous
@@ -1218,6 +1225,7 @@ export default function ChatSessionPage({ params }: PageProps) {
                 messageId={msg.id}
                 gasAmount={msg.gasAmount}
                 onSendGas={handleSendGas}
+                isCrisis={sessionInfo?.consultType !== "PRIVATE" ? msg.isCrisis : undefined}
               />
             );
           })}

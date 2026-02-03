@@ -25,6 +25,7 @@ interface ChatBubbleProps {
   messageId?: string; // メッセージID（灯を送るため）
   gasAmount?: number; // 受け取った灯の合計
   onSendGas?: (messageId: string) => void; // 灯を送るコールバック
+  isCrisis?: boolean; // 危機判定されたメッセージ
 }
 
 export const ChatBubble = memo(function ChatBubble({
@@ -37,6 +38,7 @@ export const ChatBubble = memo(function ChatBubble({
   onBlock,
   messageId,
   onSendGas,
+  isCrisis,
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const isHuman = !!responder; // responderがいれば人間（相談者または回答者）
@@ -153,6 +155,11 @@ export const ChatBubble = memo(function ChatBubble({
         <p className="whitespace-pre-wrap break-words leading-relaxed">
           {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
         </p>
+        {isCrisis && (
+          <span className="inline-block ml-1 text-warning" title="危機検出">
+            💣
+          </span>
+        )}
       </div>
 
       {/* Footer: Timestamp and action buttons (buttons visible on hover only) */}
