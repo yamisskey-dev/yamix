@@ -7,7 +7,12 @@ services:
       - ../:/workspace:cached
     env_file:
       - ../.env.local
-      - ../.env
+    environment:
+      # DevContainer infrastructure settings (these don't change)
+      DATABASE_URL: "postgresql://yamix:password@postgres:5432/yamix"
+      REDIS_URL: "redis://redis:6379"
+      YAMII_API_URL: "http://yamii:8000"
+      WEB_URL: "http://localhost:3000"
     command: sleep infinity
     networks:
       - internal_network

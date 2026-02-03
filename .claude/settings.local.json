@@ -31,7 +31,8 @@
       "Bash(find:*)",
       "Bash(wc:*)",
       "Bash(npx eslint:*)",
-      "Bash(pnpm test:unit:run:*)"
+      "Bash(pnpm test:unit:run:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
