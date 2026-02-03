@@ -541,7 +541,7 @@ export default function ChatSessionPage({ params }: PageProps) {
     setMessages((prev) => {
       // Avoid duplicates
       if (prev.some((m) => m.id === userMessage.id)) return prev;
-      return [userMessage];
+      return [...prev, userMessage];
     });
     setIsLoading(true);
 
