@@ -28,31 +28,14 @@ export function CrisisStrikeIndicator({
   const isMaxStrikes = crisisCount >= maxStrikes;
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="flex items-center gap-1">
-        {[...Array(maxStrikes)].map((_, index) => {
-          const isActive = index < crisisCount;
-          return (
-            <div
-              key={index}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                isActive
-                  ? isMaxStrikes
-                    ? "bg-error animate-pulse"
-                    : "bg-warning"
-                  : "bg-base-300"
-              }`}
-              title={`フラグ ${index + 1}${isActive ? " (検出済み)" : ""}`}
-            />
-          );
-        })}
-      </div>
+    <div className={`flex items-center gap-1.5 ${className}`}>
+      <span className="text-base">🚩</span>
       <span
         className={`text-xs font-medium ${
-          isMaxStrikes ? "text-error" : "text-warning"
+          isMaxStrikes ? "text-error" : "text-info"
         }`}
       >
-        {isMaxStrikes ? "非公開化" : `フラグ ${crisisCount}/5`}
+        {isMaxStrikes ? "非公開化" : `${crisisCount}/5`}
       </span>
     </div>
   );
@@ -81,21 +64,14 @@ export function CrisisStrikeIndicatorCompact({
 
   return (
     <div className={`flex items-center gap-1 ${className}`} title={`危機検出: ${crisisCount}/5`}>
-      {[...Array(maxStrikes)].map((_, index) => {
-        const isActive = index < crisisCount;
-        return (
-          <div
-            key={index}
-            className={`w-1.5 h-1.5 rounded-full ${
-              isActive
-                ? isMaxStrikes
-                  ? "bg-error"
-                  : "bg-warning"
-                : "bg-base-300"
-            }`}
-          />
-        );
-      })}
+      <span className="text-sm">🚩</span>
+      <span
+        className={`text-xs ${
+          isMaxStrikes ? "text-error" : "text-info"
+        }`}
+      >
+        {crisisCount}/5
+      </span>
     </div>
   );
 }
