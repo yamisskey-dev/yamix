@@ -155,15 +155,10 @@ export const ChatBubble = memo(function ChatBubble({
         <p className="whitespace-pre-wrap break-words leading-relaxed">
           {parseMentions(content, "text-base-content/90 hover:text-base-content hover:underline font-medium")}
         </p>
-        {isCrisis && (
-          <span className="inline-block ml-1 text-warning" title="危機検出">
-            💣
-          </span>
-        )}
       </div>
 
       {/* Footer: Timestamp and action buttons (buttons visible on hover only) */}
-      {(timestamp || canSendGas || canBlock) && (
+      {(timestamp || canSendGas || canBlock || isCrisis) && (
         <div className="chat-footer flex items-center gap-2 mt-1">
           {/* Timestamp */}
           {timestamp && (
@@ -177,6 +172,17 @@ export const ChatBubble = memo(function ChatBubble({
 
           {/* Action buttons - always visible on mobile, hover on desktop */}
           <div className="flex items-center gap-1 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity">
+            {/* Crisis indicator */}
+            {isCrisis && (
+              <span
+                className="text-warning text-sm"
+                title="危機検出"
+                aria-label="危機検出"
+              >
+                💣
+              </span>
+            )}
+
             {/* Gas button (only for non-owners) */}
             {canSendGas && (
               <button
