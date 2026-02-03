@@ -83,6 +83,14 @@ class MessageQueueManager {
           );
 
           if (item) {
+            // 403/404などの永続的エラーは即座に削除
+            const isPermanentError = (error as Error & { permanent?: boolean }).permanent;
+            if (isPermanentError) {
+              await indexedDB.removeFromSyncQueue(item.id);
+              console.warn('[MessageQueue] Permanent error (403/404), removing from queue:', queuedMsg.sessionId);
+              continue;
+            }
+
             queuedMsg.retries += 1;
             queuedMsg.error = error instanceof Error ? error.message : 'Unknown error';
 
@@ -115,7 +123,12 @@ class MessageQueueManager {
 
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.error || 'Failed to send message');
+      const error = new Error(data.error || 'Failed to send message');
+      // 403/404エラーはリトライしても無駄なのでフラグを立てる
+      if (response.status === 403 || response.status === 404) {
+        (error as Error & { permanent: boolean }).permanent = true;
+      }
+      throw error;
     }
   }
 
