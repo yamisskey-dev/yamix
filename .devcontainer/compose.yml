@@ -6,17 +6,12 @@ services:
     volumes:
       - ../:/workspace:cached
     env_file:
+      - ../.env.local
       - ../.env
     command: sleep infinity
     networks:
       - internal_network
       - external_network
-    environment:
-      DATABASE_URL: postgresql://yamix:password@postgres:5432/yamix
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: devcontainer-secret-key
-      WEB_URL: http://localhost:3000
-      YAMII_API_URL: http://yamii:8000
     depends_on:
       yamii:
         condition: service_healthy
