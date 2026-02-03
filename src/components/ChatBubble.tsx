@@ -170,19 +170,19 @@ export const ChatBubble = memo(function ChatBubble({
             </time>
           )}
 
+          {/* Crisis indicator - always visible */}
+          {isCrisis && (
+            <span
+              className="text-warning text-sm"
+              title="危機検出"
+              aria-label="危機検出"
+            >
+              💣
+            </span>
+          )}
+
           {/* Action buttons - always visible on mobile, hover on desktop */}
           <div className="flex items-center gap-1 xl:opacity-0 xl:group-hover:opacity-100 transition-opacity">
-            {/* Crisis indicator */}
-            {isCrisis && (
-              <span
-                className="text-warning text-sm"
-                title="危機検出"
-                aria-label="危機検出"
-              >
-                💣
-              </span>
-            )}
-
             {/* Gas button (only for non-owners) */}
             {canSendGas && (
               <button
