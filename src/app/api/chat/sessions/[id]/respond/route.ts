@@ -201,7 +201,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       moderationCrisis = checkCrisisKeywords(body.content.trim());
     }
 
-    // 3-strike system: increment crisisCount, only privatize on 3rd detection
+    // 5-flag system: increment crisisCount, only privatize on 5th detection
     const isPublicType = sessionWithMessages.consultType === "PUBLIC" || sessionWithMessages.consultType === "DIRECTED";
     let shouldHide = false;
     if (moderationCrisis && isPublicType) {
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         where: { id },
         data: { crisisCount: { increment: 1 } },
       });
-      shouldHide = updatedSession.crisisCount >= 3;
+      shouldHide = updatedSession.crisisCount >= 5;
     }
 
     // Get responder wallet and check balance for response cost

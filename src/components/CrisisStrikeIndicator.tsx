@@ -1,5 +1,5 @@
 /**
- * 3ストライク制の表示UIコンポーネント
+ * 5フラグ制の表示UIコンポーネント
  * 危機検出回数を視覚的に表示
  */
 
@@ -14,17 +14,17 @@ export function CrisisStrikeIndicator({
   consultType,
   className = ""
 }: CrisisStrikeIndicatorProps) {
-  // PRIVATE相談はストライク制の対象外
+  // PRIVATE相談はフラグ制の対象外
   if (consultType === "PRIVATE") {
     return null;
   }
 
-  // ストライクがない場合は表示しない
+  // フラグがない場合は表示しない
   if (crisisCount === 0) {
     return null;
   }
 
-  const maxStrikes = 3;
+  const maxStrikes = 5;
   const isMaxStrikes = crisisCount >= maxStrikes;
 
   return (
@@ -42,7 +42,7 @@ export function CrisisStrikeIndicator({
                     : "bg-warning"
                   : "bg-base-300"
               }`}
-              title={`ストライク ${index + 1}${isActive ? " (検出済み)" : ""}`}
+              title={`フラグ ${index + 1}${isActive ? " (検出済み)" : ""}`}
             />
           );
         })}
@@ -52,7 +52,7 @@ export function CrisisStrikeIndicator({
           isMaxStrikes ? "text-error" : "text-warning"
         }`}
       >
-        {isMaxStrikes ? "非公開化" : `${crisisCount}/3 ストライク`}
+        {isMaxStrikes ? "非公開化" : `フラグ ${crisisCount}/5`}
       </span>
     </div>
   );
@@ -66,21 +66,21 @@ export function CrisisStrikeIndicatorCompact({
   consultType,
   className = ""
 }: CrisisStrikeIndicatorProps) {
-  // PRIVATE相談はストライク制の対象外
+  // PRIVATE相談はフラグ制の対象外
   if (consultType === "PRIVATE") {
     return null;
   }
 
-  // ストライクがない場合は表示しない
+  // フラグがない場合は表示しない
   if (crisisCount === 0) {
     return null;
   }
 
-  const maxStrikes = 3;
+  const maxStrikes = 5;
   const isMaxStrikes = crisisCount >= maxStrikes;
 
   return (
-    <div className={`flex items-center gap-1 ${className}`} title={`危機検出: ${crisisCount}/3`}>
+    <div className={`flex items-center gap-1 ${className}`} title={`危機検出: ${crisisCount}/5`}>
       {[...Array(maxStrikes)].map((_, index) => {
         const isActive = index < crisisCount;
         return (
