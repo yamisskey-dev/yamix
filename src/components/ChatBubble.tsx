@@ -66,7 +66,7 @@ export const ChatBubble = memo(function ChatBubble({
   }
 
   return (
-    <div className={`chat ${isUser ? "chat-end" : "chat-start"} group animate-slide-up`}>
+    <div className={`chat ${isUser ? "chat-end" : "chat-start"} group`}>
       {/* Avatar for assistant or human */}
       {!isUser && (
         <div className="chat-image avatar">
