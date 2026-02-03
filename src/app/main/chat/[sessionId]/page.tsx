@@ -459,7 +459,22 @@ export default function ChatSessionPage({ params }: PageProps) {
       timestamp: m.timestamp,
       responder: undefined,
     }));
-    setMessages(localMessages);
+
+    // Only update messages if not currently streaming (prevents overwriting AI response)
+    setMessages((prev) => {
+      // Skip if server session is ready (sync complete, message about to be sent)
+      if (pendingServerSessionId) {
+        devLog.log('[LOCAL SESSION] Skipping setMessages: server session ready, preventing overwrite');
+        return prev;
+      }
+      // Skip if SSE streaming is in progress or assistant message already exists
+      if (prev.some(m => m.role === 'assistant')) {
+        devLog.log('[LOCAL SESSION] Skipping setMessages: assistant message exists');
+        return prev;
+      }
+      devLog.log('[CHAT DEBUG] Initializing messages from local session (direct)');
+      return localMessages;
+    });
 
     // Start immediate sync (not background!)
     if (!localSession.synced && !localSession.syncing) {
@@ -490,7 +505,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       // Already synced, redirect to server session
       router.replace(`/main/chat/${localSession.serverId}`);
     }
-  }, [isLocalSession, localSession, currentUser, router, toast]);
+  }, [isLocalSession, localSession, currentUser, router, toast, pendingServerSessionId]);
 
   // Process session data from SWR
   useEffect(() => {
