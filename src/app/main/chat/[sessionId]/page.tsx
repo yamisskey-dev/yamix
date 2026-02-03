@@ -388,15 +388,18 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Case 2: Check for pending initial message (for server IDs after sync)
     const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
+    devLog.log('[INIT DEBUG] Case 2 check - sessionId:', sessionId, 'pendingLocalId:', pendingLocalId);
     if (pendingLocalId) {
       const localSession = localSessionStore.get(pendingLocalId);
       const mapped = mapMessages(localSession);
+      devLog.log('[INIT DEBUG] Found local session:', !!localSession, 'mapped messages:', mapped?.length);
       if (mapped) {
         devLog.log('[CHAT DEBUG] Initializing messages from pending initial message');
         return mapped;
       }
     }
 
+    devLog.log('[INIT DEBUG] No initialization source found, returning empty array');
     return [];
   });
 
@@ -462,14 +465,14 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     // Only update messages if not currently streaming (prevents overwriting AI response)
     setMessages((prev) => {
-      // Skip if server session is ready (sync complete, message about to be sent)
-      if (pendingServerSessionId) {
-        devLog.log('[LOCAL SESSION] Skipping setMessages: server session ready, preventing overwrite');
-        return prev;
-      }
-      // Skip if SSE streaming is in progress or assistant message already exists
+      // Skip if assistant message already exists (SSE streaming completed or in progress)
       if (prev.some(m => m.role === 'assistant')) {
         devLog.log('[LOCAL SESSION] Skipping setMessages: assistant message exists');
+        return prev;
+      }
+      // Skip if messages are not empty and have same content (avoid unnecessary re-initialization)
+      if (prev.length > 0 && prev.length === localMessages.length) {
+        devLog.log('[LOCAL SESSION] Skipping setMessages: messages already initialized');
         return prev;
       }
       devLog.log('[CHAT DEBUG] Initializing messages from local session (direct)');
@@ -501,11 +504,12 @@ export default function ChatSessionPage({ params }: PageProps) {
           },
         });
       });
-    } else if (localSession.synced && localSession.serverId) {
-      // Already synced, redirect to server session
+    } else if (localSession.synced && localSession.serverId && !pendingServerSessionId) {
+      // Already synced (from previous visit), redirect to server session immediately
+      // NOTE: If pendingServerSessionId exists, we're in the middle of initial message send, don't redirect yet
       router.replace(`/main/chat/${localSession.serverId}`);
     }
-  }, [isLocalSession, localSession, currentUser, router, toast, pendingServerSessionId]);
+  }, [isLocalSession, localSession, currentUser, router, toast]);
 
   // Process session data from SWR
   useEffect(() => {
