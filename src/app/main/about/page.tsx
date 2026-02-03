@@ -110,15 +110,25 @@ export default async function AboutPage() {
         </div>
 
         {/* Yamixについて */}
-        <FormSection label="Yamixについて">
+        <FormSection label="このアプリについて">
           <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
             <p>
-              AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しすぎない</strong>健全な相談プラットフォームです。
+              AIと人間が共存し、<strong className="text-base-content/90">支え合いながらも依存しない</strong>相談プラットフォーム
             </p>
             <ul className="text-base-content/60 space-y-1 ml-4 list-disc">
               <li>相談にはYAMIトークンを消費、回答で報酬を獲得</li>
-              <li>毎日YAMIが支給され、誰でも参加できます</li>
+              <li>毎日YAMIトークンが支給され、誰でも参加できます</li>
             </ul>
+          </div>
+        </FormSection>
+
+        {/* 使いかた */}
+        <FormSection label="使いかた">
+          <div className="text-xs text-base-content/70 space-y-2 leading-relaxed">
+            <ol className="text-base-content/60 space-y-1.5 ml-4 list-decimal">
+              <li><strong className="text-base-content/80">相談する</strong>：公開か指名で他人に相談するか、非公開でAIに相談</li>
+              <li><strong className="text-base-content/80">回答する</strong>：他のユーザーの相談に答えて。YAMIトークンを回復</li>
+            </ol>
           </div>
         </FormSection>
 
@@ -128,7 +138,7 @@ export default async function AboutPage() {
             <ul className="text-base-content/60 space-y-1.5 ml-4 list-disc">
               <li>メッセージは<strong className="text-base-content/80">暗号化</strong>され安全に保存されます</li>
               <li>デバイスに保存され、<strong className="text-base-content/80">オフライン</strong>でも動作します</li>
-              <li>IPアドレスは記録しません</li>
+              <li>IPアドレスは記録しません。ノーログポリシーです</li>
               <li>危険な内容はAIが自動検出し、<strong className="text-base-content/80">5回のフラグ</strong>で非公開化されます</li>
             </ul>
           </div>
