@@ -129,7 +129,7 @@ export default async function AboutPage() {
               <li>メッセージは<strong className="text-base-content/80">暗号化</strong>され安全に保存されます</li>
               <li>デバイスに保存され、<strong className="text-base-content/80">オフライン</strong>でも動作します</li>
               <li>IPアドレスは記録しません</li>
-              <li>危険な内容はAIが自動検出し、非公開化されることがあります</li>
+              <li>危険な内容はAIが自動検出し、<strong className="text-base-content/80">5回のフラグ</strong>で非公開化されます</li>
             </ul>
           </div>
         </FormSection>
