@@ -174,10 +174,11 @@ async function handleSSEResponse(
     setSessionInfo: React.Dispatch<React.SetStateAction<SessionInfo | null>>;
     setShowCrisisAlert: React.Dispatch<React.SetStateAction<boolean>>;
     showToast: (message: string, type?: "success" | "error" | "warning" | "info") => void;
+    onStreamComplete?: () => void;
   }
 ): Promise<void> {
   const contentType = res.headers.get("content-type") || "";
-  console.log('[SSE DEBUG] handleSSEResponse called, contentType:', contentType);
+  devLog.log('[SSE DEBUG] handleSSEResponse called, contentType:', contentType);
 
   if (contentType.includes("text/event-stream") && res.body) {
     const streamingMsgId = crypto.randomUUID();
@@ -209,10 +210,10 @@ async function handleSSEResponse(
     };
 
     try {
-      console.log('[SSE DEBUG] Starting SSE stream processing');
+      devLog.log('[SSE DEBUG] Starting SSE stream processing');
       await processSSEStream(res, {
         onInit(event) {
-          console.log('[SSE DEBUG] onInit called, event:', event);
+          devLog.log('[SSE DEBUG] onInit called, event:', event);
           if (event.userMessageId) {
             callbacks.setMessages((prev) =>
               prev.map((m) =>
@@ -227,17 +228,21 @@ async function handleSSEResponse(
         },
         onChunk(chunk) {
           chunkCount++;
-          console.log('[SSE DEBUG] onChunk called, chunk #', chunkCount, 'length:', chunk.length);
+          devLog.log('[SSE DEBUG] onChunk called, chunk #', chunkCount, 'length:', chunk.length);
           if (!streamStarted) {
             streamStarted = true;
-            console.log('[SSE DEBUG] First chunk, creating assistant message');
-            callbacks.setIsLoading(false);
-            callbacks.setMessages((prev) => [...prev, {
-              id: streamingMsgId,
-              role: "assistant",
-              content: chunk,
-              timestamp: new Date(),
-            }]);
+            devLog.log('[SSE DEBUG] First chunk, creating assistant message');
+            // Note: Don't set isLoading=false here, it will be set in finally block
+            // Setting it here causes race condition with SWR update useEffect
+            callbacks.setMessages((prev) => {
+              devLog.log('[SSE DEBUG] Adding assistant message, prev.length:', prev.length, 'prev:', prev.map(m => ({ id: m.id, role: m.role })));
+              return [...prev, {
+                id: streamingMsgId,
+                role: "assistant",
+                content: chunk,
+                timestamp: new Date(),
+              }];
+            });
           } else {
             // Buffer the chunk and schedule an update
             contentBuffer += chunk;
@@ -245,7 +250,7 @@ async function handleSSEResponse(
           }
         },
         onDone(event) {
-          console.log('[SSE DEBUG] onDone called, total chunks:', chunkCount, 'event:', event);
+          devLog.log('[SSE DEBUG] onDone called, total chunks:', chunkCount, 'event:', event);
 
           // Cancel any pending RAF and flush remaining buffer
           if (rafId !== null) {
@@ -278,20 +283,22 @@ async function handleSSEResponse(
           throw new Error(error);
         },
       });
-      console.log('[SSE DEBUG] SSE stream processing completed');
+      devLog.log('[SSE DEBUG] SSE stream processing completed');
     } finally {
-      console.log('[SSE DEBUG] Finally block, setting isLoading to false');
+      devLog.log('[SSE DEBUG] Finally block, setting isLoading to false');
       // Clean up RAF in finally block
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         flushContentBuffer();
       }
+      // Mark streaming as just completed to prevent SWR overwrite
+      callbacks.onStreamComplete?.();
       callbacks.setIsLoading(false);
       // Log to verify message was added (will be visible in next render)
-      console.log('[SSE DEBUG] SSE processing finished, check next render for messages count');
+      devLog.log('[SSE DEBUG] SSE processing finished, check next render for messages count');
     }
   } else {
-    console.log('[SSE DEBUG] Non-streaming response, parsing JSON');
+    devLog.log('[SSE DEBUG] Non-streaming response, parsing JSON');
     // Non-streaming JSON response
     const data = await res.json();
 
@@ -354,7 +361,44 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
   );
 
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  // Initialize messages with pending initial message if available (avoids race condition)
+  const [messages, setMessages] = useState<LocalMessage[]>(() => {
+    if (typeof window === 'undefined') return [];
+
+    // Helper to map local session messages to LocalMessage format
+    const mapMessages = (localSession: ReturnType<typeof localSessionStore.get>) => {
+      if (!localSession || localSession.messages.length === 0) return null;
+      return localSession.messages.map(m => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: typeof m.content === 'string' ? m.content : '[暗号化メッセージ]',
+        timestamp: m.timestamp,
+      }));
+    };
+
+    // Case 1: If sessionId is a local ID, get directly from store
+    if (sessionId.startsWith('local-')) {
+      const localSession = localSessionStore.get(sessionId);
+      const mapped = mapMessages(localSession);
+      if (mapped) {
+        devLog.log('[CHAT DEBUG] Initializing messages from local session (direct)');
+        return mapped;
+      }
+    }
+
+    // Case 2: Check for pending initial message (for server IDs after sync)
+    const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
+    if (pendingLocalId) {
+      const localSession = localSessionStore.get(pendingLocalId);
+      const mapped = mapMessages(localSession);
+      if (mapped) {
+        devLog.log('[CHAT DEBUG] Initializing messages from pending initial message');
+        return mapped;
+      }
+    }
+
+    return [];
+  });
 
   devLog.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
   const [isLoading, setIsLoading] = useState(false);
@@ -377,6 +421,9 @@ export default function ChatSessionPage({ params }: PageProps) {
   const anonymousUserMapRef = useRef<Map<string, string>>(new Map());
   const pollFailCountRef = useRef<number>(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Track when streaming just completed to prevent SWR overwrite
+  const streamingJustCompletedRef = useRef(false);
 
   // Handle local session (local-first approach)
   useEffect(() => {
@@ -485,6 +532,18 @@ export default function ChatSessionPage({ params }: PageProps) {
       );
 
       setMessages((prev) => {
+        // Skip if streaming just completed (prevent overwriting fresh AI response)
+        if (streamingJustCompletedRef.current) {
+          devLog.log('[CHAT DEBUG] Skipping setMessages: streaming just completed');
+          streamingJustCompletedRef.current = false; // Reset for next time
+          return prev;
+        }
+        // Skip if local messages exist (not yet synced to server)
+        const hasLocalMessages = prev.some(m => m.id.startsWith('local-'));
+        if (hasLocalMessages) {
+          devLog.log('[CHAT DEBUG] Skipping setMessages: has local messages not yet synced');
+          return prev;
+        }
         // If local state has more messages than server data, don't overwrite (race condition)
         if (prev.length > decryptedMessages.length) {
           devLog.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', decryptedMessages.length, ')');
@@ -502,19 +561,32 @@ export default function ChatSessionPage({ params }: PageProps) {
   // Send pending initial message after sync completes (optimistic UI approach)
   const pendingMessageSentRef = useRef(false);
   useEffect(() => {
+    devLog.log('[INITIAL MSG DEBUG] useEffect triggered, sessionId:', sessionId, 'isLoading:', isLoading, 'pendingMessageSentRef:', pendingMessageSentRef.current);
+
     // Check if there's a pending initial message for this session
     const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
-    if (!pendingLocalId || pendingMessageSentRef.current || isLoading) return;
+    devLog.log('[INITIAL MSG DEBUG] pendingLocalId:', pendingLocalId);
+
+    if (!pendingLocalId || pendingMessageSentRef.current || isLoading) {
+      devLog.log('[INITIAL MSG DEBUG] Early return - pendingLocalId:', !!pendingLocalId, 'pendingMessageSentRef:', pendingMessageSentRef.current, 'isLoading:', isLoading);
+      return;
+    }
 
     // Get the local session to retrieve the initial message
     const localSession = localSessionStore.get(pendingLocalId);
+    devLog.log('[INITIAL MSG DEBUG] localSession:', localSession ? 'found' : 'null', 'messages:', localSession?.messages?.length);
+
     if (!localSession || localSession.messages.length === 0) {
+      devLog.log('[INITIAL MSG DEBUG] No local session or no messages, cleaning up');
       sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
       return;
     }
 
     // Wait for currentUser to be loaded
-    if (!currentUser) return;
+    if (!currentUser) {
+      devLog.log('[INITIAL MSG DEBUG] Waiting for currentUser');
+      return;
+    }
 
     const initialMessage = localSession.messages[0];
     devLog.log('[CHAT DEBUG] Auto-sending pending initial message (optimistic UI)');
@@ -542,11 +614,18 @@ export default function ChatSessionPage({ params }: PageProps) {
     };
 
     // Add message optimistically (preserve any existing messages)
+    devLog.log('[INITIAL MSG DEBUG] About to setMessages with userMessage:', userMessage.id);
     setMessages((prev) => {
+      devLog.log('[INITIAL MSG DEBUG] setMessages callback, prev.length:', prev.length, 'prev:', prev.map(m => ({ id: m.id, role: m.role })));
       // Avoid duplicates
-      if (prev.some((m) => m.id === userMessage.id)) return prev;
+      if (prev.some((m) => m.id === userMessage.id)) {
+        devLog.log('[INITIAL MSG DEBUG] Duplicate detected, returning prev');
+        return prev;
+      }
+      devLog.log('[INITIAL MSG DEBUG] Adding userMessage to messages');
       return [...prev, userMessage];
     });
+    devLog.log('[INITIAL MSG DEBUG] setIsLoading(true)');
     setIsLoading(true);
 
     // Send message to server in background
@@ -568,6 +647,9 @@ export default function ChatSessionPage({ params }: PageProps) {
           setSessionInfo,
           setShowCrisisAlert,
           showToast: toast.showToast,
+          onStreamComplete: () => {
+            streamingJustCompletedRef.current = true;
+          },
         });
       })
       .catch((err) => {
@@ -887,6 +969,9 @@ export default function ChatSessionPage({ params }: PageProps) {
           setSessionInfo,
           setShowCrisisAlert,
           showToast: toast.showToast,
+          onStreamComplete: () => {
+            streamingJustCompletedRef.current = true;
+          },
         });
 
         // 同期完了をマーク（統一的な処理）
