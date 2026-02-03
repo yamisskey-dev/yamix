@@ -415,6 +415,15 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
 
+  // Track server session ID for local sessions (triggers initial message send)
+  const [pendingServerSessionId, setPendingServerSessionId] = useState<string | null>(() => {
+    // Initialize from sessionStorage if available
+    if (typeof window !== 'undefined' && sessionId.startsWith('local-')) {
+      return sessionStorage.getItem(`pendingServerSession-${sessionId}`);
+    }
+    return null;
+  });
+
   // Polling refs
   const lastPollTimeRef = useRef<string | null>(null);
   const messageIdsRef = useRef<Set<string>>(new Set());
@@ -443,30 +452,33 @@ export default function ChatSessionPage({ params }: PageProps) {
     });
 
     // Display local messages immediately (instant UX)
-    // E2EE対応: 暗号化されたメッセージは後でサーバーから取得して復号する
     const localMessages: LocalMessage[] = localSession.messages.map((m) => ({
       id: m.id,
       role: m.role,
       content: typeof m.content === 'string' ? m.content : '[復号中...]',
       timestamp: m.timestamp,
-      // ローカルセッションの初期メッセージは相談者（自分）のメッセージなので responder は設定しない
       responder: undefined,
     }));
     setMessages(localMessages);
 
-    // Start background sync if not already synced
+    // Start immediate sync (not background!)
     if (!localSession.synced && !localSession.syncing) {
-      devLog.log('[LOCAL SESSION] Starting background sync...');
+      devLog.log('[LOCAL SESSION] Starting immediate sync...');
 
       import('@/lib/sync-session').then(({ syncSessionToServer }) => {
         syncSessionToServer({
           localId: localSession.id,
           onSuccess: (serverId) => {
             devLog.log('[LOCAL SESSION] Sync complete, server ID:', serverId);
-            // Store the local session ID before navigation
+
+            // Update state to trigger initial message send useEffect
+            setPendingServerSessionId(serverId);
+
+            // Also save to sessionStorage for persistence
+            sessionStorage.setItem(`pendingServerSession-${localSession.id}`, serverId);
             sessionStorage.setItem(`pendingInitialMessage-${serverId}`, localSession.id);
-            // Replace URL with server session ID (without adding to history)
-            router.replace(`/main/chat/${serverId}`);
+
+            // DON'T navigate yet - will navigate after SSE completes
           },
           onError: (error) => {
             console.error('[LOCAL SESSION] Sync failed:', error);
@@ -561,14 +573,27 @@ export default function ChatSessionPage({ params }: PageProps) {
   // Send pending initial message after sync completes (optimistic UI approach)
   const pendingMessageSentRef = useRef(false);
   useEffect(() => {
-    devLog.log('[INITIAL MSG DEBUG] useEffect triggered, sessionId:', sessionId, 'isLoading:', isLoading, 'pendingMessageSentRef:', pendingMessageSentRef.current);
+    devLog.log('[INITIAL MSG DEBUG] useEffect triggered, sessionId:', sessionId, 'pendingServerSessionId:', pendingServerSessionId, 'pendingMessageSentRef:', pendingMessageSentRef.current);
 
-    // Check if there's a pending initial message for this session
-    const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${sessionId}`);
-    devLog.log('[INITIAL MSG DEBUG] pendingLocalId:', pendingLocalId);
+    // For local sessions, check if server session is ready
+    let targetSessionId = sessionId;
+    if (sessionId.startsWith('local-')) {
+      devLog.log('[INITIAL MSG DEBUG] Local session detected, pendingServerSessionId:', pendingServerSessionId);
 
-    if (!pendingLocalId || pendingMessageSentRef.current || isLoading) {
-      devLog.log('[INITIAL MSG DEBUG] Early return - pendingLocalId:', !!pendingLocalId, 'pendingMessageSentRef:', pendingMessageSentRef.current, 'isLoading:', isLoading);
+      if (!pendingServerSessionId) {
+        devLog.log('[INITIAL MSG DEBUG] Waiting for server session...');
+        return; // Wait for server session to be created
+      }
+
+      targetSessionId = pendingServerSessionId;
+    }
+
+    // Check if there's a pending initial message for the target session
+    const pendingLocalId = sessionStorage.getItem(`pendingInitialMessage-${targetSessionId}`);
+    devLog.log('[INITIAL MSG DEBUG] pendingLocalId:', pendingLocalId, 'targetSessionId:', targetSessionId);
+
+    if (!pendingLocalId || pendingMessageSentRef.current) {
+      devLog.log('[INITIAL MSG DEBUG] Early return - pendingLocalId:', !!pendingLocalId, 'pendingMessageSentRef:', pendingMessageSentRef.current);
       return;
     }
 
@@ -578,7 +603,7 @@ export default function ChatSessionPage({ params }: PageProps) {
 
     if (!localSession || localSession.messages.length === 0) {
       devLog.log('[INITIAL MSG DEBUG] No local session or no messages, cleaning up');
-      sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
+      sessionStorage.removeItem(`pendingInitialMessage-${targetSessionId}`);
       return;
     }
 
@@ -589,20 +614,20 @@ export default function ChatSessionPage({ params }: PageProps) {
     }
 
     const initialMessage = localSession.messages[0];
-    devLog.log('[CHAT DEBUG] Auto-sending pending initial message (optimistic UI)');
+    devLog.log('[CHAT DEBUG] Auto-sending pending initial message to server session:', targetSessionId);
 
     // Mark as sent immediately to prevent duplicate sends
     pendingMessageSentRef.current = true;
-    sessionStorage.removeItem(`pendingInitialMessage-${sessionId}`);
+    sessionStorage.removeItem(`pendingInitialMessage-${targetSessionId}`);
 
     // E2EE対応: 暗号化されたメッセージを復号して表示用に準備
     const displayContent = typeof initialMessage.content === 'string'
       ? initialMessage.content
-      : '[暗号化メッセージ]'; // 暗号化データの場合は一時的なプレースホルダー
+      : '[暗号化メッセージ]';
 
     // Display local message immediately (optimistic UI)
     const userMessage: LocalMessage = {
-      id: initialMessage.id, // Use local message ID
+      id: initialMessage.id,
       role: "user",
       content: displayContent,
       timestamp: initialMessage.timestamp,
@@ -628,16 +653,22 @@ export default function ChatSessionPage({ params }: PageProps) {
     devLog.log('[INITIAL MSG DEBUG] setIsLoading(true)');
     setIsLoading(true);
 
-    // Send message to server in background
-    // E2EE対応: 暗号化済みメッセージはそのまま送信
-    fetch(`/api/chat/sessions/${sessionId}/messages`, {
+    // Send message to SERVER session (not local session)
+    fetch(`/api/chat/sessions/${targetSessionId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: initialMessage.content }),
     })
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error("Failed to send initial message");
+          const errorText = await res.text();
+          console.error('[CHAT DEBUG] Initial message send failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            body: errorText,
+            targetSessionId,
+          });
+          throw new Error(`Failed to send initial message: ${res.status} ${res.statusText}`);
         }
 
         // Handle SSE response for AI reply
@@ -647,8 +678,68 @@ export default function ChatSessionPage({ params }: PageProps) {
           setSessionInfo,
           setShowCrisisAlert,
           showToast: toast.showToast,
-          onStreamComplete: () => {
+          onStreamComplete: async () => {
             streamingJustCompletedRef.current = true;
+
+            // Navigate to server session AFTER SSE completes (prevents state loss)
+            if (sessionId.startsWith('local-')) {
+              devLog.log('[LOCAL SESSION] SSE complete, preparing to navigate...');
+
+              // Find assistant message ID from current state
+              setMessages((currentMessages) => {
+                const assistantMsg = currentMessages.find(m => m.role === 'assistant');
+                const assistantMessageId = assistantMsg?.id;
+
+                devLog.log('[LOCAL SESSION] Assistant message ID:', assistantMessageId);
+
+                // Poll server to verify DB save completed
+                const pollForMessage = async (attemptCount = 0): Promise<void> => {
+                  const maxAttempts = 15; // 15 attempts * 200ms = 3 seconds max
+
+                  if (attemptCount >= maxAttempts) {
+                    devLog.log('[LOCAL SESSION] Polling timeout, navigating anyway');
+                    sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
+                    router.replace(`/main/chat/${targetSessionId}`);
+                    return;
+                  }
+
+                  try {
+                    devLog.log(`[LOCAL SESSION] Polling for message (attempt ${attemptCount + 1}/${maxAttempts})...`);
+
+                    const response = await fetch(`/api/chat/sessions/${targetSessionId}`);
+                    if (response.ok) {
+                      const data = await response.json();
+
+                      // Check if assistant message exists in the response
+                      const hasAssistantMessage = data.messages?.some(
+                        (m: { id: string; role: string }) =>
+                          m.role === 'ASSISTANT' && (!assistantMessageId || m.id === assistantMessageId)
+                      );
+
+                      if (hasAssistantMessage) {
+                        devLog.log('[LOCAL SESSION] Message confirmed in DB, navigating now');
+                        sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
+                        router.replace(`/main/chat/${targetSessionId}`);
+                        return;
+                      }
+                    }
+
+                    // Message not found yet, retry after 200ms
+                    setTimeout(() => pollForMessage(attemptCount + 1), 200);
+                  } catch (error) {
+                    console.error('[LOCAL SESSION] Polling error:', error);
+                    // On error, retry
+                    setTimeout(() => pollForMessage(attemptCount + 1), 200);
+                  }
+                };
+
+                // Start polling immediately
+                pollForMessage();
+
+                // Return currentMessages unchanged
+                return currentMessages;
+              });
+            }
           },
         });
       })
@@ -657,7 +748,7 @@ export default function ChatSessionPage({ params }: PageProps) {
         setIsLoading(false);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
       });
-  }, [sessionId, isLoading, currentUser, toast]);
+  }, [sessionId, pendingServerSessionId, currentUser, toast, router]);
 
   // Auto-scroll
   useEffect(() => {

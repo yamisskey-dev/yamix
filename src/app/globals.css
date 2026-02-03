@@ -288,10 +288,10 @@ body {
   transition: transform 150ms ease-out, opacity 150ms ease-out, box-shadow 200ms ease-out;
 }
 
-/* Smooth message entrance */
-.chat {
+/* Smooth message entrance - disabled to prevent bounce on re-render */
+/* .chat {
   animation: slideUp 0.2s ease-out;
-}
+} */
 
 /* Hover effects */
 .btn:hover {

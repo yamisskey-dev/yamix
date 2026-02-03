@@ -49,18 +49,24 @@ async function saveUserMessageAndDeduct(opts: {
 }) {
   const { sessionId, userId, userMessage, consultCost, txType, isFirstMessage, generatedTitle, isCrisis, shouldHide } = opts;
   const now = new Date();
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new Error("Wallet not found");
 
-    await tx.wallet.update({
-      where: { id: wallet.id },
-      data: { balance: { decrement: consultCost } },
-    });
-    await tx.transaction.create({
-      data: { senderId: wallet.id, amount: -consultCost, txType },
-    });
+    // 開発環境ではYAMI消費をスキップ
+    if (!isDevelopment) {
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: { decrement: consultCost } },
+      });
+      await tx.transaction.create({
+        data: { senderId: wallet.id, amount: -consultCost, txType },
+      });
+    } else {
+      logger.info('[DEV MODE] Skipping YAMI deduction', { userId, consultCost });
+    }
 
     // E2EE対応: クライアントから暗号化済みデータが来た場合はそのまま保存
     let content: string;
@@ -411,15 +417,22 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         ? TOKEN_ECONOMY.DIRECTED_CONSULT_COST
         : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
 
-    const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
-    if (!wallet) {
-      return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
-    }
-    if (wallet.balance < consultCost) {
-      return NextResponse.json(
-        { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
-        { status: 400 }
-      );
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
+    // 開発環境では残高チェックをスキップ
+    if (!isDevelopment) {
+      const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
+      if (!wallet) {
+        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+      }
+      if (wallet.balance < consultCost) {
+        return NextResponse.json(
+          { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
+          { status: 400 }
+        );
+      }
+    } else {
+      logger.info('[DEV MODE] Skipping wallet balance check', { userId: payload.userId });
     }
 
     // Generate title for first message
