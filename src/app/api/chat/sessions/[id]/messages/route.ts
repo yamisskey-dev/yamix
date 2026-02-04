@@ -26,13 +26,21 @@ interface SessionData {
   _count: { targets: number };
 }
 
+// E2EE encrypted data type
+interface EncryptedData {
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  isEncrypted: true;
+}
+
 // ============================================
 // Shared: Save user message + deduct wallet
 // ============================================
 async function saveUserMessageAndDeduct(opts: {
   sessionId: string;
   userId: string;
-  userMessage: string;
+  userMessage: string | EncryptedData;
   consultCost: number;
   txType: "CONSULT_AI" | "CONSULT_HUMAN";
   isFirstMessage: boolean;
@@ -61,14 +69,31 @@ async function saveUserMessageAndDeduct(opts: {
       logger.info('[DEV MODE] Skipping YAMI deduction', { userId, consultCost });
     }
 
-    const encryptedContent = encryptMessage(userMessage, userId);
+    // E2EE対応: クライアントから暗号化済みデータが来た場合はそのまま保存
+    let content: string;
+    let isE2EE = false;
+    let encryptedIv: string | null = null;
+
+    if (typeof userMessage === 'object' && 'isEncrypted' in userMessage && userMessage.isEncrypted) {
+      // E2EE暗号化済み: ciphertextをそのまま保存
+      content = userMessage.ciphertext;
+      isE2EE = true;
+      encryptedIv = userMessage.iv;
+    } else {
+      // 平文: サーバーサイド暗号化を適用
+      content = encryptMessage(userMessage as string, userId);
+      isE2EE = false;
+    }
+
     const userMsg = await tx.chatMessage.create({
       data: {
         sessionId,
         role: "USER",
-        content: encryptedContent,
+        content,
         isCrisis,
         isHidden: shouldHide,
+        isE2EE,
+        encryptedIv,
       },
     });
 
@@ -274,7 +299,7 @@ async function handleStreamingResponse(opts: {
 // ============================================
 async function handleNonStreamingResponse(opts: {
   sessionId: string;
-  userMessage: string;
+  userMessage: string | EncryptedData;
   payload: JWTPayload;
   session: SessionData;
   consultCost: number;
@@ -283,17 +308,21 @@ async function handleNonStreamingResponse(opts: {
 }): Promise<NextResponse> {
   const { sessionId, userMessage, payload, session, consultCost, isFirstMessage, generatedTitle } = opts;
 
-  // Moderation check (skip for DIRECTED with no targets = self-only post)
+  // E2EE暗号化チェック
+  const isE2EEMessage = typeof userMessage === 'object' && 'isEncrypted' in userMessage && userMessage.isEncrypted;
+  const plainTextMessage = isE2EEMessage ? null : (userMessage as string);
+
+  // Moderation check (skip for DIRECTED with no targets = self-only post, and E2EE messages)
   const isPublicType = session.consultType === "PUBLIC" || (session.consultType === "DIRECTED" && session._count.targets > 0);
   let moderationCrisis = false;
-  if (isPublicType) {
+  if (isPublicType && plainTextMessage) {
     try {
       const moderationResult = await yamiiClient.sendCounselingMessage(
-        userMessage, payload.userId, { sessionId }
+        plainTextMessage, payload.userId, { sessionId }
       );
       moderationCrisis = moderationResult.is_crisis;
     } catch {
-      moderationCrisis = checkCrisisKeywords(userMessage);
+      moderationCrisis = checkCrisisKeywords(plainTextMessage);
     }
   }
 
@@ -362,7 +391,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const userMessage = validation.data.message.trim();
+  // E2EE対応: 暗号化オブジェクトまたは平文文字列を処理
+  const rawMessage = validation.data.message;
+  const userMessage = typeof rawMessage === 'string' ? rawMessage.trim() : rawMessage;
 
   try {
     // Load session with recent messages and target count
@@ -412,17 +443,25 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       logger.info('[DEV MODE] Skipping wallet balance check', { userId: payload.userId });
     }
 
-    // Generate title for first message
-    const generatedTitle = isFirstMessage ? await yamiiClient.generateTitle(userMessage) : null;
+    // E2EE暗号化チェック
+    const isE2EEMessage = typeof userMessage === 'object' && 'isEncrypted' in userMessage && userMessage.isEncrypted;
+    const plainTextMessage = isE2EEMessage ? null : (userMessage as string);
+
+    // Generate title for first message (E2EE時はスキップ)
+    const generatedTitle = isFirstMessage && plainTextMessage
+      ? await yamiiClient.generateTitle(plainTextMessage)
+      : null;
 
     // Route to streaming or non-streaming handler
-    const shouldCallYamii =
+    // E2EE暗号化メッセージはYamiiを呼び出せないため非ストリーミングパスへ
+    const shouldCallYamii = !isE2EEMessage && (
       session.consultType === "PRIVATE" ||
-      ((session.consultType === "PUBLIC" || session.consultType === "DIRECTED") && hasMentionYamii(userMessage));
+      ((session.consultType === "PUBLIC" || session.consultType === "DIRECTED") && hasMentionYamii(plainTextMessage!))
+    );
 
-    if (shouldCallYamii) {
+    if (shouldCallYamii && plainTextMessage) {
       return handleStreamingResponse({
-        sessionId, userMessage, payload, session, existingMessages,
+        sessionId, userMessage: plainTextMessage, payload, session, existingMessages,
         consultCost, isFirstMessage, generatedTitle,
       });
     }
