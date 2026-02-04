@@ -18,6 +18,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMasterKeyReady, setIsMasterKeyReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -44,9 +45,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       try {
         await initializeMasterKey(userData.handle);
         clientLogger.info('[E2EE] Master key initialized successfully');
+        setIsMasterKeyReady(true);
       } catch (e2eeError) {
         clientLogger.error('[E2EE] Failed to initialize master key:', e2eeError);
         // E2EE初期化失敗はアプリの使用を妨げない（暗号化なしで続行）
+        setIsMasterKeyReady(true); // エラーでも続行可能とマーク
       }
     } catch (error) {
       logger.warn("Failed to fetch user, redirecting to login", {}, error);
@@ -148,7 +151,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading, refetch: fetchUser }}>
+    <UserContext.Provider value={{ user, loading, refetch: fetchUser, isMasterKeyReady }}>
     <BookmarkProvider>
       {/* Skip link for keyboard users */}
       <a href="#main-content" className="skip-link">

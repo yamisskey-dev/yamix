@@ -19,10 +19,11 @@ import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
 import { devLog } from "@/lib/dev-logger";
 import { useToastActions } from "@/components/Toast";
+import { useUser } from "@/contexts/UserContext";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
 import { indexedDB } from "@/lib/indexed-db";
-import { encrypt, isMasterKeyInitialized, initializeMasterKey, type EncryptedData } from "@/lib/client-encryption";
+import { encrypt, isMasterKeyInitialized, type EncryptedData } from "@/lib/client-encryption";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -325,6 +326,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
   const toast = useToastActions();
+  const { isMasterKeyReady } = useUser();
 
   // Check if this is a local session (local-first approach)
   const isLocalSession = sessionId.startsWith('local-');
@@ -418,7 +420,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   const [isBlocking, setIsBlocking] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [sentGasMessageIds, setSentGasMessageIds] = useState<Set<string>>(new Set());
-  const [isMasterKeyReady, setIsMasterKeyReady] = useState(() => isMasterKeyInitialized());
 
   // Track server session ID for local sessions (triggers initial message send)
   const [pendingServerSessionId, setPendingServerSessionId] = useState<string | null>(() => {
@@ -438,27 +439,6 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   // Track when streaming just completed to prevent SWR overwrite
   const streamingJustCompletedRef = useRef(false);
-
-  // Initialize E2EE master key when user is available
-  useEffect(() => {
-    if (!currentUser?.handle) return;
-    if (isMasterKeyInitialized()) {
-      setIsMasterKeyReady(true);
-      return;
-    }
-
-    devLog.log('[E2EE] Initializing master key for user:', currentUser.handle);
-    initializeMasterKey(currentUser.handle)
-      .then(() => {
-        devLog.log('[E2EE] Master key initialized');
-        setIsMasterKeyReady(true);
-      })
-      .catch((error) => {
-        clientLogger.error('[E2EE] Failed to initialize master key:', error);
-        // Still allow usage without E2EE
-        setIsMasterKeyReady(true);
-      });
-  }, [currentUser?.handle]);
 
   // Handle local session (local-first approach)
   useEffect(() => {
@@ -1467,7 +1447,19 @@ export default function ChatSessionPage({ params }: PageProps) {
             />
           )}
 
-          {messages.length === 0 && !isLoading && !showCrisisAlert && (
+          {/* E2EE復号待機中のローディング表示 */}
+          {!isMasterKeyReady && sessionData?.messages?.some((m: ChatMessage) =>
+            typeof m.content === 'object' && 'isEncrypted' in m.content
+          ) && (
+            <div className="flex flex-col items-center justify-center h-full text-center py-20">
+              <span className="loading loading-spinner loading-md text-primary mb-3" />
+              <p className="text-base-content/50 text-sm">
+                メッセージを復号中...
+              </p>
+            </div>
+          )}
+
+          {messages.length === 0 && !isLoading && !showCrisisAlert && isMasterKeyReady && (
             <div className="flex flex-col items-center justify-center h-full text-center py-20">
               <p className="text-base-content/50 text-lg">
                 今日はどうしましたか？
@@ -1476,6 +1468,19 @@ export default function ChatSessionPage({ params }: PageProps) {
           )}
 
           {messages.map((msg, index) => {
+            // E2EE復号待機中のメッセージはスキップ（ローディング表示で対応）
+            if (msg.content === '[復号中...]' || msg.content === '[暗号化メッセージ]') {
+              return (
+                <div key={msg.id} className="chat chat-start">
+                  <div className="chat-bubble bg-base-200/60 shadow-none">
+                    <div className="flex items-center gap-2 text-base-content/50">
+                      <span className="loading loading-dots loading-xs" />
+                      <span className="text-sm">復号中...</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
             devLog.log(`[CHAT DEBUG] Rendering message ${index + 1}/${messages.length}:`, {
               id: msg.id,
               role: msg.role,
