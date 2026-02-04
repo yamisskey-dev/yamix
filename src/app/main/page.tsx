@@ -312,7 +312,7 @@ export default function NewChatPage() {
                             key={user.handle}
                             className="badge badge-accent gap-1 py-2"
                           >
-                            @{user.handle}
+                            {user.handle}
                             <button
                               type="button"
                               onClick={() => removeTargetUser(user.handle)}
@@ -366,7 +366,7 @@ export default function NewChatPage() {
                                   {user.displayName || user.handle}
                                 </span>
                                 <span className="text-sm text-base-content/60 truncate w-full text-left">
-                                  @{user.handle}
+                                  {user.handle}
                                 </span>
                               </div>
                             </button>
@@ -408,7 +408,7 @@ export default function NewChatPage() {
                                         {user.displayName || user.handle}
                                       </span>
                                       <span className="text-sm text-base-content/60 truncate w-full text-left">
-                                        @{user.handle}
+                                        {user.handle}
                                       </span>
                                     </div>
                                   </button>
