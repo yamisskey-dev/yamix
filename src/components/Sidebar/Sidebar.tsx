@@ -12,6 +12,8 @@ interface Props {
   user?: UserProfile | null;
   onClose?: () => void;
   unreadNotificationCount?: number;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 // Misskey-style navigation item component - Enhanced with micro-interactions
@@ -21,33 +23,47 @@ function NavItem({
   isActive,
   onClick,
   indicator,
+  isCollapsed,
 }: {
   icon: React.ReactNode;
   label: string;
   isActive?: boolean;
   onClick: () => void;
   indicator?: boolean;
+  isCollapsed?: boolean;
 }) {
   return (
-    <div className="px-4 mb-1.5">
+    <div className={isCollapsed ? "px-2 mb-1.5" : "px-4 mb-1.5"}>
       <button
         onClick={onClick}
         className={`
-          group relative w-full h-10 rounded-full px-4
-          flex items-center gap-3
+          group relative w-full h-10 rounded-full
+          flex items-center
           transition-colors duration-150 ease-smooth
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-200
+          ${isCollapsed ? "justify-center px-0" : "gap-3 px-4"}
           ${isActive
             ? "bg-primary/10 text-primary"
             : "text-base-content/70 hover:bg-primary/10 hover:text-primary"
           }
         `}
         aria-current={isActive ? "page" : undefined}
+        title={isCollapsed ? label : undefined}
       >
         <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
-        <span className="text-[13px] font-medium flex-1 text-left">{label}</span>
-        {indicator && (
-          <span className="relative flex h-2 w-2">
+        {!isCollapsed && (
+          <>
+            <span className="text-[13px] font-medium flex-1 text-left">{label}</span>
+            {indicator && (
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
+              </span>
+            )}
+          </>
+        )}
+        {isCollapsed && indicator && (
+          <span className="absolute top-1 right-1 flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
           </span>
@@ -57,7 +73,7 @@ function NavItem({
   );
 }
 
-export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
+export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapsed = false, onToggleCollapse }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,22 +87,64 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - Instance icon */}
-      <div className="sticky top-0 z-10 pt-4 pb-4 flex items-center justify-center px-2">
+      {/* Header - Instance icon & Toggle button */}
+      <div className={`sticky top-0 z-10 pt-4 pb-4 flex items-center ${isCollapsed ? "justify-center px-2" : "justify-between px-6"}`}>
         <Link
           href="/main/about"
           onClick={onClose}
-          className="flex items-center justify-center transition-opacity duration-150 hover:opacity-80"
+          className={`flex items-center transition-opacity duration-150 hover:opacity-80 ${!isCollapsed ? "ml-1" : ""}`}
         >
           <img
             src="/app-icon.png"
             alt="やみっくす"
-            width={36}
-            height={36}
+            width={isCollapsed ? 28 : 36}
+            height={isCollapsed ? 28 : 36}
             className="rounded-lg"
           />
         </Link>
+
+        {/* Toggle button for desktop */}
+        {onToggleCollapse && !isCollapsed && (
+          <button
+            onClick={onToggleCollapse}
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-base-content/60 hover:bg-base-content/5 hover:text-primary transition-colors duration-150 flex-shrink-0 mr-1"
+            title="サイドバーを折りたたむ"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {/* Toggle button for collapsed state */}
+      {onToggleCollapse && isCollapsed && (
+        <div className="px-2 mb-2">
+          <button
+            onClick={onToggleCollapse}
+            className="w-full h-8 rounded-lg flex items-center justify-center text-base-content/60 hover:bg-base-content/5 hover:text-primary transition-colors duration-150"
+            title="サイドバーを展開"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Navigation Items - Fixed */}
       <nav className="flex-shrink-0">
@@ -109,6 +167,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
           }
           label="タイムライン"
           isActive={isTimelineActive}
+          isCollapsed={isCollapsed}
           onClick={() => {
             router.push("/main/timeline");
             onClose?.();
@@ -134,6 +193,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
           }
           label="通知"
           isActive={pathname === "/main/notifications"}
+          isCollapsed={isCollapsed}
           indicator={unreadNotificationCount > 0}
           onClick={() => {
             router.push("/main/notifications");
@@ -147,6 +207,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
           }
           label="見つける"
           isActive={pathname === "/main/explore"}
+          isCollapsed={isCollapsed}
           onClick={() => {
             router.push("/main/explore");
             onClose?.();
@@ -177,6 +238,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
           }
           label="設定"
           isActive={pathname === "/main/settings"}
+          isCollapsed={isCollapsed}
           onClick={() => {
             router.push("/main/settings");
             onClose?.();
@@ -184,41 +246,17 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
         />
       </nav>
 
-      {/* Divider */}
-      <div className="mx-5 my-3 border-t border-base-content/10 flex-shrink-0" />
+      {!isCollapsed && (
+        <>
+          {/* Divider */}
+          <div className="mx-5 my-3 border-t border-base-content/10 flex-shrink-0" />
 
-      {/* Search input */}
-      <div className="px-5 pb-2 flex-shrink-0">
-        <div className="relative group">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 transition-all duration-150 group-focus-within:text-primary"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="検索..."
-            className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-all duration-150 ease-smooth"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle hover:bg-error/10 hover:text-error transition-all duration-150"
-            >
+          {/* Search input */}
+          <div className="px-5 pb-2 flex-shrink-0">
+            <div className="relative group">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-3 w-3"
+                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-base-content/40 transition-all duration-150 group-focus-within:text-primary"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -227,93 +265,189 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0 }: Props) {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="検索..."
+                className="input input-sm w-full pl-9 pr-8 bg-base-200/50 border-none focus:bg-base-200 transition-all duration-150 ease-smooth"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle hover:bg-error/10 hover:text-error transition-all duration-150"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3 w-3"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Chat Session List - Scrollable (includes bookmarks) */}
+          <div className="flex-1 overflow-y-auto min-h-0 px-3">
+            <ChatSessionList onSessionSelect={onClose} searchQuery={searchQuery} />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="mt-auto pt-3 pb-3 border-t border-base-content/10">
+            {/* Post Button */}
+            <div className="px-4 mb-3">
+              <button
+                onClick={handleNewChat}
+                className="
+                  w-full h-11 rounded-full px-4
+                  bg-gradient-to-r from-primary to-secondary
+                  text-primary-content text-sm font-medium
+                  flex items-center gap-3
+                  hover:brightness-110
+                  transition-all duration-150 ease-smooth
+                  group
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                <span>新しい相談</span>
+              </button>
+            </div>
+
+            {/* Account Section */}
+            {user && (
+              <button
+                onClick={() => {
+                  router.push(`/main/user/${encodeHandle(user.handle)}`);
+                  onClose?.();
+                }}
+                className="
+                  group flex items-center w-full
+                  py-2.5 px-4 rounded-lg mx-2
+                  text-left
+                  hover:bg-base-content/5
+                  transition-colors duration-150 ease-smooth
+                "
+              >
+                {/* Avatar */}
+                <div className="flex-shrink-0">
+                  {user.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={user.displayName || user.account}
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
+                      {(user.displayName || user.account).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                {/* User info */}
+                <div className="flex-1 min-w-0 ml-2.5 truncate">
+                  <span className="text-sm text-base-content transition-colors duration-150 group-hover:text-primary">
+                    @{user.account}@{user.hostName}
+                  </span>
+                </div>
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Collapsed state: New chat button at bottom */}
+      {isCollapsed && (
+        <div className="mt-auto pt-3 pb-3">
+          <div className="px-2 mb-2">
+            <button
+              onClick={handleNewChat}
+              className="
+                w-full h-10 rounded-full
+                bg-gradient-to-r from-primary to-secondary
+                text-primary-content
+                flex items-center justify-center
+                hover:brightness-110
+                transition-all duration-150 ease-smooth
+              "
+              title="新しい相談"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                 />
               </svg>
             </button>
+          </div>
+
+          {/* Account avatar only */}
+          {user && (
+            <div className="px-2">
+              <button
+                onClick={() => {
+                  router.push(`/main/user/${encodeHandle(user.handle)}`);
+                  onClose?.();
+                }}
+                className="
+                  w-full flex items-center justify-center
+                  py-2 rounded-lg
+                  hover:bg-base-content/5
+                  transition-colors duration-150 ease-smooth
+                "
+                title={`@${user.account}@${user.hostName}`}
+              >
+                {user.avatarUrl ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt={user.displayName || user.account}
+                    width={32}
+                    height={32}
+                    className="rounded-full"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
+                    {(user.displayName || user.account).charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </button>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* Chat Session List - Scrollable (includes bookmarks) */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-3">
-        <ChatSessionList onSessionSelect={onClose} searchQuery={searchQuery} />
-      </div>
-
-      {/* Bottom Section */}
-      <div className="mt-auto pt-3 pb-3 border-t border-base-content/10">
-        {/* Post Button */}
-        <div className="px-4 mb-3">
-          <button
-            onClick={handleNewChat}
-            className="
-              w-full h-11 rounded-full px-4
-              bg-gradient-to-r from-primary to-secondary
-              text-primary-content text-sm font-medium
-              flex items-center gap-3
-              hover:brightness-110
-              transition-all duration-150 ease-smooth
-              group
-            "
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
-            <span>新しい相談</span>
-          </button>
-        </div>
-
-        {/* Account Section */}
-        {user && (
-          <button
-            onClick={() => {
-              router.push(`/main/user/${encodeHandle(user.handle)}`);
-              onClose?.();
-            }}
-            className="
-              group flex items-center w-full
-              py-2.5 px-4 rounded-lg mx-2
-              text-left
-              hover:bg-base-content/5
-              transition-colors duration-150 ease-smooth
-            "
-          >
-            {/* Avatar */}
-            <div className="flex-shrink-0">
-              {user.avatarUrl ? (
-                <Image
-                  src={user.avatarUrl}
-                  alt={user.displayName || user.account}
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
-                  {(user.displayName || user.account).charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            {/* User info */}
-            <div className="flex-1 min-w-0 ml-2.5 truncate">
-              <span className="text-sm text-base-content transition-colors duration-150 group-hover:text-primary">
-                @{user.account}@{user.hostName}
-              </span>
-            </div>
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

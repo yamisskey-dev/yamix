@@ -19,6 +19,20 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarWidth');
+      return saved ? parseInt(saved, 10) : 288;
+    }
+    return 288;
+  });
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
   const fetchUser = useCallback(async () => {
@@ -45,6 +59,19 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+    }
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+    }
+  }, [sidebarWidth]);
 
   // 未読通知カウントを取得
   useEffect(() => {
@@ -84,6 +111,34 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     setSidebarOpen(true);
   }, []);
 
+  const handleToggleSidebarCollapse = useCallback(() => {
+    setSidebarCollapsed((prev: boolean) => !prev);
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(200, Math.min(500, startWidth + diff)); // Min: 200px, Max: 500px
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [sidebarWidth]);
+
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center">
@@ -103,8 +158,26 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       {/* Desktop Layout - サイドバー + メインコンテンツ */}
       <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
-        <aside className="w-64 h-screen flex-shrink-0 border-r border-base-300 bg-base-300/80" role="navigation" aria-label="メインナビゲーション">
-          <Sidebar user={user} unreadNotificationCount={unreadNotificationCount} />
+        <aside
+          className="h-screen flex-shrink-0 border-r border-base-300 bg-base-300/80 transition-all duration-300 ease-smooth relative"
+          style={{ width: sidebarCollapsed ? "64px" : `${sidebarWidth}px` }}
+          role="navigation"
+          aria-label="メインナビゲーション"
+        >
+          <Sidebar
+            user={user}
+            unreadNotificationCount={unreadNotificationCount}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleToggleSidebarCollapse}
+          />
+          {/* Resize handle */}
+          {!sidebarCollapsed && (
+            <div
+              onMouseDown={handleMouseDown}
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors duration-150"
+              aria-label="サイドバーの幅を変更"
+            />
+          )}
         </aside>
 
         {/* Main Content */}

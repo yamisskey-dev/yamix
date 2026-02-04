@@ -67,7 +67,7 @@ export function MobileDrawer({ isOpen, onClose, children }: MobileDrawerProps) {
 
       {/* Drawer Panel - Enhanced with glassmorphism and animation */}
       <div
-        className={`absolute left-0 top-0 h-full w-60 glass-card-enhanced shadow-elevated transition-all duration-300 ease-smooth ${
+        className={`absolute left-0 top-0 h-full w-72 glass-card-enhanced shadow-elevated transition-all duration-300 ease-smooth ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
