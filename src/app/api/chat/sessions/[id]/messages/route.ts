@@ -23,14 +23,7 @@ interface SessionData {
   consultType: string;
   isAnonymous: boolean;
   messages: PrismaMessage[];
-}
-
-// E2EE encrypted data type
-interface EncryptedData {
-  ciphertext: string;
-  iv: string;
-  salt: string;
-  isEncrypted: true;
+  _count: { targets: number };
 }
 
 // ============================================
@@ -39,7 +32,7 @@ interface EncryptedData {
 async function saveUserMessageAndDeduct(opts: {
   sessionId: string;
   userId: string;
-  userMessage: string | EncryptedData; // E2EE対応: 暗号化データまたは平文
+  userMessage: string;
   consultCost: number;
   txType: "CONSULT_AI" | "CONSULT_HUMAN";
   isFirstMessage: boolean;
@@ -68,31 +61,14 @@ async function saveUserMessageAndDeduct(opts: {
       logger.info('[DEV MODE] Skipping YAMI deduction', { userId, consultCost });
     }
 
-    // E2EE対応: クライアントから暗号化済みデータが来た場合はそのまま保存
-    let content: string;
-    let isE2EE = false;
-    let encryptedIv: string | null = null;
-
-    if (typeof userMessage === 'object' && 'isEncrypted' in userMessage && userMessage.isEncrypted) {
-      // E2EE暗号化済み: ciphertextをそのまま保存
-      content = userMessage.ciphertext;
-      isE2EE = true;
-      encryptedIv = userMessage.iv;
-    } else {
-      // 平文: サーバーサイド暗号化を適用
-      content = encryptMessage(userMessage as string, userId);
-      isE2EE = false;
-    }
-
+    const encryptedContent = encryptMessage(userMessage, userId);
     const userMsg = await tx.chatMessage.create({
       data: {
         sessionId,
         role: "USER",
-        content,
+        content: encryptedContent,
         isCrisis,
         isHidden: shouldHide,
-        isE2EE,
-        encryptedIv,
       },
     });
 
@@ -230,7 +206,8 @@ async function handleStreamingResponse(opts: {
                 controller.enqueue(encoder.encode(`data: ${chunkEvent}\n\n`));
               } else if (data.done) {
                 const isCrisis = data.is_crisis || false;
-                const isPublicType = session.consultType === "PUBLIC" || session.consultType === "DIRECTED";
+                // DIRECTED with no targets = self-only post (skip crisis detection like PRIVATE)
+                const isPublicType = session.consultType === "PUBLIC" || (session.consultType === "DIRECTED" && session._count.targets > 0);
 
                 // 5-flag system: increment crisisCount, only privatize on 5th detection
                 let shouldHide = false;
@@ -306,9 +283,10 @@ async function handleNonStreamingResponse(opts: {
 }): Promise<NextResponse> {
   const { sessionId, userMessage, payload, session, consultCost, isFirstMessage, generatedTitle } = opts;
 
-  // Moderation check
+  // Moderation check (skip for DIRECTED with no targets = self-only post)
+  const isPublicType = session.consultType === "PUBLIC" || (session.consultType === "DIRECTED" && session._count.targets > 0);
   let moderationCrisis = false;
-  if (session.consultType === "PUBLIC" || session.consultType === "DIRECTED") {
+  if (isPublicType) {
     try {
       const moderationResult = await yamiiClient.sendCounselingMessage(
         userMessage, payload.userId, { sessionId }
@@ -318,8 +296,6 @@ async function handleNonStreamingResponse(opts: {
       moderationCrisis = checkCrisisKeywords(userMessage);
     }
   }
-
-  const isPublicType = session.consultType === "PUBLIC" || session.consultType === "DIRECTED";
 
   // 5-flag system: increment crisisCount, only privatize on 5th detection
   let shouldHide = false;
@@ -389,11 +365,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const userMessage = validation.data.message.trim();
 
   try {
-    // Load session with recent messages
+    // Load session with recent messages and target count
     const session = await prisma.chatSession.findUnique({
       where: { id: sessionId },
       include: {
         messages: { orderBy: { createdAt: "asc" }, take: QUERY_LIMITS.RECENT_MESSAGES },
+        _count: { select: { targets: true } },
       },
     });
 

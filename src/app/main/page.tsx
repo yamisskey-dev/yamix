@@ -1,38 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo, useCallback, memo, lazy, Suspense } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { localSessionStore } from "@/lib/local-session-store";
 import { devLog } from "@/lib/dev-logger";
 
 const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
-
-// Memoized user search list item to prevent unnecessary re-renders
-const UserSearchListItem = memo(function UserSearchListItem({
-  user,
-  onAdd
-}: {
-  user: { id: string; handle: string; displayName: string | null; avatarUrl: string | null };
-  onAdd: (user: { handle: string; displayName: string | null; avatarUrl: string | null }) => void;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        className="btn btn-ghost btn-xs w-full justify-start gap-2 transition-colors duration-150"
-        onClick={() => onAdd(user)}
-      >
-        {user.avatarUrl && (
-          <img src={user.avatarUrl} alt="" className="w-4 h-4 rounded-full" />
-        )}
-        <span className="truncate">
-          {user.displayName && <span className="font-medium">{user.displayName} </span>}
-          <span className="opacity-60">{user.handle}</span>
-        </span>
-      </button>
-    </li>
-  );
-});
 
 export default function NewChatPage() {
   const router = useRouter();
@@ -48,8 +21,36 @@ export default function NewChatPage() {
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
+  const [recentUsers, setRecentUsers] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load recent users from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("recentTargetUsers");
+      if (stored) {
+        setRecentUsers(JSON.parse(stored));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // Save user to recent history
+  const saveToRecentUsers = useCallback((user: { id?: string; handle: string; displayName: string | null; avatarUrl: string | null }) => {
+    setRecentUsers((prev) => {
+      const filtered = prev.filter((u) => u.handle !== user.handle);
+      const newUser = { id: user.id || user.handle, handle: user.handle, displayName: user.displayName, avatarUrl: user.avatarUrl };
+      const updated = [newUser, ...filtered].slice(0, 10); // Keep max 10
+      try {
+        localStorage.setItem("recentTargetUsers", JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -94,11 +95,12 @@ export default function NewChatPage() {
     };
   }, [userSearchQuery, targetUsers]);
 
-  const addTargetUser = useCallback((user: { handle: string; displayName: string | null; avatarUrl: string | null }) => {
+  const addTargetUser = useCallback((user: { id?: string; handle: string; displayName: string | null; avatarUrl: string | null }) => {
     setTargetUsers((prev) => [...prev, user]);
     setUserSearchQuery("");
     setUserSearchResults([]);
-  }, []);
+    saveToRecentUsers(user);
+  }, [saveToRecentUsers]);
 
   const removeTargetUser = useCallback((handle: string) => {
     setTargetUsers((prev) => {
@@ -157,6 +159,59 @@ export default function NewChatPage() {
   // Input form component (memoized to prevent unnecessary re-renders)
   const inputForm = useMemo(() => (
     <>
+      {/* Anonymous options + Target users - skeleton row (always same height) */}
+      <div className={`flex items-center gap-1 mb-2 h-6 ${consultType === "PUBLIC" || consultType === "DIRECTED" ? "" : "invisible"}`}>
+        <button
+          type="button"
+          className={`btn btn-xs gap-1 ${
+            isAnonymous
+              ? "btn-secondary btn-outline"
+              : "btn-ghost opacity-60"
+          }`}
+          onClick={() => setIsAnonymous(!isAnonymous)}
+          disabled={isLoading}
+          aria-label="匿名で相談"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+            <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs">匿名</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn-xs gap-1 ${
+            !allowAnonymousResponses
+              ? "btn-warning btn-outline"
+              : "btn-ghost opacity-60"
+          }`}
+          onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
+          disabled={isLoading}
+          aria-label={allowAnonymousResponses ? "匿名回答を許可中" : "匿名回答を拒否中"}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+            <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+          </svg>
+          <span className="text-xs">{allowAnonymousResponses ? "匿名回答OK" : "匿名NG"}</span>
+        </button>
+
+        {/* Target users button - only shows when DIRECTED is selected */}
+        {consultType === "DIRECTED" && (
+          <button
+            type="button"
+            className={`btn btn-xs gap-1 ${targetUsers.length > 0 ? "btn-accent" : "btn-ghost opacity-60"}`}
+            onClick={() => setShowUserSearch(!showUserSearch)}
+            disabled={isLoading}
+            aria-label="指名先を選択"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+            </svg>
+            <span className="text-xs">指名先{targetUsers.length > 0 ? ` (${targetUsers.length})` : ""}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Input box */}
       <div className="bg-base-200/50 rounded-2xl border border-base-300/50">
         {/* Textarea */}
         <textarea
@@ -170,11 +225,10 @@ export default function NewChatPage() {
           disabled={isLoading}
         />
 
-        {/* Footer with options and submit button */}
-        <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-base-300/30">
-          {/* Left side: Options */}
+        {/* Footer with consult type buttons and submit */}
+        <div className="flex items-center justify-between px-3 pb-3">
+          {/* Left: Consult type buttons */}
           <div className="flex items-center gap-1">
-            {/* Three independent mode buttons */}
             <button
               type="button"
               className={`btn btn-xs gap-1 ${consultType === "PRIVATE" ? "btn-ghost border-base-content/20" : "btn-ghost opacity-50"}`}
@@ -210,15 +264,13 @@ export default function NewChatPage() {
               <span className="text-xs">公開</span>
             </button>
 
+            {/* DIRECTED button */}
             <button
               type="button"
               className={`btn btn-xs gap-1 ${consultType === "DIRECTED" ? "btn-accent btn-outline" : "btn-ghost opacity-50"}`}
               onClick={() => {
-                if (consultType === "DIRECTED") {
-                  setShowUserSearch(!showUserSearch);
-                } else {
+                if (consultType !== "DIRECTED") {
                   setConsultType("DIRECTED");
-                  setShowUserSearch(true);
                 }
               }}
               disabled={isLoading}
@@ -227,56 +279,167 @@ export default function NewChatPage() {
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
                 <path d="M3 4a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2.5 1a.5.5 0 00-.5.5v1.077l4.146 2.907a1.5 1.5 0 001.708 0L15 6.577V5.5a.5.5 0 00-.5-.5h-9zM15 8.077l-3.854 2.7a2.5 2.5 0 01-2.848-.056L4.5 8.077V13.5a.5.5 0 00.5.5h9.5a.5.5 0 00.5-.5V8.077z" />
               </svg>
-              <span className="text-xs">指名{consultType === "DIRECTED" && targetUsers.length > 0 ? ` (${targetUsers.length})` : ""}</span>
+              <span className="text-xs">指名</span>
             </button>
 
-            {/* Anonymous/response options for PUBLIC and DIRECTED */}
-            {(consultType === "PUBLIC" || consultType === "DIRECTED") && (
-              <>
-                <div className="w-px h-4 bg-base-300 mx-1" />
-                {/* Anonymous toggle */}
-                <button
-                  type="button"
-                  className={`btn btn-xs gap-1 ${
-                    isAnonymous
-                      ? "btn-secondary btn-outline"
-                      : "btn-ghost opacity-60"
-                  }`}
-                  onClick={() => setIsAnonymous(!isAnonymous)}
-                  disabled={isLoading}
-                  aria-label="匿名で相談"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM6 8.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm5 0a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-xs">匿名</span>
-                </button>
-                {/* Allow anonymous responses toggle */}
-                <button
-                  type="button"
-                  className={`btn btn-xs gap-1 ${
-                    !allowAnonymousResponses
-                      ? "btn-warning btn-outline"
-                      : "btn-ghost opacity-60"
-                  }`}
-                  onClick={() => setAllowAnonymousResponses(!allowAnonymousResponses)}
-                  disabled={isLoading}
-                  aria-label={allowAnonymousResponses ? "匿名回答を許可中" : "匿名回答を拒否中"}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                    <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
-                  </svg>
-                  <span className="text-xs">{allowAnonymousResponses ? "匿名回答OK" : "匿名NG"}</span>
-                </button>
-              </>
-            )}
+            {/* User search popup - Misskey style */}
+            {showUserSearch && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30"
+                    onClick={() => setShowUserSearch(false)}
+                  />
+                  <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md bg-base-100 border border-base-300 rounded-2xl shadow-2xl z-40">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-base-300">
+                    <span className="font-medium">指名先を選択</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowUserSearch(false)}
+                      className="btn btn-ghost btn-xs btn-circle"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="p-4">
+                    {/* Selected users */}
+                    {targetUsers.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {targetUsers.map((user) => (
+                          <span
+                            key={user.handle}
+                            className="badge badge-accent gap-1 py-2"
+                          >
+                            @{user.handle}
+                            <button
+                              type="button"
+                              onClick={() => removeTargetUser(user.handle)}
+                              className="hover:text-error ml-0.5"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Misskey-style search input with @ prefix */}
+                    <div className="flex items-center bg-base-200 rounded-lg px-3 py-2 gap-1 focus-within:ring-2 focus-within:ring-primary/50">
+                      <span className="text-base-content/50 select-none font-mono">@</span>
+                      <input
+                        type="text"
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        placeholder="username"
+                        className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm"
+                        autoFocus
+                      />
+                    </div>
+                    <p className="text-xs text-base-content/40 mt-1.5 px-1">
+                      例: yamii, user@example.com
+                    </p>
+                  </div>
+
+                  {/* Search results */}
+                  <div className="border-t border-base-300 max-h-64 overflow-y-auto">
+                    {isSearching && (
+                      <div className="flex items-center justify-center gap-2 py-6 text-base-content/50">
+                        <span className="loading loading-spinner loading-sm" />
+                        <span className="text-sm">検索中...</span>
+                      </div>
+                    )}
+                    {!isSearching && userSearchResults.length > 0 && (
+                      <ul className="py-2">
+                        {userSearchResults.map((user) => (
+                          <li key={user.id}>
+                            <button
+                              type="button"
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-base-200 transition-colors"
+                              onClick={() => addTargetUser(user)}
+                            >
+                              {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt="" className="w-11 h-11 rounded-full shrink-0" />
+                              ) : (
+                                <div className="w-11 h-11 rounded-full bg-base-300 shrink-0" />
+                              )}
+                              <div className="flex flex-col items-start min-w-0 flex-1">
+                                <span className="font-medium truncate w-full text-left">
+                                  {user.displayName || user.handle}
+                                </span>
+                                <span className="text-sm text-base-content/60 truncate w-full text-left">
+                                  @{user.handle}
+                                </span>
+                              </div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!isSearching && userSearchQuery && userSearchResults.length === 0 && (
+                      <div className="py-6 text-center text-base-content/50 text-sm">
+                        該当するユーザーが見つかりません
+                      </div>
+                    )}
+                    {/* Show recent users when no search query */}
+                    {!isSearching && !userSearchQuery && (() => {
+                      const availableRecentUsers = recentUsers.filter(
+                        (u) => !targetUsers.some((t) => t.handle === u.handle)
+                      );
+                      if (availableRecentUsers.length > 0) {
+                        return (
+                          <>
+                            <div className="px-4 py-2 text-xs text-base-content/50">
+                              最近のユーザー
+                            </div>
+                            <ul className="py-2">
+                              {availableRecentUsers.map((user) => (
+                                <li key={user.id}>
+                                  <button
+                                    type="button"
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-base-200 transition-colors"
+                                    onClick={() => addTargetUser(user)}
+                                  >
+                                    {user.avatarUrl ? (
+                                      <img src={user.avatarUrl} alt="" className="w-11 h-11 rounded-full shrink-0" />
+                                    ) : (
+                                      <div className="w-11 h-11 rounded-full bg-base-300 shrink-0" />
+                                    )}
+                                    <div className="flex flex-col items-start min-w-0 flex-1">
+                                      <span className="font-medium truncate w-full text-left">
+                                        {user.displayName || user.handle}
+                                      </span>
+                                      <span className="text-sm text-base-content/60 truncate w-full text-left">
+                                        @{user.handle}
+                                      </span>
+                                    </div>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        );
+                      }
+                      return (
+                        <div className="py-6 text-center text-sm text-base-content/40">
+                          {targetUsers.length === 0
+                            ? "指名なしで投稿すると自分専用になります"
+                            : "ユーザー名を入力して検索"}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                </>
+              )}
           </div>
 
-          {/* Right side: Submit button */}
+          {/* Right: Submit button */}
           <button
             onClick={handleSubmit}
             className="btn btn-primary btn-circle btn-sm"
-            disabled={isLoading || !inputValue.trim() || (consultType === "DIRECTED" && targetUsers.length === 0)}
+            disabled={isLoading || !inputValue.trim()}
             aria-label="送信"
           >
             {isLoading ? (
@@ -296,57 +459,7 @@ export default function NewChatPage() {
           </button>
         </div>
       </div>
-      {/* User search for DIRECTED mode */}
-      {consultType === "DIRECTED" && showUserSearch && (
-        <div className="mt-2 bg-base-200/50 rounded-xl border border-base-300/50 p-3">
-          {/* Selected users chips */}
-          {targetUsers.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-2">
-              {targetUsers.map((user) => (
-                <span
-                  key={user.handle}
-                  className="badge badge-accent badge-sm gap-1"
-                >
-                  {user.displayName || user.handle}
-                  <button
-                    type="button"
-                    onClick={() => removeTargetUser(user.handle)}
-                    className="hover:text-error"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
 
-          {/* Search input */}
-          <input
-            type="text"
-            value={userSearchQuery}
-            onChange={(e) => setUserSearchQuery(e.target.value)}
-            placeholder="ユーザーを検索..."
-            className="input input-sm input-bordered w-full"
-          />
-
-          {/* Search results */}
-          {isSearching && (
-            <div className="text-xs text-base-content/50 mt-1 px-1">検索中...</div>
-          )}
-          {userSearchResults.length > 0 && (
-            <ul className="mt-1 space-y-1 max-h-32 overflow-y-auto">
-              {userSearchResults.map((user) => (
-                <UserSearchListItem key={user.id} user={user} onAdd={addTargetUser} />
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      {consultType === "DIRECTED" && targetUsers.length === 0 && (
-        <p className="text-xs text-center text-warning mt-2">
-          指名先を1人以上選択してください
-        </p>
-      )}
       <p className="text-xs text-center text-base-content/40 mt-2">
         Shift + Enter で改行
       </p>
@@ -362,6 +475,7 @@ export default function NewChatPage() {
     userSearchQuery,
     userSearchResults,
     isSearching,
+    recentUsers,
     handleSubmit,
     handleKeyDown,
     addTargetUser,

@@ -12,10 +12,8 @@ export const createChatSessionSchema = z.object({
   category: z.string().max(50).nullable().optional(),
   targetUserHandles: z.array(z.string().min(1).max(100)).max(20).optional(),
   initialMessage: z.string().min(1).max(10000).optional(),
-}).refine(
-  (data) => data.consultType !== "DIRECTED" || (data.targetUserHandles && data.targetUserHandles.length > 0),
-  { message: "指名相談には1人以上の指名先が必要です", path: ["targetUserHandles"] }
-);
+});
+// Note: DIRECTED with no targets = self-only post (Misskey-style "裏技")
 
 export const updateChatSessionSchema = z.object({
   title: z.string().min(1).max(200).optional(),
