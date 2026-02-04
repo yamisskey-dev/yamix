@@ -325,20 +325,17 @@ export default function NewChatPage() {
                       </div>
                     )}
 
-                    {/* Misskey-style search input with @ prefix */}
-                    <div className="flex items-center bg-base-200 rounded-lg px-3 py-2 gap-1 focus-within:ring-2 focus-within:ring-primary/50">
-                      <span className="text-base-content/50 select-none font-mono">@</span>
-                      <input
-                        type="text"
-                        value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
-                        placeholder="username"
-                        className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm"
-                        autoFocus
-                      />
-                    </div>
+                    {/* Search input */}
+                    <input
+                      type="text"
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      placeholder="@username@server.example"
+                      className="w-full bg-base-200 rounded-lg px-3 py-2 text-sm border-0 outline-none focus:ring-2 focus:ring-primary/50"
+                      autoFocus
+                    />
                     <p className="text-xs text-base-content/40 mt-1.5 px-1">
-                      例: yamii, user@example.com
+                      例: @admin@yami.ski
                     </p>
                   </div>
 
