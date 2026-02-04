@@ -19,11 +19,9 @@ import { processSSEStream } from "@/hooks/useSSEStream";
 import { clientLogger } from "@/lib/client-logger";
 import { devLog } from "@/lib/dev-logger";
 import { useToastActions } from "@/components/Toast";
-import { useUser } from "@/contexts/UserContext";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
 import { indexedDB } from "@/lib/indexed-db";
-import { encrypt, isMasterKeyInitialized, type EncryptedData } from "@/lib/client-encryption";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -70,24 +68,6 @@ const fetcher = async (url: string) => {
   }
   return res.json();
 };
-
-/**
- * E2EE暗号化メッセージを復号（async）
- */
-async function decryptE2EEContent(content: string | EncryptedData): Promise<string> {
-  // E2EE暗号化データかチェック
-  if (typeof content === 'object' && 'isEncrypted' in content && content.isEncrypted) {
-    try {
-      const { decrypt } = await import('@/lib/client-encryption');
-      return await decrypt(content);
-    } catch (error) {
-      clientLogger.error('[E2EE] Failed to decrypt message:', error);
-      return '[復号エラー]';
-    }
-  }
-  // 平文またはサーバーサイド復号済み
-  return content as string;
-}
 
 /**
  * サーバーメッセージをローカル表示用に変換
@@ -326,7 +306,6 @@ export default function ChatSessionPage({ params }: PageProps) {
   const { sessionId } = use(params);
   const router = useRouter();
   const toast = useToastActions();
-  const { isMasterKeyReady } = useUser();
 
   // Check if this is a local session (local-first approach)
   const isLocalSession = sessionId.startsWith('local-');
@@ -457,48 +436,30 @@ export default function ChatSessionPage({ params }: PageProps) {
       responseCount: 0,
     });
 
-    // Display local messages with E2EE decryption
-    const processLocalMessages = async () => {
-      const localMessages: LocalMessage[] = await Promise.all(
-        localSession.messages.map(async (m) => {
-          let content: string;
-          if (typeof m.content === 'string') {
-            content = m.content;
-          } else if (isMasterKeyReady) {
-            // E2EE encrypted - try to decrypt
-            content = await decryptE2EEContent(m.content);
-          } else {
-            // Master key not ready yet - show placeholder
-            content = '[復号中...]';
-          }
-          return {
-            id: m.id,
-            role: m.role,
-            content,
-            timestamp: m.timestamp,
-            responder: undefined,
-          };
-        })
-      );
+    // Display local messages
+    const localMessages: LocalMessage[] = localSession.messages.map((m) => ({
+      id: m.id,
+      role: m.role,
+      content: typeof m.content === 'string' ? m.content : '[メッセージ]',
+      timestamp: m.timestamp,
+      responder: undefined,
+    }));
 
-      // Only update messages if not currently streaming (prevents overwriting AI response)
-      setMessages((prev) => {
-        // Skip if assistant message already exists (SSE streaming completed or in progress)
-        if (prev.some(m => m.role === 'assistant')) {
-          devLog.log('[LOCAL SESSION] Skipping setMessages: assistant message exists');
-          return prev;
-        }
-        // Skip if messages are not empty and have same content (avoid unnecessary re-initialization)
-        if (prev.length > 0 && prev.length === localMessages.length && !prev.some(m => m.content === '[復号中...]')) {
-          devLog.log('[LOCAL SESSION] Skipping setMessages: messages already initialized');
-          return prev;
-        }
-        devLog.log('[CHAT DEBUG] Initializing messages from local session (direct)');
-        return localMessages;
-      });
-    };
-
-    processLocalMessages();
+    // Only update messages if not currently streaming (prevents overwriting AI response)
+    setMessages((prev) => {
+      // Skip if assistant message already exists (SSE streaming completed or in progress)
+      if (prev.some(m => m.role === 'assistant')) {
+        devLog.log('[LOCAL SESSION] Skipping setMessages: assistant message exists');
+        return prev;
+      }
+      // Skip if messages are not empty and have same content (avoid unnecessary re-initialization)
+      if (prev.length > 0 && prev.length === localMessages.length) {
+        devLog.log('[LOCAL SESSION] Skipping setMessages: messages already initialized');
+        return prev;
+      }
+      devLog.log('[CHAT DEBUG] Initializing messages from local session (direct)');
+      return localMessages;
+    });
 
     // Start immediate sync (not background!)
     if (!localSession.synced && !localSession.syncing) {
@@ -530,7 +491,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       // NOTE: If pendingServerSessionId exists, we're in the middle of initial message send, don't redirect yet
       router.replace(`/main/chat/${localSession.serverId}`);
     }
-  }, [isLocalSession, localSession, currentUser, router, toast, isMasterKeyReady]);
+  }, [isLocalSession, localSession, currentUser, router, toast]);
 
   // Process session data from SWR
   useEffect(() => {
@@ -567,54 +528,35 @@ export default function ChatSessionPage({ params }: PageProps) {
     anonymousUserMapRef.current = new Map(anonymousUserMap);
 
     // Update messages (SWR handles deduplication automatically)
-    // E2EE対応: 暗号化メッセージを復号してから変換
-    const processMessages = async () => {
-      // Don't overwrite messages while loading (message is being sent)
-      if (isLoading) {
-        devLog.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
-        return;
-      }
+    // Don't overwrite messages while loading (message is being sent)
+    if (isLoading) {
+      devLog.log('[CHAT DEBUG] Skipping setMessages: message is being sent (isLoading=true)');
+      return;
+    }
 
-      // Wait for master key before attempting E2EE decryption
-      if (!isMasterKeyReady) {
-        devLog.log('[CHAT DEBUG] Waiting for E2EE master key initialization...');
-        return;
+    setMessages((prev) => {
+      // Skip if streaming just completed (prevent overwriting fresh AI response)
+      if (streamingJustCompletedRef.current) {
+        devLog.log('[CHAT DEBUG] Skipping setMessages: streaming just completed');
+        streamingJustCompletedRef.current = false; // Reset for next time
+        return prev;
       }
-
-      // Decrypt E2EE messages before transformation
-      const decryptedMessages: ChatMessage[] = await Promise.all(
-        sessionData.messages.map(async (m: ChatMessage) => {
-          const decryptedContent: string = await decryptE2EEContent(m.content);
-          return { ...m, content: decryptedContent } as ChatMessage;
-        })
+      // Skip if local messages exist (not yet synced to server)
+      const hasLocalMessages = prev.some(m => m.id.startsWith('local-'));
+      if (hasLocalMessages) {
+        devLog.log('[CHAT DEBUG] Skipping setMessages: has local messages not yet synced');
+        return prev;
+      }
+      // If local state has more messages than server data, don't overwrite (race condition)
+      if (prev.length > sessionData.messages.length) {
+        devLog.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', sessionData.messages.length, ')');
+        return prev;
+      }
+      return sessionData.messages.map((m: ChatMessage) =>
+        transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
       );
-
-      setMessages((prev) => {
-        // Skip if streaming just completed (prevent overwriting fresh AI response)
-        if (streamingJustCompletedRef.current) {
-          devLog.log('[CHAT DEBUG] Skipping setMessages: streaming just completed');
-          streamingJustCompletedRef.current = false; // Reset for next time
-          return prev;
-        }
-        // Skip if local messages exist (not yet synced to server)
-        const hasLocalMessages = prev.some(m => m.id.startsWith('local-'));
-        if (hasLocalMessages) {
-          devLog.log('[CHAT DEBUG] Skipping setMessages: has local messages not yet synced');
-          return prev;
-        }
-        // If local state has more messages than server data, don't overwrite (race condition)
-        if (prev.length > decryptedMessages.length) {
-          devLog.log('[CHAT DEBUG] Skipping setMessages: prev has more messages than sessionData (race condition, prev:', prev.length, 'server:', decryptedMessages.length, ')');
-          return prev;
-        }
-        return decryptedMessages.map((m) =>
-          transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
-        );
-      });
-    };
-
-    processMessages();
-  }, [sessionData, currentUser, isLoading, isMasterKeyReady]);
+    });
+  }, [sessionData, currentUser, isLoading]);
 
   // Send pending initial message after sync completes (optimistic UI approach)
   const pendingMessageSentRef = useRef(false);
@@ -666,103 +608,92 @@ export default function ChatSessionPage({ params }: PageProps) {
     pendingMessageSentRef.current = true;
     sessionStorage.removeItem(`pendingInitialMessage-${targetSessionId}`);
 
-    // E2EE対応: 暗号化されたメッセージを復号して表示用に準備
-    const processAndSendMessage = async () => {
-      let displayContent: string;
-      if (typeof initialMessage.content === 'string') {
-        displayContent = initialMessage.content;
-      } else if (isMasterKeyReady) {
-        displayContent = await decryptE2EEContent(initialMessage.content);
-      } else {
-        displayContent = '[復号中...]';
-      }
+    // Display local message immediately (optimistic UI)
+    const displayContent = typeof initialMessage.content === 'string'
+      ? initialMessage.content
+      : '[メッセージ]';
 
-      // Display local message immediately (optimistic UI)
-      const userMessage: LocalMessage = {
-        id: initialMessage.id,
-        role: "user",
-        content: displayContent,
-        timestamp: initialMessage.timestamp,
-        responder: {
-          displayName: currentUser.displayName,
-          avatarUrl: currentUser.avatarUrl,
-          handle: currentUser.handle,
-        },
-      };
-
-      // Add message optimistically (preserve any existing messages)
-      devLog.log('[INITIAL MSG DEBUG] About to setMessages with userMessage:', userMessage.id);
-      setMessages((prev) => {
-        devLog.log('[INITIAL MSG DEBUG] setMessages callback, prev.length:', prev.length, 'prev:', prev.map(m => ({ id: m.id, role: m.role })));
-        // Avoid duplicates
-        if (prev.some((m) => m.id === userMessage.id)) {
-          devLog.log('[INITIAL MSG DEBUG] Duplicate detected, returning prev');
-          return prev;
-        }
-        devLog.log('[INITIAL MSG DEBUG] Adding userMessage to messages');
-        return [...prev, userMessage];
-      });
-      devLog.log('[INITIAL MSG DEBUG] setIsLoading(true)');
-      setIsLoading(true);
-
-      return userMessage;
+    const userMessage: LocalMessage = {
+      id: initialMessage.id,
+      role: "user",
+      content: displayContent,
+      timestamp: initialMessage.timestamp,
+      responder: {
+        displayName: currentUser.displayName,
+        avatarUrl: currentUser.avatarUrl,
+        handle: currentUser.handle,
+      },
     };
 
-    processAndSendMessage().then((userMessage) => {
-      // Send message to SERVER session (not local session)
-      fetch(`/api/chat/sessions/${targetSessionId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: initialMessage.content }),
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            const errorText = await res.text();
-            console.error('[CHAT DEBUG] Initial message send failed:', {
-              status: res.status,
-              statusText: res.statusText,
-              body: errorText,
-              targetSessionId,
-            });
-            throw new Error(`Failed to send initial message: ${res.status} ${res.statusText}`);
-          }
+    // Add message optimistically (preserve any existing messages)
+    devLog.log('[INITIAL MSG DEBUG] About to setMessages with userMessage:', userMessage.id);
+    setMessages((prev) => {
+      devLog.log('[INITIAL MSG DEBUG] setMessages callback, prev.length:', prev.length, 'prev:', prev.map(m => ({ id: m.id, role: m.role })));
+      // Avoid duplicates
+      if (prev.some((m) => m.id === userMessage.id)) {
+        devLog.log('[INITIAL MSG DEBUG] Duplicate detected, returning prev');
+        return prev;
+      }
+      devLog.log('[INITIAL MSG DEBUG] Adding userMessage to messages');
+      return [...prev, userMessage];
+    });
+    devLog.log('[INITIAL MSG DEBUG] setIsLoading(true)');
+    setIsLoading(true);
 
-          // Handle SSE response for AI reply
-          await handleSSEResponse(res, userMessage.id, {
-            setMessages,
-            setIsLoading,
-            setSessionInfo,
-            setShowCrisisAlert,
-            showToast: toast.showToast,
-            onStreamComplete: async () => {
-              streamingJustCompletedRef.current = true;
+    // Send message to SERVER session (not local session)
+    fetch(`/api/chat/sessions/${targetSessionId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: initialMessage.content }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[CHAT DEBUG] Initial message send failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            body: errorText,
+            targetSessionId,
+          });
+          throw new Error(`Failed to send initial message: ${res.status} ${res.statusText}`);
+        }
 
-              // Navigate to server session AFTER SSE completes (prevents state loss)
-              if (sessionId.startsWith('local-')) {
-                devLog.log('[LOCAL SESSION] SSE complete, preparing to navigate...');
+        // Handle SSE response for AI reply
+        await handleSSEResponse(res, userMessage.id, {
+          setMessages,
+          setIsLoading,
+          setSessionInfo,
+          setShowCrisisAlert,
+          showToast: toast.showToast,
+          onStreamComplete: async () => {
+            streamingJustCompletedRef.current = true;
 
-                // Find assistant message ID from current state
-                setMessages((currentMessages) => {
-                  const assistantMsg = currentMessages.find(m => m.role === 'assistant');
-                  const assistantMessageId = assistantMsg?.id;
+            // Navigate to server session AFTER SSE completes (prevents state loss)
+            if (sessionId.startsWith('local-')) {
+              devLog.log('[LOCAL SESSION] SSE complete, preparing to navigate...');
 
-                  devLog.log('[LOCAL SESSION] Assistant message ID:', assistantMessageId);
+              // Find assistant message ID from current state
+              setMessages((currentMessages) => {
+                const assistantMsg = currentMessages.find(m => m.role === 'assistant');
+                const assistantMessageId = assistantMsg?.id;
 
-                  // Poll server to verify DB save completed
-                  const pollForMessage = async (attemptCount = 0): Promise<void> => {
-                    const maxAttempts = 15; // 15 attempts * 200ms = 3 seconds max
+                devLog.log('[LOCAL SESSION] Assistant message ID:', assistantMessageId);
 
-                    if (attemptCount >= maxAttempts) {
-                      devLog.log('[LOCAL SESSION] Polling timeout, navigating anyway');
-                      sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
-                      router.replace(`/main/chat/${targetSessionId}`);
-                      return;
-                    }
+                // Poll server to verify DB save completed
+                const pollForMessage = async (attemptCount = 0): Promise<void> => {
+                  const maxAttempts = 15; // 15 attempts * 200ms = 3 seconds max
 
-                    try {
-                      devLog.log(`[LOCAL SESSION] Polling for message (attempt ${attemptCount + 1}/${maxAttempts})...`);
+                  if (attemptCount >= maxAttempts) {
+                    devLog.log('[LOCAL SESSION] Polling timeout, navigating anyway');
+                    sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
+                    router.replace(`/main/chat/${targetSessionId}`);
+                    return;
+                  }
 
-                      const response = await fetch(`/api/chat/sessions/${targetSessionId}`);
+                  try {
+                    devLog.log(`[LOCAL SESSION] Polling for message (attempt ${attemptCount + 1}/${maxAttempts})...`);
+
+                    const response = await fetch(`/api/chat/sessions/${targetSessionId}`);
                       if (response.ok) {
                         const data = await response.json();
 
@@ -804,8 +735,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           setIsLoading(false);
           setError(err instanceof Error ? err.message : "エラーが発生しました");
         });
-    });
-  }, [sessionId, pendingServerSessionId, currentUser, toast, router, isMasterKeyReady]);
+  }, [sessionId, pendingServerSessionId, currentUser, toast, router]);
 
   // Auto-scroll
   useEffect(() => {
@@ -1081,31 +1011,16 @@ export default function ChatSessionPage({ params }: PageProps) {
       setError(undefined);
 
       // ローカルストアに追加（IndexedDB永続化 + リアクティブ更新）
-      // PRIVATE以外はE2EE暗号化される
-      const isAIOnly = sessionInfo.consultType === "PRIVATE";
       await localSessionStore.addMessage(sessionId, {
         ...userMessage,
         synced: false,
-      }, isAIOnly);
+      });
 
       try {
-        // E2EE対応: PUBLIC/DIRECTED相談は暗号化して送信
-        let messageToSend: string | EncryptedData = userMessage.content;
-
-        if (!isAIOnly && isMasterKeyInitialized()) {
-          try {
-            messageToSend = await encrypt(userMessage.content);
-            clientLogger.info('[E2EE] Message encrypted before sending');
-          } catch (encryptError) {
-            clientLogger.error('[E2EE] Encryption failed, sending plaintext:', encryptError);
-            // フォールバック: 暗号化失敗時は平文で送信
-          }
-        }
-
         const res = await fetch(`/api/chat/sessions/${sessionId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: messageToSend }),
+          body: JSON.stringify({ message: userMessage.content }),
         });
 
         if (!res.ok) {
@@ -1447,19 +1362,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             />
           )}
 
-          {/* E2EE復号待機中のローディング表示 */}
-          {!isMasterKeyReady && sessionData?.messages?.some((m: ChatMessage) =>
-            typeof m.content === 'object' && 'isEncrypted' in m.content
-          ) && (
-            <div className="flex flex-col items-center justify-center h-full text-center py-20">
-              <span className="loading loading-spinner loading-md text-primary mb-3" />
-              <p className="text-base-content/50 text-sm">
-                メッセージを復号中...
-              </p>
-            </div>
-          )}
-
-          {messages.length === 0 && !isLoading && !showCrisisAlert && isMasterKeyReady && (
+          {messages.length === 0 && !isLoading && !showCrisisAlert && (
             <div className="flex flex-col items-center justify-center h-full text-center py-20">
               <p className="text-base-content/50 text-lg">
                 今日はどうしましたか？
@@ -1468,19 +1371,6 @@ export default function ChatSessionPage({ params }: PageProps) {
           )}
 
           {messages.map((msg, index) => {
-            // E2EE復号待機中のメッセージはスキップ（ローディング表示で対応）
-            if (msg.content === '[復号中...]' || msg.content === '[暗号化メッセージ]') {
-              return (
-                <div key={msg.id} className="chat chat-start">
-                  <div className="chat-bubble bg-base-200/60 shadow-none">
-                    <div className="flex items-center gap-2 text-base-content/50">
-                      <span className="loading loading-dots loading-xs" />
-                      <span className="text-sm">復号中...</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
             devLog.log(`[CHAT DEBUG] Rendering message ${index + 1}/${messages.length}:`, {
               id: msg.id,
               role: msg.role,

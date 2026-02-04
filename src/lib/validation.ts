@@ -19,20 +19,9 @@ export const updateChatSessionSchema = z.object({
   title: z.string().min(1).max(200).optional(),
 });
 
-// E2EE encrypted data schema
-const e2eeEncryptedSchema = z.object({
-  ciphertext: z.string().min(1),
-  iv: z.string().min(1),
-  salt: z.string(), // Can be empty - not used for per-message encryption
-  isEncrypted: z.literal(true),
-});
-
-// Message schemas - accepts both plain string and E2EE encrypted object
+// Message schemas
 export const sendMessageSchema = z.object({
-  message: z.union([
-    z.string().min(1).max(10000),
-    e2eeEncryptedSchema,
-  ]),
+  message: z.string().min(1).max(10000),
 });
 
 export const respondToSessionSchema = z.object({
