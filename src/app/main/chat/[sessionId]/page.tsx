@@ -22,6 +22,7 @@ import { useToastActions } from "@/components/Toast";
 import type { ChatMessage, ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
 import { indexedDB } from "@/lib/indexed-db";
+import { hasMentionYamii } from "@/lib/constants";
 
 interface PageProps {
   params: Promise<{ sessionId: string }>;
@@ -386,6 +387,7 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   devLog.log('[CHAT DEBUG] ChatSessionPage RENDER, sessionId:', sessionId, 'messages.length:', messages.length);
   const [isLoading, setIsLoading] = useState(false);
+  const [expectingAIResponse, setExpectingAIResponse] = useState(false);
   const [showCrisisAlert, setShowCrisisAlert] = useState(false);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
@@ -997,17 +999,23 @@ export default function ChatSessionPage({ params }: PageProps) {
     const canRespond = sessionInfo.consultType === "PUBLIC" || sessionInfo.consultType === "DIRECTED";
 
     if (isOwner) {
+      const messageContent = inputValue.trim();
       const userMessage: LocalMessage = {
         id: crypto.randomUUID(),
         role: "user",
-        content: inputValue.trim(),
+        content: messageContent,
         timestamp: new Date(),
       };
+
+      // AI応答が期待されるかどうかを判定
+      const willGetAIResponse = sessionInfo.consultType === "PRIVATE" ||
+        hasMentionYamii(messageContent);
 
       // 楽観的更新: ローカルストアを使用して統一的に処理
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
       setIsLoading(true);
+      setExpectingAIResponse(willGetAIResponse);
       setError(undefined);
 
       // ローカルストアに追加（IndexedDB永続化 + リアクティブ更新）
@@ -1094,6 +1102,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       setMessages((prev) => [...prev, optimisticResponse]);
       setInputValue("");
       setIsLoading(true);
+      setExpectingAIResponse(false); // 回答者は自分のメッセージを追加するだけなのでAI応答は期待しない
       setError(undefined);
 
       // ローカルストアに追加（統一的な処理）
@@ -1396,7 +1405,7 @@ export default function ChatSessionPage({ params }: PageProps) {
             );
           })}
 
-          {isLoading && !messages.some(m => m.role === 'assistant') && <ChatBubble role="assistant" content="" isLoading />}
+          {isLoading && expectingAIResponse && <ChatBubble role="assistant" content="" isLoading />}
 
           {error && (
             <div className="alert alert-error text-sm" role="alert" aria-live="polite">
