@@ -90,7 +90,7 @@ function getSafeErrorMessage(error: unknown): string {
   }
 
   if (error instanceof ZodError) {
-    return "Validation failed: " + error.errors.map(e => e.message).join(", ");
+    return "Validation failed: " + error.issues.map(e => e.message).join(", ");
   }
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
