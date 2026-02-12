@@ -90,9 +90,9 @@ export async function GET(req: NextRequest) {
         questionMessage = msg;
       } else {
         // For ASSISTANT messages, find the most recent USER message before this one
-        const allUserMessages = session.messages.filter((m: any) => m.role === "USER");
+        const allUserMessages = session.messages.filter((m) => m.role === "USER");
         const previousUserMessages = allUserMessages.filter(
-          (m: any) => new Date(m.createdAt) < new Date(msg.createdAt)
+          (m) => new Date(m.createdAt) < new Date(msg.createdAt)
         );
 
         if (previousUserMessages.length > 0) {

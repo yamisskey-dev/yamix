@@ -106,9 +106,6 @@ export async function POST(req: NextRequest) {
     const handle = `@${misskeyUser.username}@${host}`;
     const now = new Date();
 
-    let userId: string;
-    let walletId: string;
-
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.upsert({
         where: { handle },
@@ -155,8 +152,8 @@ export async function POST(req: NextRequest) {
       return { user, wallet };
     });
 
-    userId = result.user.id;
-    walletId = result.wallet.id;
+    const userId = result.user.id;
+    const walletId = result.wallet.id;
 
     // Clean up session
     await RedisService.delete(`login/misskey/${token}`);

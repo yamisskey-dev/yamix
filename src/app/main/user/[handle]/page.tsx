@@ -151,7 +151,7 @@ export default function UserProfilePage({ params }: PageProps) {
         if (res.ok) {
           const data = await res.json();
           const blocked = data.blocks.some(
-            (block: any) => block.blockedUser?.id === user.id
+            (block: { blockedUser?: { id: string } }) => block.blockedUser?.id === user.id
           );
           setIsBlocked(blocked);
         }

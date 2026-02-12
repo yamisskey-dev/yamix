@@ -23,7 +23,7 @@ export interface StoredMessage extends OptimisticMessage {
 export interface SyncQueueItem {
   id: string;
   type: 'session' | 'message';
-  data: any;
+  data: unknown;
   timestamp: number;
   retries: number;
 }

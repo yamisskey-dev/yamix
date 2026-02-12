@@ -7,7 +7,7 @@
  * - SIEM integration ready
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { logger } from "@/lib/logger";
 
 const prisma = new PrismaClient();
@@ -227,7 +227,7 @@ export async function queryAuditLogs(filters: {
   endDate?: Date;
   limit?: number;
 }) {
-  const where: any = {};
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (filters.eventType) where.eventType = filters.eventType;
   if (filters.userId) where.userId = filters.userId;

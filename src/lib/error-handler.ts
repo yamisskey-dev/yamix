@@ -209,7 +209,7 @@ export function handleError(
  * Async error wrapper for API route handlers
  * SECURITY: Ensures all errors are properly handled
  */
-export function asyncHandler<T extends (...args: any[]) => Promise<NextResponse>>(
+export function asyncHandler<T extends (...args: unknown[]) => Promise<NextResponse>>(
   handler: T
 ): T {
   return (async (...args: Parameters<T>) => {
