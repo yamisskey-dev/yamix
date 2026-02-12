@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyJWT } from "@/lib/jwt";
 import { csrfProtection } from "@/lib/csrf";
-import { checkRateLimitRedis, RateLimitType } from "@/lib/rate-limit-redis";
+import { checkRateLimitRedis, RateLimits } from "@/lib/rate-limit-redis";
 import {
   logAuditEvent,
   logAuthEvent,
@@ -21,6 +21,8 @@ import {
   AuditRiskLevel,
 } from "@/lib/audit-log";
 import { handleError, AppError } from "@/lib/error-handler";
+
+type RateLimitType = keyof typeof RateLimits;
 
 /**
  * Get client IP address from request
@@ -126,7 +128,7 @@ export async function requireRateLimit(
   const ip = getClientIP(request);
   const key = `${type}:${userId}:${ip}`;
 
-  const result = await checkRateLimitRedis(key, type);
+  const result = await checkRateLimitRedis(key, RateLimits[type]);
 
   if (!result.success) {
     await logSecurityEvent(
