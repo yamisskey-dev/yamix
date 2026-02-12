@@ -294,7 +294,6 @@ export function ExploreFeed() {
     <div
       ref={scrollRef}
       className="flex gap-4 sm:gap-6 h-full overflow-x-auto overflow-y-hidden snap-x snap-mandatory py-4 px-4 sm:px-8"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
     >
       {consultations.map((consultation) => (
         <PhoneChatCard key={consultation.id} consultation={consultation} />
