@@ -187,9 +187,9 @@ export async function withApiSecurity<T>(
     context: { userId?: string; handle?: string }
   ) => Promise<NextResponse>
 ): Promise<NextResponse> {
-  try {
-    const context: { userId?: string; handle?: string } = {};
+  const context: { userId?: string; handle?: string } = {};
 
+  try {
     // 1. Authentication
     if (options.requireAuth) {
       const authResult = await requireAuth(request);
