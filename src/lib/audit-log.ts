@@ -116,11 +116,11 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     // Alert on critical events
     if (entry.riskLevel === AuditRiskLevel.CRITICAL) {
       // TODO: Integrate with alerting system (Slack, PagerDuty, etc.)
-      logger.error("CRITICAL SECURITY EVENT", entry);
+      logger.error("CRITICAL SECURITY EVENT", { ...entry });
     }
   } catch (error) {
     // IMPORTANT: Never let audit logging failure break the application
-    logger.error("Failed to log audit event", entry, error);
+    logger.error("Failed to log audit event", { ...entry }, error);
   }
 }
 
