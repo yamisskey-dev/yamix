@@ -15,7 +15,7 @@ interface Props {
   currentUserHandle?: string;
 }
 
-export const ConsultationCard = memo(function ConsultationCard({ consultation, currentUserHandle }: Props) {
+export const ConsultationCard = memo(function ConsultationCard({ consultation }: Props) {
   const router = useRouter();
 
   // 回答モードかどうか（responderがnullの場合はAI回答）

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 /**
  * Middleware for adding security headers
@@ -12,7 +11,7 @@ import type { NextRequest } from "next/server";
  * NOTE: Edge Runtime compatible (no Node.js crypto module)
  * TODO: Implement CSP nonce via custom _document for full nonce-based CSP
  */
-export function middleware(request: NextRequest) {
+export function middleware() {
   const response = NextResponse.next();
 
   // Note: Nonce generation requires Node.js crypto, not available in Edge Runtime

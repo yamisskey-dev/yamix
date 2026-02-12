@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import Image from "next/image";
 import { ConsultationCard } from "@/components/Timeline";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -45,7 +45,7 @@ export default function UserProfilePage({ params }: PageProps) {
   // Own profile detection
   const [currentUserHandle, setCurrentUserHandle] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [, setStats] = useState<UserStats | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [isBlockLoading, setIsBlockLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);

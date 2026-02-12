@@ -49,18 +49,19 @@ export async function getEconomyConfig(): Promise<EconomyConfig> {
   };
 }
 
-function getDefaultConfig(): EconomyConfig {
-  return {
-    dailyGrantAmount: TOKEN_ECONOMY.DAILY_GRANT_AMOUNT,
-    decayRatePercent: TOKEN_ECONOMY.DECAY_RATE_PERCENT,
-    aiConsultCost: TOKEN_ECONOMY.AI_CONSULT_COST,
-    humanConsultCost: TOKEN_ECONOMY.HUMAN_CONSULT_COST,
-    responseReward: TOKEN_ECONOMY.RESPONSE_REWARD,
-    dailyRewardCap: TOKEN_ECONOMY.DAILY_REWARD_CAP,
-    initialBalance: TOKEN_ECONOMY.INITIAL_BALANCE,
-    maxBalance: TOKEN_ECONOMY.MAX_BALANCE,
-  };
-}
+// Helper function to get default config - available for future use
+// function getDefaultConfig(): EconomyConfig {
+//   return {
+//     dailyGrantAmount: TOKEN_ECONOMY.DAILY_GRANT_AMOUNT,
+//     decayRatePercent: TOKEN_ECONOMY.DECAY_RATE_PERCENT,
+//     aiConsultCost: TOKEN_ECONOMY.AI_CONSULT_COST,
+//     humanConsultCost: TOKEN_ECONOMY.HUMAN_CONSULT_COST,
+//     responseReward: TOKEN_ECONOMY.RESPONSE_REWARD,
+//     dailyRewardCap: TOKEN_ECONOMY.DAILY_REWARD_CAP,
+//     initialBalance: TOKEN_ECONOMY.INITIAL_BALANCE,
+//     maxBalance: TOKEN_ECONOMY.MAX_BALANCE,
+//   };
+// }
 
 // ============================================
 // BI付与（Daily Grant）

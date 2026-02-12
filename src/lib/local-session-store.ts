@@ -4,7 +4,7 @@
  * リアクティブな更新通知をサポート
  */
 
-import { indexedDB, type StoredMessage } from './indexed-db';
+import { indexedDB } from './indexed-db';
 import { devLog } from './dev-logger';
 
 export interface OptimisticMessage {

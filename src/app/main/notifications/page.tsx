@@ -56,21 +56,21 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAllAsRead = async () => {
-    try {
-      const res = await fetch("/api/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markAllRead: true }),
-      });
-
-      if (res.ok) {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      }
-    } catch (error) {
-      clientLogger.error("Failed to mark all as read:", error);
-    }
-  };
+  // Mark all as read function - available for future use
+  // const markAllAsRead = async () => {
+  //   try {
+  //     const res = await fetch("/api/notifications", {
+  //       method: "PUT",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ markAllRead: true }),
+  //     });
+  //     if (res.ok) {
+  //       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  //     }
+  //   } catch (error) {
+  //     clientLogger.error("Failed to mark all as read:", error);
+  //   }
+  // };
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
@@ -132,7 +132,8 @@ export default function NotificationsPage() {
     return date.toLocaleDateString("ja-JP");
   };
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // Unread count - available for future use
+  // const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (loading) {
     return (

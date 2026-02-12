@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { ChatSessionListItem } from "@/types";
 import { useToast } from "@/components/Toast";
 import { clientLogger } from "@/lib/client-logger";
 

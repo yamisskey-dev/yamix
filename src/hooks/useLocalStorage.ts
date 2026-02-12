@@ -30,7 +30,7 @@ export function useLocalStorage<T>(
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   // SSR対応: 初期値は常にinitialValue
   const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [, setIsInitialized] = useState(false);
 
   // マウント時にlocalStorageから読み込み
   useEffect(() => {

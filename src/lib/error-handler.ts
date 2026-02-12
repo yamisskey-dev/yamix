@@ -59,15 +59,16 @@ export enum ErrorCode {
  * Check if error should be exposed to client
  * SECURITY: Only expose safe errors, hide sensitive details
  */
-function isSafeError(error: unknown): boolean {
-  if (error instanceof AppError) {
-    return true; // Our own errors are safe to expose
-  }
-  if (error instanceof ZodError) {
-    return true; // Validation errors are safe
-  }
-  return false;
-}
+// Helper function to check if error is safe - available for future use
+// function isSafeError(error: unknown): boolean {
+//   if (error instanceof AppError) {
+//     return true; // Our own errors are safe to expose
+//   }
+//   if (error instanceof ZodError) {
+//     return true; // Validation errors are safe
+//   }
+//   return false;
+// }
 
 /**
  * Get safe error message for client

@@ -8,7 +8,7 @@ import { encodeHandle } from "@/lib/encode-handle";
 import { ChatBubble, CrisisAlert } from "@/components/ChatBubble";
 import { ConsultTypeIcon, getConsultTypeLabel } from "@/components/ConsultTypeIcon";
 import { CrisisStrikeIndicator } from "@/components/CrisisStrikeIndicator";
-import { localSessionStore, type OptimisticSession } from "@/lib/local-session-store";
+import { localSessionStore } from "@/lib/local-session-store";
 
 // 動的インポートで初期ロードを高速化
 const BookmarkButton = lazy(() => import("@/components/BookmarkButton").then(mod => ({ default: mod.BookmarkButton })));
@@ -313,7 +313,7 @@ export default function ChatSessionPage({ params }: PageProps) {
   const localSession = isLocalSession ? localSessionStore.get(sessionId) : null;
 
   // SWR for session data fetching (skip for local sessions)
-  const { data: sessionData, error: sessionError, isLoading: isFetching, mutate: mutateSession } = useSWR<ChatSessionWithMessages>(
+  const { data: sessionData, isLoading: isFetching, mutate: mutateSession } = useSWR<ChatSessionWithMessages>(
     isLocalSession ? null : `/api/chat/sessions/${sessionId}`,
     fetcher,
     {
@@ -493,6 +493,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       // NOTE: If pendingServerSessionId exists, we're in the middle of initial message send, don't redirect yet
       router.replace(`/main/chat/${localSession.serverId}`);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLocalSession, localSession, currentUser, router, toast]);
 
   // Process session data from SWR
@@ -737,6 +738,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           setIsLoading(false);
           setError(err instanceof Error ? err.message : "エラーが発生しました");
         });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, pendingServerSessionId, currentUser, toast, router]);
 
   // Auto-scroll
@@ -930,6 +932,7 @@ export default function ChatSessionPage({ params }: PageProps) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, isLocalSession]);
 
   const openBlockModal = (userId: string) => {

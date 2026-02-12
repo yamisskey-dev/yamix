@@ -20,7 +20,7 @@ import {
   AuditEventType,
   AuditRiskLevel,
 } from "@/lib/audit-log";
-import { handleError, AppError } from "@/lib/error-handler";
+import { handleError } from "@/lib/error-handler";
 
 type RateLimitType = keyof typeof RateLimits;
 
@@ -175,7 +175,7 @@ export async function requireRateLimit(
  * }
  * ```
  */
-export async function withApiSecurity<T>(
+export async function withApiSecurity(
   request: NextRequest,
   options: {
     requireAuth?: boolean;

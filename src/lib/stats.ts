@@ -303,7 +303,8 @@ export async function getUserStats(walletId: string): Promise<UserStats | null> 
     return null;
   }
 
-  const config = await getEconomyConfig();
+  // Get economy config - available for future calculations
+  await getEconomyConfig();
   const equilibriumBalance = await getEquilibriumBalance();
 
   const now = new Date();

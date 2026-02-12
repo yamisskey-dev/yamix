@@ -147,6 +147,7 @@ export default function NewChatPage() {
       setIsLoading(false);
       submittingRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputValue, isLoading, consultType, isAnonymous, allowAnonymousResponses, targetUsers, router]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const sessionInfo = JSON.parse(sessionData);
+    // Verify session exists - sessionData is already validated above
+    JSON.parse(sessionData);
 
     // Get server info
     let server: { id: string; appSecret: string | null } | null = null;

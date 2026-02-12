@@ -43,7 +43,7 @@ export async function verifyJWT(token: string): Promise<JWTPayload | null> {
       audience: JWT_AUDIENCE,
     });
     return payload as unknown as JWTPayload;
-  } catch (error) {
+  } catch {
     // JWT verification failure is expected for expired/invalid tokens - no logging needed
     return null;
   }
