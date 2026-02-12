@@ -9,14 +9,25 @@ import { logger } from "@/lib/logger";
 
 export async function migrateUnencryptedMessages(): Promise<void> {
   try {
-    // 平文メッセージをカウント（$enc$で始まらないもの）
+    // 平文メッセージをカウント（$enc$または$enc2$で始まらないもの）
     const plaintextCount = await prisma.chatMessage.count({
       where: {
-        NOT: {
-          content: {
-            startsWith: "$enc$",
+        AND: [
+          {
+            NOT: {
+              content: {
+                startsWith: "$enc$",
+              },
+            },
           },
-        },
+          {
+            NOT: {
+              content: {
+                startsWith: "$enc2$",
+              },
+            },
+          },
+        ],
       },
     });
 
@@ -30,11 +41,22 @@ export async function migrateUnencryptedMessages(): Promise<void> {
     // 平文メッセージを取得
     const messages = await prisma.chatMessage.findMany({
       where: {
-        NOT: {
-          content: {
-            startsWith: "$enc$",
+        AND: [
+          {
+            NOT: {
+              content: {
+                startsWith: "$enc$",
+              },
+            },
           },
-        },
+          {
+            NOT: {
+              content: {
+                startsWith: "$enc2$",
+              },
+            },
+          },
+        ],
       },
       include: {
         session: {

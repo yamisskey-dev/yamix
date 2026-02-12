@@ -12,7 +12,13 @@ export async function GET(req: NextRequest) {
     const profile = await yamiiClient.getUserProfile(payload.userId);
     return NextResponse.json(profile);
   } catch (error) {
-    logger.error("Failed to get yamii user profile:", {}, error);
+    // 404 is expected for first-time users
+    const is404 = error instanceof Error && error.message.includes("404");
+    if (is404) {
+      logger.info("User profile not found in Yamii (first-time user), returning default profile", { userId: payload.userId });
+    } else {
+      logger.error("Failed to get yamii user profile:", {}, error);
+    }
     // Return default profile if user doesn't exist yet
     return NextResponse.json({
       user_id: payload.userId,
