@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken } from "@/lib/jwt";
+import { verifyJWT } from "@/lib/jwt";
 import { csrfProtection } from "@/lib/csrf";
 import { checkRateLimitRedis, RateLimitType } from "@/lib/rate-limit-redis";
 import {
@@ -47,7 +47,7 @@ export async function requireAuth(
   request: NextRequest
 ): Promise<{ userId: string; handle: string } | NextResponse> {
   try {
-    const token = request.cookies.get("token")?.value;
+    const token = request.cookies.get("yamix-token")?.value;
 
     if (!token) {
       await logAuthEvent(
@@ -60,7 +60,7 @@ export async function requireAuth(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const payload = await verifyToken(token);
+    const payload = await verifyJWT(token);
     if (!payload) {
       await logAuthEvent(
         AuditEventType.AUTHZ_ACCESS_DENIED,
@@ -73,7 +73,7 @@ export async function requireAuth(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    return { userId: payload.userId, handle: payload.handle };
+    return { userId: payload.userId, handle: payload.sub };
   } catch (error) {
     await logAuthEvent(
       AuditEventType.AUTHZ_ACCESS_DENIED,
