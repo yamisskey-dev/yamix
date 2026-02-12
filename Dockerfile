@@ -55,6 +55,11 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy prisma schema for migrations
 COPY --from=deps /app/prisma ./prisma
 
+# Copy migration scripts
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./
 
