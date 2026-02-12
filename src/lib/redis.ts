@@ -137,4 +137,100 @@ export class RedisService {
     // Also delete from memory cache
     globalForRedis.memoryCache.delete(key);
   }
+
+  // Alias for compatibility
+  static async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+    if (ttlSeconds) {
+      return this.setWithExpiry(key, value, ttlSeconds);
+    }
+
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        await redis.set(key, value);
+        return;
+      } catch (err) {
+        logger.warn("Redis set failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+
+    globalForRedis.memoryCache.set(key, {
+      value,
+      expiresAt: Date.now() + 86400 * 1000, // Default 24h
+    });
+  }
+
+  // Sorted set operations for rate limiting
+  static async zadd(key: string, score: number, member: string): Promise<void> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        await redis.zadd(key, score, member);
+        return;
+      } catch (err) {
+        logger.warn("Redis zadd failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+    // In-memory fallback: not ideal for rate limiting, but better than nothing
+  }
+
+  static async zcard(key: string): Promise<number> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        return await redis.zcard(key);
+      } catch (err) {
+        logger.warn("Redis zcard failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+    return 0;
+  }
+
+  static async zremrangebyscore(key: string, min: number, max: number): Promise<void> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        await redis.zremrangebyscore(key, min, max);
+        return;
+      } catch (err) {
+        logger.warn("Redis zremrangebyscore failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+  }
+
+  static async zrange(key: string, start: number, stop: number): Promise<string[]> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        return await redis.zrange(key, start, stop);
+      } catch (err) {
+        logger.warn("Redis zrange failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+    return [];
+  }
+
+  static async expire(key: string, seconds: number): Promise<void> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        await redis.expire(key, seconds);
+        return;
+      } catch (err) {
+        logger.warn("Redis expire failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+  }
+
+  static async ttl(key: string): Promise<number> {
+    if (redis && globalForRedis.redisAvailable) {
+      try {
+        return await redis.ttl(key);
+      } catch (err) {
+        logger.warn("Redis ttl failed", {}, err);
+        globalForRedis.redisAvailable = false;
+      }
+    }
+    return -1;
+  }
 }

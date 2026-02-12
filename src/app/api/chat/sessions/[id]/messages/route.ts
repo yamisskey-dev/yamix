@@ -42,14 +42,14 @@ async function saveUserMessageAndDeduct(opts: {
 }) {
   const { sessionId, userId, userMessage, consultCost, txType, isFirstMessage, generatedTitle, isCrisis, shouldHide } = opts;
   const now = new Date();
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new Error("Wallet not found");
 
-    // 開発環境ではYAMI消費をスキップ
-    if (!isDevelopment) {
+    // SECURITY FIX: 本番環境では必ずYAMIを消費
+    if (isProduction) {
       await tx.wallet.update({
         where: { id: wallet.id },
         data: { balance: { decrement: consultCost } },
@@ -58,7 +58,11 @@ async function saveUserMessageAndDeduct(opts: {
         data: { senderId: wallet.id, amount: -consultCost, txType },
       });
     } else {
-      logger.info('[DEV MODE] Skipping YAMI deduction', { userId, consultCost });
+      logger.warn('[NON-PROD] Skipping YAMI deduction - THIS SHOULD NOT HAPPEN IN PRODUCTION', {
+        userId,
+        consultCost,
+        nodeEnv: process.env.NODE_ENV
+      });
     }
 
     // サーバーサイド暗号化を適用
@@ -396,10 +400,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         ? TOKEN_ECONOMY.DIRECTED_CONSULT_COST
         : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
 
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    // SECURITY FIX: Explicit check for production (safer than checking for development)
+    const isProduction = process.env.NODE_ENV === 'production';
 
-    // 開発環境では残高チェックをスキップ
-    if (!isDevelopment) {
+    // 本番環境では必ず残高チェック
+    if (isProduction) {
       const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
       if (!wallet) {
         return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
@@ -411,7 +416,21 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         );
       }
     } else {
-      logger.info('[DEV MODE] Skipping wallet balance check', { userId: payload.userId });
+      // 開発環境でもチェックは行うが、ログのみ出力
+      logger.warn('[NON-PROD] Skipping wallet balance check - THIS SHOULD NOT HAPPEN IN PRODUCTION', {
+        userId: payload.userId,
+        nodeEnv: process.env.NODE_ENV
+      });
+      const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
+      if (!wallet) {
+        logger.warn('[NON-PROD] Wallet not found', { userId: payload.userId });
+      } else if (wallet.balance < consultCost) {
+        logger.warn('[NON-PROD] Insufficient balance', {
+          userId: payload.userId,
+          balance: wallet.balance,
+          required: consultCost
+        });
+      }
     }
 
     // Generate title for first message

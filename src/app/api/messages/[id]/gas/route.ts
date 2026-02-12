@@ -73,31 +73,33 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 送信者のウォレットとユーザー情報を取得
-    const senderWallet = await prisma.wallet.findUnique({
-      where: { userId: payload.userId },
-      include: {
-        user: true,
-      },
-    });
+    // トランザクション実行（残高チェックも含める - SECURITY: Race condition fix）
+    const result = await prisma.$transaction(async (tx) => {
+      // SECURITY FIX: Check balance inside transaction to prevent race conditions
+      const senderWallet = await tx.wallet.findUnique({
+        where: { userId: payload.userId },
+        include: {
+          user: true,
+        },
+      });
 
-    if (!senderWallet) {
-      return NextResponse.json(
-        { error: "Sender wallet not found" },
-        { status: 404 }
-      );
-    }
+      if (!senderWallet) {
+        throw new Error("Sender wallet not found");
+      }
 
-    // 残高チェック
-    if (senderWallet.balance < GAS_TIP_AMOUNT) {
-      return NextResponse.json(
-        { error: "Insufficient balance" },
-        { status: 400 }
-      );
-    }
+      // 残高チェック（トランザクション内）
+      if (senderWallet.balance < GAS_TIP_AMOUNT) {
+        throw new Error("Insufficient balance");
+      }
 
-    // トランザクション実行
-    await prisma.$transaction(async (tx) => {
+      // 受信者のウォレットを取得
+      const recipientWallet = await tx.wallet.findUnique({
+        where: { id: message.responder!.wallet!.id },
+      });
+
+      if (!recipientWallet) {
+        throw new Error("Recipient wallet not found");
+      }
       // 送信者からYAMIを減らす
       await tx.wallet.update({
         where: { id: senderWallet.id },
@@ -106,12 +108,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
       // 回答者にYAMIを追加
       await tx.wallet.update({
-        where: { id: message.responder!.wallet!.id },
+        where: { id: recipientWallet.id },
         data: { balance: { increment: GAS_TIP_AMOUNT } },
       });
 
       // メッセージのgasAmountを更新
-      await tx.chatMessage.update({
+      const updatedMessage = await tx.chatMessage.update({
         where: { id: messageId },
         data: { gasAmount: { increment: GAS_TIP_AMOUNT } },
       });
@@ -128,12 +130,27 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // トランザクション記録（受信者の収入）
       await tx.transaction.create({
         data: {
-          senderId: message.responder!.wallet!.id,
+          senderId: recipientWallet.id,
           amount: GAS_TIP_AMOUNT,
           txType: "GAS_TIP",
         },
       });
+
+      return {
+        senderHandle: senderWallet.user.handle,
+        newGasAmount: updatedMessage.gasAmount,
+      };
     });
+
+    // Handle transaction errors
+    if (!result) {
+      return NextResponse.json(
+        { error: "Transaction failed" },
+        { status: 500 }
+      );
+    }
+
+    const { senderHandle, newGasAmount } = result;
 
     logger.info("Gas tip sent successfully", {
       messageId,
@@ -145,15 +162,31 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // 通知を送信
     await notifyGasReceived(
       message.responderId,
-      senderWallet.user.handle,
+      senderHandle,
       message.session.id
     );
 
     return NextResponse.json({
       success: true,
-      gasAmount: message.gasAmount + GAS_TIP_AMOUNT,
+      gasAmount: newGasAmount,
     });
   } catch (error) {
+    // Handle specific errors
+    if (error instanceof Error) {
+      if (error.message === "Insufficient balance") {
+        return NextResponse.json(
+          { error: "Insufficient balance" },
+          { status: 400 }
+        );
+      }
+      if (error.message === "Sender wallet not found") {
+        return NextResponse.json(
+          { error: "Sender wallet not found" },
+          { status: 404 }
+        );
+      }
+    }
+
     logger.error("Send gas error", {}, error);
     return ErrorResponses.internalError();
   }

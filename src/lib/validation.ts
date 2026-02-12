@@ -2,7 +2,87 @@ import { z } from "zod";
 
 /**
  * Validation schemas for API endpoints
+ *
+ * SECURITY: Enterprise-grade input validation
+ * - XSS prevention
+ * - SQL injection prevention (defense in depth)
+ * - Type-safe validation
  */
+
+// ============================================
+// Security-focused validators
+// ============================================
+
+/**
+ * Check if string contains potential XSS patterns
+ * SECURITY: Detect and block XSS attempts
+ */
+export function containsXSSPatterns(input: string): boolean {
+  const xssPatterns = [
+    /<script[\s\S]*?>[\s\S]*?<\/script>/gi,
+    /<iframe[\s\S]*?>/gi,
+    /<object[\s\S]*?>/gi,
+    /<embed[\s\S]*?>/gi,
+    /javascript:/gi,
+    /on\w+\s*=\s*["']?[^"']*["']?/gi, // Event handlers like onclick, onerror
+    /<img[^>]+src\s*=\s*["']?javascript:/gi,
+    /data:text\/html/gi,
+    /<svg[\s\S]*?onload/gi,
+  ];
+
+  return xssPatterns.some(pattern => pattern.test(input));
+}
+
+/**
+ * Check if string contains potential SQL injection patterns
+ * SECURITY: Defense in depth (Prisma already prevents SQL injection)
+ */
+export function containsSQLInjectionPatterns(input: string): boolean {
+  const sqlPatterns = [
+    /(\bunion\b.*\bselect\b)|(\bselect\b.*\bunion\b)/i,
+    /\b(drop|delete|insert|update|create|alter|exec|execute)\b.*\b(table|database|schema)\b/i,
+    /--|\#|\/\*|\*\//,
+    /\bor\b\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
+    /\band\b\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
+  ];
+
+  return sqlPatterns.some(pattern => pattern.test(input));
+}
+
+/**
+ * Sanitize string for safe usage
+ * SECURITY: Remove dangerous patterns while preserving content
+ */
+export function sanitizeString(input: string): string {
+  // Remove null bytes
+  let sanitized = input.replace(/\0/g, "");
+
+  // Remove control characters (keep newlines and tabs)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, "");
+
+  // Trim whitespace
+  sanitized = sanitized.trim();
+
+  return sanitized;
+}
+
+/**
+ * Safe string schema with XSS and injection detection
+ * SECURITY: Comprehensive string validation
+ */
+export const safeStringSchema = z
+  .string()
+  .min(1)
+  .max(10000)
+  .transform(sanitizeString)
+  .refine(
+    (val) => !containsXSSPatterns(val),
+    { message: "Input contains potentially dangerous XSS patterns" }
+  )
+  .refine(
+    (val) => !containsSQLInjectionPatterns(val),
+    { message: "Input contains potentially dangerous SQL patterns" }
+  );
 
 // Chat session schemas
 export const createChatSessionSchema = z.object({
@@ -11,21 +91,21 @@ export const createChatSessionSchema = z.object({
   allowAnonymousResponses: z.boolean().default(true),
   category: z.string().max(50).nullable().optional(),
   targetUserHandles: z.array(z.string().min(1).max(100)).max(20).optional(),
-  initialMessage: z.string().min(1).max(10000).optional(),
+  initialMessage: safeStringSchema.optional(),
 });
 // Note: DIRECTED with no targets = self-only post (Misskey-style "裏技")
 
 export const updateChatSessionSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
+  title: z.string().min(1).max(200).transform(sanitizeString).optional(),
 });
 
 // Message schemas
 export const sendMessageSchema = z.object({
-  message: z.string().min(1).max(10000),
+  message: safeStringSchema,
 });
 
 export const respondToSessionSchema = z.object({
-  content: z.string().min(1).max(10000),
+  content: safeStringSchema,
   isAnonymous: z.boolean().default(false),
 });
 

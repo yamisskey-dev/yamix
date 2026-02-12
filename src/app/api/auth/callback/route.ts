@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { createJWT, createTokenCookie } from "@/lib/jwt";
 import { TOKEN_ECONOMY } from "@/types";
 import { parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
+import { validateExternalHost } from "@/lib/ssrf-protection";
 
 // Generate an ETH-style address (0x + 40 hex chars)
 function generateAddress(): string {
@@ -37,6 +38,16 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, host } = data;
+
+  // SECURITY: SSRF protection - validate hostname before any external request
+  const hostValidation = await validateExternalHost(host, { skipDNSCheck: false });
+  if (!hostValidation.valid) {
+    logger.warn("SSRF attempt detected", { host, error: hostValidation.error });
+    return NextResponse.json(
+      { error: "Invalid hostname" },
+      { status: 400 }
+    );
+  }
 
   try {
     // Verify session exists

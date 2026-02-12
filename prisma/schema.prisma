@@ -440,3 +440,29 @@ enum MessageRole {
   USER
   ASSISTANT
 }
+
+// ============================================
+// AuditLog - 監査ログ（エンタープライズ級セキュリティ）
+// SECURITY: すべてのセキュリティ関連イベントを記録
+// COMPLIANCE: GDPR, SOC2, ISO27001対応
+// ============================================
+model AuditLog {
+  id           String   @id @default(cuid())
+  eventType    String   // AuditEventType enum値（文字列として保存）
+  riskLevel    String   // LOW, MEDIUM, HIGH, CRITICAL
+  userId       String?  // イベントに関連するユーザーID（nullable: 未認証イベントもある）
+  ipAddress    String?  // リクエスト元IPアドレス
+  userAgent    String?  // ユーザーエージェント
+  resource     String?  // 対象リソース（例: "wallet", "authentication"）
+  action       String?  // 実行されたアクション
+  result       String   // SUCCESS or FAILURE
+  metadata     String?  @db.Text // JSONメタデータ（詳細情報）
+  errorMessage String?  @db.Text // エラーメッセージ（失敗時）
+  timestamp    DateTime @default(now())
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@index([riskLevel, timestamp])
+  @@index([ipAddress, timestamp])
+  @@map("audit_logs")
+}

@@ -234,8 +234,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     // Execute all operations in a transaction
+    // SECURITY FIX: Use UTC to prevent timezone-based reward cap bypass
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. Deduct response cost
