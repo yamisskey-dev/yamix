@@ -1087,16 +1087,9 @@ export default function ChatSessionPage({ params }: PageProps) {
       const optimisticId = `optimistic-${Date.now()}`;
       const optimisticResponse: LocalMessage = {
         id: optimisticId,
-        role: "assistant",
+        role: "user",
         content: responseContent,
         timestamp: new Date(),
-        responder: currentUser ? {
-          displayName: isAnonymousResponse ? null : currentUser.displayName,
-          avatarUrl: isAnonymousResponse ? null : currentUser.avatarUrl,
-          isAnonymous: isAnonymousResponse,
-          handle: isAnonymousResponse ? undefined : currentUser.handle,
-          responderId: currentUser.id,
-        } : undefined,
       };
 
       setMessages((prev) => [...prev, optimisticResponse]);
