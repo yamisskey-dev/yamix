@@ -4,7 +4,7 @@
  * SECURITY: Test XSS, SQL injection, and other attack vector detection
  */
 
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import {
   containsXSSPatterns,
   containsSQLInjectionPatterns,
