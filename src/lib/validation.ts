@@ -41,6 +41,9 @@ export function containsSQLInjectionPatterns(input: string): boolean {
   const sqlPatterns = [
     /(\bunion\b.*\bselect\b)|(\bselect\b.*\bunion\b)/i,
     /\b(drop|delete|insert|update|create|alter|exec|execute)\b.*\b(table|database|schema)\b/i,
+    // DML文の形（DELETE FROM / INSERT INTO / UPDATE x SET / TRUNCATE）
+    /\b(delete\s+from|insert\s+into|truncate\s+table)\b/i,
+    /\bupdate\b\s+\S+\s+\bset\b/i,
     /--|\#|\/\*|\*\//,
     /\bor\b\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
     /\band\b\s+['"]?\d+['"]?\s*=\s*['"]?\d+['"]?/i,
