@@ -55,9 +55,12 @@ describe("isEncrypted", () => {
   });
 });
 
-describe("decryptMessage backward compatibility", () => {
-  it("returns unencrypted text as-is", () => {
-    expect(decryptMessage("plain text", USER_ID)).toBe("plain text");
+describe("decryptMessage V2-only policy", () => {
+  it("throws on non-V2 content", () => {
+    // V1サポートとマイグレーションは削除済み(8b6a22d)。平文パススルーは許可しない
+    expect(() => decryptMessage("plain text", USER_ID)).toThrow(
+      "Invalid encrypted message format"
+    );
   });
 });
 
@@ -79,11 +82,9 @@ describe("decryptMessages", () => {
     expect(result[0].id).toBe("1");
   });
 
-  it("passes through unencrypted messages", () => {
-    const result = decryptMessages(
-      [{ content: "plain", id: "1" }],
-      USER_ID
-    );
-    expect(result[0].content).toBe("plain");
+  it("throws when batch contains non-V2 content", () => {
+    expect(() =>
+      decryptMessages([{ content: "plain", id: "1" }], USER_ID)
+    ).toThrow("Invalid encrypted message format");
   });
 });

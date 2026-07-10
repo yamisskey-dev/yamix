@@ -134,11 +134,12 @@ describe("Zod schemas", () => {
       expect(result.success).toBe(true);
     });
 
-    it("rejects DIRECTED without targets", () => {
+    it("accepts DIRECTED without targets (self-only post)", () => {
+      // targets 無しの DIRECTED は自分専用投稿として有効(ac09c28)
       const result = createChatSessionSchema.safeParse({
         consultType: "DIRECTED",
       });
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
   });
 
