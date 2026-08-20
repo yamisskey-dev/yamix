@@ -30,6 +30,7 @@ export function middleware(request: NextRequest) {
     `img-src 'self' data: https:`,
     `font-src 'self' data:`,
     `connect-src 'self' https://mix.yami.ski https://down.yami.ski`,
+    `worker-src 'self'`, // Service Worker（strict-dynamic の script-src フォールバックを回避）
     `frame-ancestors 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
