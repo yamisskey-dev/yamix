@@ -64,6 +64,25 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit:run
 
+  yamii-tests:
+    name: Yamii Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: yamii/uv.lock
+
+      - name: Run yamii tests
+        working-directory: yamii
+        run: uv run --extra test pytest
+
   build:
     name: Build
     runs-on: ubuntu-latest
