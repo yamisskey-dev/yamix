@@ -40,6 +40,9 @@ services:
       - '8000'
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # OpenAI 互換 API の切り替え用（OpenRouter / ローカル LLM 等）。未設定なら OpenAI
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1}
       YAMII_API_KEYS: ${YAMII_API_KEY}
       YAMII_DATA_DIR: /app/data
     networks:
