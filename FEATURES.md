@@ -9,7 +9,6 @@ Yamixで利用可能な機能と構想中の機能を示します。
 #### Misskeyログイン
 - MiAuthによるセキュアな認証
 - JWT（HttpOnly Cookie）によるセッション管理
-- トークンのリフレッシュ機能
 
 #### 1:1 ウォレット
 - Misskeyアカウントと1対1でウォレット管理
@@ -102,7 +101,7 @@ Yamixで利用可能な機能と構想中の機能を示します。
 #### 認証・認可
 - JWT認証（HttpOnly Cookie）
 - 全APIエンドポイント認証チェック
-- CSRF対策
+- SameSite=Lax Cookie によるCSRF緩和
 
 #### データ保護
 - 非公開データの漏洩防止
