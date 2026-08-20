@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { parseSSEJsonStream } from "@/lib/sse-parser";
 import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
@@ -165,7 +166,6 @@ async function handleStreamingResponse(opts: {
 
   // Proxy SSE stream with post-stream DB saves
   const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
   let fullResponse = "";
   let assistantSaved = false;
   // クライアント切断後も Yamii の応答は読み切って DB に保存する（課金済みのため）
@@ -216,45 +216,27 @@ async function handleStreamingResponse(opts: {
 
       safeEnqueue({ type: "init", userMessageId: userMsgId, sessionTitle: generatedTitle });
 
-      const reader = yamiiBody.getReader();
-      let buffer = "";
-
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-
-            // パース失敗のみスキップ（DB エラーまで握り潰さないよう、処理は try の外で行う）
-            let data: { chunk?: string; done?: boolean; is_crisis?: boolean; error?: string };
-            try {
-              data = JSON.parse(trimmed.slice(6));
-            } catch {
-              continue;
-            }
-
-            if (data.chunk) {
-              fullResponse += data.chunk;
-              safeEnqueue({ type: "chunk", chunk: data.chunk });
-            } else if (data.done) {
-              const isCrisis = data.is_crisis || false;
-              const { assistantMsg, shouldHide } = await persistAssistantMessage(isCrisis);
-              safeEnqueue({
-                type: "done",
-                assistantMessageId: assistantMsg.id,
-                isCrisis,
-                sessionPrivatized: shouldHide,
-              });
-            } else if (data.error) {
-              safeEnqueue({ type: "error", error: data.error });
-            }
+        for await (const data of parseSSEJsonStream<{
+          chunk?: string;
+          done?: boolean;
+          is_crisis?: boolean;
+          error?: string;
+        }>(yamiiBody)) {
+          if (data.chunk) {
+            fullResponse += data.chunk;
+            safeEnqueue({ type: "chunk", chunk: data.chunk });
+          } else if (data.done) {
+            const isCrisis = data.is_crisis || false;
+            const { assistantMsg, shouldHide } = await persistAssistantMessage(isCrisis);
+            safeEnqueue({
+              type: "done",
+              assistantMessageId: assistantMsg.id,
+              isCrisis,
+              sessionPrivatized: shouldHide,
+            });
+          } else if (data.error) {
+            safeEnqueue({ type: "error", error: data.error });
           }
         }
       } catch (error) {

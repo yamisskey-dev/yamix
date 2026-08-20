@@ -1,5 +1,7 @@
 "use client";
 
+import { parseSSEJsonStream } from "@/lib/sse-parser";
+
 /**
  * SSEイベントの型定義
  */
@@ -42,50 +44,20 @@ export async function processSSEStream(
 ): Promise<void> {
   if (!response.body) return;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith("data: ")) continue;
-        const dataStr = trimmed.slice(6).trim();
-        if (!dataStr || !dataStr.startsWith("{")) continue;
-
-        try {
-          const event: SSEEvent = JSON.parse(dataStr);
-
-          switch (event.type) {
-            case "init":
-              callbacks.onInit?.(event);
-              break;
-            case "chunk":
-              callbacks.onChunk?.(event.chunk);
-              break;
-            case "done":
-              callbacks.onDone?.(event);
-              break;
-            case "error":
-              callbacks.onError?.(event.error);
-              break;
-          }
-        } catch (parseErr) {
-          if (parseErr instanceof Error && dataStr.includes('"type":"error"')) {
-            throw parseErr;
-          }
-        }
-      }
+  for await (const event of parseSSEJsonStream<SSEEvent>(response.body)) {
+    switch (event.type) {
+      case "init":
+        callbacks.onInit?.(event);
+        break;
+      case "chunk":
+        callbacks.onChunk?.(event.chunk);
+        break;
+      case "done":
+        callbacks.onDone?.(event);
+        break;
+      case "error":
+        callbacks.onError?.(event.error);
+        break;
     }
-  } finally {
-    reader.releaseLock();
   }
 }
