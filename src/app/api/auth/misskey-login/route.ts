@@ -5,6 +5,8 @@ import { detectInstance, isMisskeyLike } from "@/lib/detect-instance";
 import { logger } from "@/lib/logger";
 import type { MiAuthSession } from "@/types";
 import { parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
+import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
+import { validateExternalHost } from "@/lib/ssrf-protection";
 
 const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
 
@@ -20,6 +22,15 @@ interface ServerRecord {
 }
 
 export async function POST(req: NextRequest) {
+  // 未認証エンドポイントなので IP 単位でレート制限（外部 fetch の踏み台化を防ぐ）
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (checkRateLimit(`misskey-login:${clientIp}`, RateLimits.AUTH)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   const bodyResult = await parseJsonBody<LoginRequest>(req);
   if ("error" in bodyResult) return bodyResult.error;
   const data = bodyResult.data;
@@ -32,6 +43,15 @@ export async function POST(req: NextRequest) {
   }
 
   const misskeyHost = data.host.toLowerCase().trim();
+
+  // SSRF 対策: callback と同様に外部 fetch の前にホストを検証
+  const hostValidation = await validateExternalHost(misskeyHost, { skipDNSCheck: false });
+  if (!hostValidation.valid) {
+    return NextResponse.json(
+      { error: hostValidation.error || "Invalid host" },
+      { status: 400 }
+    );
+  }
 
   try {
     // Check instance type

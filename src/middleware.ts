@@ -1,22 +1,51 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Middleware for adding security headers
  *
- * SECURITY IMPROVEMENTS:
- * - Stricter CSP (with unsafe-inline for now)
+ * - Nonce-based CSP (本番): script-src から unsafe-inline を排除
+ *   Next.js はリクエストヘッダの CSP から nonce を検出し、自身の script タグに付与する
  * - HSTS header for production
  * - Comprehensive security headers
  *
- * NOTE: Edge Runtime compatible (no Node.js crypto module)
- * TODO: Implement CSP nonce via custom _document for full nonce-based CSP
+ * NOTE: Edge Runtime compatible (Web Crypto を使用)
  */
-export function middleware() {
-  const response = NextResponse.next();
+export function middleware(request: NextRequest) {
+  const isDev = process.env.NODE_ENV !== "production";
 
-  // Note: Nonce generation requires Node.js crypto, not available in Edge Runtime
-  // For full nonce-based CSP, implement via custom _document
-  // const nonce = crypto.randomBytes(16).toString("base64");
+  // Web Crypto はEdge Runtimeで利用可能
+  const nonce = btoa(crypto.randomUUID());
+
+  const scriptSrc = isDev
+    ? "'self' 'unsafe-eval' 'unsafe-inline'" // Development needs eval/inline for HMR
+    : `'self' 'nonce-${nonce}' 'strict-dynamic'`;
+
+  // style属性・styled-jsx のため unsafe-inline を維持（script と異なり実害は限定的）
+  const styleSrc = "'self' 'unsafe-inline'";
+
+  const csp = [
+    `default-src 'self'`,
+    `script-src ${scriptSrc}`,
+    `style-src ${styleSrc}`,
+    `img-src 'self' data: https:`,
+    `font-src 'self' data:`,
+    `connect-src 'self' https://mix.yami.ski https://down.yami.ski`,
+    `frame-ancestors 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `upgrade-insecure-requests`, // Upgrade HTTP to HTTPS
+  ].join("; ");
+
+  // Next.js に nonce を伝えるため、リクエストヘッダにも CSP を載せる
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", csp);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+
+  response.headers.set("Content-Security-Policy", csp);
 
   // Security headers
   response.headers.set("X-Frame-Options", "DENY");
@@ -32,33 +61,6 @@ export function middleware() {
     );
   }
 
-  // Content Security Policy with nonce
-  // TODO: Full nonce implementation requires injecting nonce into HTML
-  // For now, use strict policy with minimal inline allowances
-  const isDev = process.env.NODE_ENV !== "production";
-
-  const scriptSrc = isDev
-    ? "'self' 'unsafe-eval' 'unsafe-inline'" // Development needs eval for HMR
-    : "'self' 'unsafe-inline'"; // TODO: Replace with nonce-${nonce} after HTML injection
-
-  const styleSrc = "'self' 'unsafe-inline'"; // TODO: Replace with nonce for styles
-
-  response.headers.set(
-    "Content-Security-Policy",
-    [
-      `default-src 'self'`,
-      `script-src ${scriptSrc}`,
-      `style-src ${styleSrc}`,
-      `img-src 'self' data: https:`,
-      `font-src 'self' data:`,
-      `connect-src 'self' https://mix.yami.ski https://down.yami.ski`,
-      `frame-ancestors 'none'`,
-      `base-uri 'self'`,
-      `form-action 'self'`,
-      `upgrade-insecure-requests`, // Upgrade HTTP to HTTPS
-    ].join("; ")
-  );
-
   // Permissions Policy (more restrictive)
   response.headers.set(
     "Permissions-Policy",
@@ -72,9 +74,6 @@ export function middleware() {
     ].join(", ")
   );
 
-  // Store nonce for use in HTML (Next.js would need custom document for this)
-  // response.headers.set("X-CSP-Nonce", nonce);
-
   return response;
 }
 
@@ -86,7 +85,15 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public directory)
+     * Also skip prefetch requests (nonce 付き CSP は動的レンダリングを強制するため)
      */
-    "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*\\.js).*)",
+    {
+      source:
+        "/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|workbox-.*\\.js).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };
