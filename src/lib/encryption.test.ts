@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { encryptMessage, decryptMessage, isEncrypted, decryptMessages } from "./encryption";
+import {
+  encryptMessage,
+  decryptMessage,
+  safeDecryptMessage,
+  DECRYPT_FAILED_PLACEHOLDER,
+  isEncrypted,
+  decryptMessages,
+} from "./encryption";
 
 const USER_ID = "test-user-123";
 
@@ -60,6 +67,28 @@ describe("decryptMessage V2-only policy", () => {
     // V1サポートとマイグレーションは削除済み(8b6a22d)。平文パススルーは許可しない
     expect(() => decryptMessage("plain text", USER_ID)).toThrow(
       "Invalid encrypted message format"
+    );
+  });
+});
+
+describe("safeDecryptMessage", () => {
+  it("decrypts valid V2 content", () => {
+    const encrypted = encryptMessage("hello", USER_ID);
+    expect(safeDecryptMessage(encrypted, USER_ID)).toBe("hello");
+  });
+
+  it("returns placeholder for non-V2 content instead of throwing", () => {
+    expect(safeDecryptMessage("plain text", USER_ID)).toBe(DECRYPT_FAILED_PLACEHOLDER);
+  });
+
+  it("returns placeholder when decrypting with wrong user", () => {
+    const encrypted = encryptMessage("secret", "user-1");
+    expect(safeDecryptMessage(encrypted, "user-2")).toBe(DECRYPT_FAILED_PLACEHOLDER);
+  });
+
+  it("returns placeholder for corrupted ciphertext", () => {
+    expect(safeDecryptMessage("$enc2$not-valid-base64!!", USER_ID)).toBe(
+      DECRYPT_FAILED_PLACEHOLDER
     );
   });
 });

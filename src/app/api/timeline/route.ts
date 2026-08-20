@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
 
 // Disable caching for this route
@@ -80,7 +80,7 @@ export async function GET(req: NextRequest) {
       const ownerId = session.user.id;
 
       // Decrypt message content (backwards compatible)
-      const decryptedMsgContent = decryptMessage(msg.content, ownerId);
+      const decryptedMsgContent = safeDecryptMessage(msg.content, ownerId);
 
       // Find the previous USER message for this message
       let question = "";
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
         if (previousUserMessages.length > 0) {
           questionMessage = previousUserMessages[previousUserMessages.length - 1];
           // Decrypt question content (backwards compatible)
-          question = decryptMessage(questionMessage.content, ownerId);
+          question = safeDecryptMessage(questionMessage.content, ownerId);
         }
       }
 

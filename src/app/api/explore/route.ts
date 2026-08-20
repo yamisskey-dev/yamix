@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
 import { parseLimit } from "@/lib/validation";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
           .filter((m) => m.role === "ASSISTANT")
           .map((m) => ({
             id: m.id,
-            content: decryptMessage(m.content, ownerId),
+            content: safeDecryptMessage(m.content, ownerId),
             createdAt: m.createdAt,
             responder: m.responder ? {
               id: m.responder.id,
@@ -101,8 +101,8 @@ export async function GET(req: NextRequest) {
           id: s.id,
           sessionId: s.id,
           title: s.title || null,
-          question: userMsg ? decryptMessage(userMsg.content, ownerId) : "",
-          answer: firstAssistantMsg ? decryptMessage(firstAssistantMsg.content, ownerId) : null,
+          question: userMsg ? safeDecryptMessage(userMsg.content, ownerId) : "",
+          answer: firstAssistantMsg ? safeDecryptMessage(firstAssistantMsg.content, ownerId) : null,
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
           user: s.isAnonymous ? null : { // 匿名の場合はnull

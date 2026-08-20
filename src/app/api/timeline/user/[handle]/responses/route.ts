@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
 
 interface RouteParams {
@@ -75,8 +75,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       const session = response.session;
       // Decrypt message content (backwards compatible)
       const rawQuestion = session.messages[0]?.content || "";
-      const question = decryptMessage(rawQuestion, session.userId);
-      const answer = decryptMessage(response.content, session.userId);
+      const question = safeDecryptMessage(rawQuestion, session.userId);
+      const answer = safeDecryptMessage(response.content, session.userId);
 
       return {
         id: response.id,

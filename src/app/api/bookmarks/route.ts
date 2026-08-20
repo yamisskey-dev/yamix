@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { logger } from "@/lib/logger";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
 
 /**
@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         // Decrypt message content for preview (backwards compatible)
         const rawContent = b.session.messages[0]?.content;
         const decryptedContent = rawContent
-          ? decryptMessage(rawContent, b.session.userId)
+          ? safeDecryptMessage(rawContent, b.session.userId)
           : null;
         return {
           id: b.id,

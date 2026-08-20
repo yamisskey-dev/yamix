@@ -4,7 +4,7 @@ import { logger } from "@/lib/logger";
 import type { ChatSessionListItem, ChatSessionsResponse } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { createChatSessionSchema, validateBody, parseLimit } from "@/lib/validation";
-import { decryptMessage, encryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage, encryptMessage } from "@/lib/encryption";
 import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 
 // Prismaのセッション取得結果の型
@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
         const rawContent = s.messages[0]?.content;
         const ownerId = s.userId || payload.userId;
         const decryptedContent = rawContent
-          ? decryptMessage(rawContent, ownerId)
+          ? safeDecryptMessage(rawContent, ownerId)
           : null;
         return {
           id: s.id,

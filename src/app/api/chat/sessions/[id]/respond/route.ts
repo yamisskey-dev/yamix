@@ -6,7 +6,7 @@ import { yamiiClient } from "@/lib/yamii-client";
 import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
 import { notifyResponse } from "@/lib/notifications";
-import { encryptMessage, decryptMessage } from "@/lib/encryption";
+import { encryptMessage, safeDecryptMessage } from "@/lib/encryption";
 
 import { checkCrisisKeywords } from "@/lib/crisis";
 import { QUERY_LIMITS, PrismaMessage, hasMentionYamii, removeMentionYamii } from "@/lib/constants";
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       // Prepare conversation history (decrypt messages for Yamii)
       const existingMessages: ConversationMessage[] = sessionWithMessages.messages.map((m: PrismaMessage) => ({
         role: m.role === "USER" ? "user" : "assistant",
-        content: decryptMessage(m.content, sessionWithMessages.userId),
+        content: safeDecryptMessage(m.content, sessionWithMessages.userId),
       })) as ConversationMessage[];
 
       // Remove @yamii mention before sending to Yamii

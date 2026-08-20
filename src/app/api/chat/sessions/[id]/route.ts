@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { QUERY_LIMITS } from "@/lib/constants";
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         .filter((m) => isOwner || !m.isHidden) // Hide moderated messages from non-owners
         .map((m) => ({
           ...m,
-          content: decryptMessage(m.content, session.userId),
+          content: safeDecryptMessage(m.content, session.userId),
           responder: m.responder ? {
             id: m.responder.id,
             handle: m.responder.handle,

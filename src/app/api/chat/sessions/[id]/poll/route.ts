@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { logger } from "@/lib/logger";
 import { authenticateRequest, ErrorResponses } from "@/lib/api-helpers";
 
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const messages = newMessages.map((m: typeof newMessages[number]) => ({
       id: m.id,
       role: m.role,
-      content: decryptMessage(m.content, session.userId),
+      content: safeDecryptMessage(m.content, session.userId),
       createdAt: m.createdAt.toISOString(),
       responderId: m.responderId,
       isAnonymous: m.isAnonymous,

@@ -144,6 +144,26 @@ export function decryptMessage(ciphertext: string, userId: string): string {
 }
 
 /**
+ * 復号に失敗したメッセージの表示用プレースホルダ
+ */
+export const DECRYPT_FAILED_PLACEHOLDER = "（このメッセージは復号できませんでした）";
+
+/**
+ * メッセージを復号（失敗時は例外の代わりにプレースホルダを返す）
+ *
+ * タイムライン等の一覧系エンドポイントで、不正な形式の行が1件あるだけで
+ * レスポンス全体が 500 になるのを防ぐ。失敗はログに記録する。
+ */
+export function safeDecryptMessage(ciphertext: string, userId: string): string {
+  try {
+    return decryptMessage(ciphertext, userId);
+  } catch (error) {
+    logger.error("Message decryption failed", { userId }, error);
+    return DECRYPT_FAILED_PLACEHOLDER;
+  }
+}
+
+/**
  * メッセージが暗号化されているかチェック
  */
 export function isEncrypted(content: string): boolean {

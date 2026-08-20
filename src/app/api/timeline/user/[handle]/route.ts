@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
-import { decryptMessage } from "@/lib/encryption";
+import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
 
 // Prisma結果の型
@@ -92,10 +92,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
         // Decrypt message content (backwards compatible)
         const question = userMsg?.content
-          ? decryptMessage(userMsg.content, user.id)
+          ? safeDecryptMessage(userMsg.content, user.id)
           : "";
         const answer = assistantMsg?.content
-          ? decryptMessage(assistantMsg.content, user.id)
+          ? safeDecryptMessage(assistantMsg.content, user.id)
           : null;
 
         return {
