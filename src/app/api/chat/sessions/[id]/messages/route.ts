@@ -6,7 +6,7 @@ import { TOKEN_ECONOMY } from "@/types";
 import type { ConversationMessage } from "@/types";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 import { sendMessageSchema, validateBody } from "@/lib/validation";
-import { encryptMessage, decryptMessage } from "@/lib/encryption";
+import { encryptMessage, safeDecryptMessage } from "@/lib/encryption";
 import { notifyDirectedRequest } from "@/lib/notifications";
 import { checkCrisisKeywords } from "@/lib/crisis";
 import type { JWTPayload } from "@/lib/jwt";
@@ -42,28 +42,19 @@ async function saveUserMessageAndDeduct(opts: {
 }) {
   const { sessionId, userId, userMessage, consultCost, txType, isFirstMessage, generatedTitle, isCrisis, shouldHide } = opts;
   const now = new Date();
-  const isProduction = process.env.NODE_ENV === 'production';
 
   return prisma.$transaction(async (tx) => {
     const wallet = await tx.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new Error("Wallet not found");
 
-    // SECURITY FIX: 本番環境では必ずYAMIを消費
-    if (isProduction) {
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: { decrement: consultCost } },
-      });
-      await tx.transaction.create({
-        data: { senderId: wallet.id, amount: -consultCost, txType },
-      });
-    } else {
-      logger.warn('[NON-PROD] Skipping YAMI deduction - THIS SHOULD NOT HAPPEN IN PRODUCTION', {
-        userId,
-        consultCost,
-        nodeEnv: process.env.NODE_ENV
-      });
-    }
+    // YAMI消費は環境を問わず必ず行う（NODE_ENV の立て忘れで経済が無効化されるのを防ぐ）
+    await tx.wallet.update({
+      where: { id: wallet.id },
+      data: { balance: { decrement: consultCost } },
+    });
+    await tx.transaction.create({
+      data: { senderId: wallet.id, amount: -consultCost, txType },
+    });
 
     // サーバーサイド暗号化を適用
     const content = encryptMessage(userMessage, userId);
@@ -136,22 +127,7 @@ async function handleStreamingResponse(opts: {
     ? removeMentionYamii(userMessage)
     : userMessage;
 
-  // Save user message and deduct cost
-  const { userMsgId } = await saveUserMessageAndDeduct({
-    sessionId,
-    userId: payload.userId,
-    userMessage,
-    consultCost,
-    txType: "CONSULT_AI",
-    isFirstMessage,
-    generatedTitle,
-    isCrisis: false,
-    shouldHide: false,
-  });
-
-  await notifyTargetsIfNeeded(session, sessionId, isFirstMessage, payload.sub, false);
-
-  // Connect to Yamii SSE stream
+  // Connect to Yamii SSE stream first (接続に失敗した場合は保存も課金もしない)
   let yamiiStreamResponse: Response;
   try {
     yamiiStreamResponse = await yamiiClient.sendCounselingMessageStream(
@@ -172,19 +148,73 @@ async function handleStreamingResponse(opts: {
     return NextResponse.json({ error: "No stream body from Yamii" }, { status: 503 });
   }
 
+  // Save user message and deduct cost
+  const { userMsgId } = await saveUserMessageAndDeduct({
+    sessionId,
+    userId: payload.userId,
+    userMessage,
+    consultCost,
+    txType: "CONSULT_AI",
+    isFirstMessage,
+    generatedTitle,
+    isCrisis: false,
+    shouldHide: false,
+  });
+
+  await notifyTargetsIfNeeded(session, sessionId, isFirstMessage, payload.sub, false);
+
   // Proxy SSE stream with post-stream DB saves
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let fullResponse = "";
+  let assistantSaved = false;
+  // クライアント切断後も Yamii の応答は読み切って DB に保存する（課金済みのため）
+  let clientGone = false;
+
+  const persistAssistantMessage = async (isCrisis: boolean) => {
+    // DIRECTED with no targets = self-only post (skip crisis detection like PRIVATE)
+    const isPublicType = session.consultType === "PUBLIC" || (session.consultType === "DIRECTED" && session._count.targets > 0);
+
+    // 5-flag system: increment crisisCount, only privatize on 5th detection
+    let shouldHide = false;
+    if (isCrisis && isPublicType) {
+      const updatedSession = await prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { crisisCount: { increment: 1 } },
+      });
+      shouldHide = updatedSession.crisisCount >= 5;
+    }
+
+    const encryptedContent = encryptMessage(fullResponse, payload.userId);
+    const assistantMsg = await prisma.chatMessage.create({
+      data: { sessionId, role: "ASSISTANT", content: encryptedContent, isCrisis, isHidden: shouldHide },
+    });
+
+    if (isCrisis) {
+      await prisma.chatMessage.update({ where: { id: userMsgId }, data: { isCrisis: true, isHidden: shouldHide } });
+    }
+
+    if (shouldHide) {
+      await prisma.chatSession.update({ where: { id: sessionId }, data: { consultType: "PRIVATE" } });
+      await deleteNotificationsOnPrivatize(sessionId, payload.userId);
+    }
+
+    assistantSaved = true;
+    return { assistantMsg, shouldHide };
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
-      const initEvent = JSON.stringify({
-        type: "init",
-        userMessageId: userMsgId,
-        sessionTitle: generatedTitle,
-      });
-      controller.enqueue(encoder.encode(`data: ${initEvent}\n\n`));
+      const safeEnqueue = (event: Record<string, unknown>) => {
+        if (clientGone) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } catch {
+          clientGone = true;
+        }
+      };
+
+      safeEnqueue({ type: "init", userMessageId: userMsgId, sessionTitle: generatedTitle });
 
       const reader = yamiiBody.getReader();
       let buffer = "";
@@ -202,66 +232,54 @@ async function handleStreamingResponse(opts: {
             const trimmed = line.trim();
             if (!trimmed || !trimmed.startsWith("data: ")) continue;
 
-            const dataStr = trimmed.slice(6);
+            // パース失敗のみスキップ（DB エラーまで握り潰さないよう、処理は try の外で行う）
+            let data: { chunk?: string; done?: boolean; is_crisis?: boolean; error?: string };
             try {
-              const data = JSON.parse(dataStr);
-
-              if (data.chunk) {
-                fullResponse += data.chunk;
-                const chunkEvent = JSON.stringify({ type: "chunk", chunk: data.chunk });
-                controller.enqueue(encoder.encode(`data: ${chunkEvent}\n\n`));
-              } else if (data.done) {
-                const isCrisis = data.is_crisis || false;
-                // DIRECTED with no targets = self-only post (skip crisis detection like PRIVATE)
-                const isPublicType = session.consultType === "PUBLIC" || (session.consultType === "DIRECTED" && session._count.targets > 0);
-
-                // 5-flag system: increment crisisCount, only privatize on 5th detection
-                let shouldHide = false;
-                if (isCrisis && isPublicType) {
-                  const updatedSession = await prisma.chatSession.update({
-                    where: { id: sessionId },
-                    data: { crisisCount: { increment: 1 } },
-                  });
-                  shouldHide = updatedSession.crisisCount >= 5;
-                }
-
-                const encryptedContent = encryptMessage(fullResponse, payload.userId);
-                const assistantMsg = await prisma.chatMessage.create({
-                  data: { sessionId, role: "ASSISTANT", content: encryptedContent, isCrisis, isHidden: shouldHide },
-                });
-
-                if (isCrisis) {
-                  await prisma.chatMessage.update({ where: { id: userMsgId }, data: { isCrisis: true, isHidden: shouldHide } });
-                }
-
-                if (shouldHide) {
-                  await prisma.chatSession.update({ where: { id: sessionId }, data: { consultType: "PRIVATE" } });
-                  await deleteNotificationsOnPrivatize(sessionId, payload.userId);
-                }
-
-                const doneEvent = JSON.stringify({
-                  type: "done",
-                  assistantMessageId: assistantMsg.id,
-                  isCrisis,
-                  sessionPrivatized: shouldHide,
-                });
-                controller.enqueue(encoder.encode(`data: ${doneEvent}\n\n`));
-              } else if (data.error) {
-                const errorEvent = JSON.stringify({ type: "error", error: data.error });
-                controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
-              }
+              data = JSON.parse(trimmed.slice(6));
             } catch {
-              // Skip unparseable lines
+              continue;
+            }
+
+            if (data.chunk) {
+              fullResponse += data.chunk;
+              safeEnqueue({ type: "chunk", chunk: data.chunk });
+            } else if (data.done) {
+              const isCrisis = data.is_crisis || false;
+              const { assistantMsg, shouldHide } = await persistAssistantMessage(isCrisis);
+              safeEnqueue({
+                type: "done",
+                assistantMessageId: assistantMsg.id,
+                isCrisis,
+                sessionPrivatized: shouldHide,
+              });
+            } else if (data.error) {
+              safeEnqueue({ type: "error", error: data.error });
             }
           }
         }
       } catch (error) {
         logger.error("Stream processing error", { sessionId }, error);
-        const errorEvent = JSON.stringify({ type: "error", error: "ストリーム処理中にエラーが発生しました" });
-        controller.enqueue(encoder.encode(`data: ${errorEvent}\n\n`));
+        safeEnqueue({ type: "error", error: "ストリーム処理中にエラーが発生しました" });
       } finally {
-        controller.close();
+        // done イベントを受け取れずに終了した場合も、受信済みの部分応答を保存する
+        if (!assistantSaved && fullResponse) {
+          try {
+            await persistAssistantMessage(false);
+            logger.warn("Stream ended without done event; saved partial response", { sessionId });
+          } catch (error) {
+            logger.error("Failed to persist partial assistant response", { sessionId }, error);
+          }
+        }
+        try {
+          controller.close();
+        } catch {
+          // クライアント切断済みの場合は close できないが問題ない
+        }
       }
+    },
+    cancel() {
+      // クライアント切断。start 側のループは継続し、Yamii の応答を保存し切る
+      clientGone = true;
     },
   });
 
@@ -390,7 +408,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const isFirstMessage = session.messages.length === 0;
     const existingMessages = session.messages.map((m: PrismaMessage) => ({
       role: m.role === "USER" ? "user" : "assistant",
-      content: decryptMessage(m.content, payload.userId),
+      content: safeDecryptMessage(m.content, payload.userId),
     })) as ConversationMessage[];
 
     // Wallet balance check
@@ -400,37 +418,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         ? TOKEN_ECONOMY.DIRECTED_CONSULT_COST
         : TOKEN_ECONOMY.PRIVATE_CONSULT_COST;
 
-    // SECURITY FIX: Explicit check for production (safer than checking for development)
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // 本番環境では必ず残高チェック
-    if (isProduction) {
-      const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
-      if (!wallet) {
-        return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
-      }
-      if (wallet.balance < consultCost) {
-        return NextResponse.json(
-          { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
-          { status: 400 }
-        );
-      }
-    } else {
-      // 開発環境でもチェックは行うが、ログのみ出力
-      logger.warn('[NON-PROD] Skipping wallet balance check - THIS SHOULD NOT HAPPEN IN PRODUCTION', {
-        userId: payload.userId,
-        nodeEnv: process.env.NODE_ENV
-      });
-      const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
-      if (!wallet) {
-        logger.warn('[NON-PROD] Wallet not found', { userId: payload.userId });
-      } else if (wallet.balance < consultCost) {
-        logger.warn('[NON-PROD] Insufficient balance', {
-          userId: payload.userId,
-          balance: wallet.balance,
-          required: consultCost
-        });
-      }
+    // 残高チェックは環境を問わず必ず行う
+    const wallet = await prisma.wallet.findUnique({ where: { userId: payload.userId } });
+    if (!wallet) {
+      return NextResponse.json({ error: "ウォレットが見つかりません" }, { status: 400 });
+    }
+    if (wallet.balance < consultCost) {
+      return NextResponse.json(
+        { error: "YAMIが足りません。明日のBI付与をお待ちください。" },
+        { status: 400 }
+      );
     }
 
     // Generate title for first message
