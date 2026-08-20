@@ -738,7 +738,7 @@ export default function ChatSessionPage({ params }: PageProps) {
           setIsLoading(false);
           setError(err instanceof Error ? err.message : "エラーが発生しました");
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sessionId, pendingServerSessionId, currentUser, toast, router]);
 
   // Auto-scroll
