@@ -5,6 +5,7 @@ import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
+import { toPublicUserRef, paginate } from "@/lib/api-format";
 
 interface RouteParams {
   params: Promise<{ handle: string }>;
@@ -68,8 +69,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       },
     });
 
-    const hasMore = responses.length > limit;
-    const items = responses.slice(0, limit);
+    const { items, hasMore, nextCursor } = paginate(responses, limit);
 
     const consultations: TimelineConsultation[] = items.map((response) => {
       const session = response.session;
@@ -86,40 +86,24 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         answer,
         consultType: session.consultType,
         isAnonymous: session.isAnonymous,
-        user: session.isAnonymous
-          ? null
-          : {
-              handle: session.user.handle,
-              displayName: session.user.profile?.displayName || null,
-              avatarUrl: session.user.profile?.avatarUrl || null,
-            },
+        user: session.isAnonymous ? null : toPublicUserRef(session.user),
         replyCount: 0,
         replies: [],
         createdAt: response.createdAt,
         isUserResponse: true, // このアイテムはユーザーの回答
-        responder: response.isAnonymous
-          ? null
-          : {
-              handle: user.handle,
-              displayName: user.profile?.displayName || null,
-              avatarUrl: user.profile?.avatarUrl || null,
-            },
+        responder: response.isAnonymous ? null : toPublicUserRef(user),
       };
     });
 
     const responseData: TimelineResponse = {
       consultations,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      nextCursor,
     };
 
     return NextResponse.json({
       ...responseData,
-      user: {
-        handle: user.handle,
-        displayName: user.profile?.displayName || null,
-        avatarUrl: user.profile?.avatarUrl || null,
-      },
+      user: toPublicUserRef(user),
     });
   } catch (error) {
     logger.error("Get user responses error", { handle: decodedHandle }, error);

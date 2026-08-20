@@ -5,6 +5,7 @@ import { optionalAuth, ErrorResponses } from "@/lib/api-helpers";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
+import { toPublicUserRef, paginate } from "@/lib/api-format";
 
 // Prisma結果の型
 interface PrismaUser {
@@ -81,8 +82,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       },
     }) as PrismaSessionWithMessages[];
 
-    const hasMore = sessions.length > limit;
-    const items = sessions.slice(0, limit);
+    const { items, hasMore, nextCursor } = paginate(sessions, limit);
 
     const consultations: TimelineConsultation[] = items
       .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
@@ -106,11 +106,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           answer, // PUBLIC相談ではnullの場合あり
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
-          user: s.isAnonymous ? null : { // 匿名の場合はnull
-            handle: user.handle,
-            displayName: user.profile?.displayName || null,
-            avatarUrl: user.profile?.avatarUrl || null,
-          },
+          user: s.isAnonymous ? null : toPublicUserRef(user), // 匿名の場合はnull
           replyCount: 0,
           replies: [],
           createdAt: s.createdAt,
@@ -120,17 +116,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const response: TimelineResponse = {
       consultations,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      nextCursor,
     };
 
     return NextResponse.json({
       ...response,
-      user: {
-        id: user.id,
-        handle: user.handle,
-        displayName: user.profile?.displayName || null,
-        avatarUrl: user.profile?.avatarUrl || null,
-      },
+      user: { id: user.id, ...toPublicUserRef(user) },
     });
   } catch (error) {
     logger.error("Get user timeline error", { handle: decodedHandle }, error);

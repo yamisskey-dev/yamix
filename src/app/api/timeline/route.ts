@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse } from "@/types";
 import { safeDecryptMessage } from "@/lib/encryption";
 import { parseLimit } from "@/lib/validation";
+import { toPublicUserRef, paginate } from "@/lib/api-format";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -72,8 +73,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const hasMore = messages.length > limit;
-    const items = messages.slice(0, limit);
+    const { items, hasMore, nextCursor } = paginate(messages, limit);
 
     const consultations: TimelineConsultation[] = items.map((msg) => {
       const session = msg.session;
@@ -114,13 +114,7 @@ export async function GET(req: NextRequest) {
           answer: null,
           consultType: session.consultType,
           isAnonymous: session.isAnonymous,
-          user: session.isAnonymous
-            ? null
-            : {
-                handle: questionAuthor.handle,
-                displayName: questionAuthor.profile?.displayName || null,
-                avatarUrl: questionAuthor.profile?.avatarUrl || null,
-              },
+          user: session.isAnonymous ? null : toPublicUserRef(questionAuthor),
           replyCount: 0,
           replies: [],
           createdAt: msg.createdAt,
@@ -143,24 +137,12 @@ export async function GET(req: NextRequest) {
           answer: decryptedMsgContent,
           consultType: session.consultType,
           isAnonymous: session.isAnonymous,
-          user: session.isAnonymous
-            ? null
-            : {
-                handle: questionAuthor.handle,
-                displayName: questionAuthor.profile?.displayName || null,
-                avatarUrl: questionAuthor.profile?.avatarUrl || null,
-              },
+          user: session.isAnonymous ? null : toPublicUserRef(questionAuthor),
           replyCount: 0,
           replies: [],
           createdAt: msg.createdAt,
           isUserResponse: true,
-          responder: msg.responder
-            ? {
-                handle: msg.responder.handle,
-                displayName: msg.responder.profile?.displayName || null,
-                avatarUrl: msg.responder.profile?.avatarUrl || null,
-              }
-            : null, // null means AI response
+          responder: msg.responder ? toPublicUserRef(msg.responder) : null, // null means AI response
         };
       }
     });
@@ -168,7 +150,7 @@ export async function GET(req: NextRequest) {
     const response: TimelineResponse = {
       consultations,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      nextCursor,
     };
 
     return NextResponse.json(response);

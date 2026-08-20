@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import type { TimelineConsultation, TimelineResponse, TimelineReply } from "@/types";
 import { parseLimit } from "@/lib/validation";
 import { safeDecryptMessage } from "@/lib/encryption";
+import { toPublicUserRef, paginate } from "@/lib/api-format";
 
 // Disable caching for this route
 export const dynamic = 'force-dynamic';
@@ -72,8 +73,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    const hasMore = sessions.length > limit;
-    const items = sessions.slice(0, limit) as PrismaSessionWithMessages[];
+    const { items, hasMore, nextCursor } = paginate(
+      sessions as PrismaSessionWithMessages[],
+      limit
+    );
 
     const consultations: TimelineConsultation[] = items
       .filter((s) => s.messages.length >= 1) // PUBLIC相談は質問のみでもOK
@@ -89,12 +92,9 @@ export async function GET(req: NextRequest) {
             id: m.id,
             content: safeDecryptMessage(m.content, ownerId),
             createdAt: m.createdAt,
-            responder: m.responder ? {
-              id: m.responder.id,
-              handle: m.responder.handle,
-              displayName: m.responder.profile?.displayName || null,
-              avatarUrl: m.responder.profile?.avatarUrl || null,
-            } : null,
+            responder: m.responder
+              ? { id: m.responder.id, ...toPublicUserRef(m.responder) }
+              : null,
           }));
 
         return {
@@ -105,11 +105,7 @@ export async function GET(req: NextRequest) {
           answer: firstAssistantMsg ? safeDecryptMessage(firstAssistantMsg.content, ownerId) : null,
           consultType: s.consultType,
           isAnonymous: s.isAnonymous,
-          user: s.isAnonymous ? null : { // 匿名の場合はnull
-            handle: s.user.handle,
-            displayName: s.user.profile?.displayName || null,
-            avatarUrl: s.user.profile?.avatarUrl || null,
-          },
+          user: s.isAnonymous ? null : toPublicUserRef(s.user), // 匿名の場合はnull
           replyCount: allReplies.length,
           replies: allReplies,
           createdAt: s.createdAt,
@@ -119,7 +115,7 @@ export async function GET(req: NextRequest) {
     const response: TimelineResponse = {
       consultations,
       hasMore,
-      nextCursor: hasMore ? items[items.length - 1].id : null,
+      nextCursor,
     };
 
     return NextResponse.json(response);
