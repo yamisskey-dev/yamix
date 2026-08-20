@@ -22,6 +22,13 @@ const PBKDF2_ITERATIONS = 100000; // 10万回イテレーション
 let _encKeyWarned = false;
 let _masterKeyCache: Buffer | null = null;
 
+// 導出済みキーの LRU キャッシュ
+// PBKDF2 10万回は1回あたり数十msかかり、タイムライン等では同じメッセージを
+// リクエストのたびに復号するため、(userId, salt) 単位でキャッシュする。
+// エントリは32バイトの鍵のみで、メモリコストは無視できる
+const KEY_CACHE_MAX_ENTRIES = 5000;
+const _derivedKeyCache = new Map<string, Buffer>();
+
 /**
  * マスターキーを取得（キャッシュ付き）
  * 環境変数から取得、なければ生成（開発用）
@@ -50,6 +57,15 @@ function getMasterKey(): Buffer {
  * SECURITY: Each message uses a unique random salt (rainbow table attack prevention)
  */
 function deriveUserKeyV2(userId: string, salt: Buffer, context: string = "chat_message"): Buffer {
+  const cacheKey = `${userId}:${context}:${salt.toString("base64")}`;
+  const cached = _derivedKeyCache.get(cacheKey);
+  if (cached) {
+    // LRU: 直近利用を末尾に移動
+    _derivedKeyCache.delete(cacheKey);
+    _derivedKeyCache.set(cacheKey, cached);
+    return cached;
+  }
+
   const masterKey = getMasterKey();
 
   // Combine master key, userId, and context for key derivation
@@ -62,6 +78,13 @@ function deriveUserKeyV2(userId: string, salt: Buffer, context: string = "chat_m
 
   // PBKDF2 with random salt
   const key = crypto.pbkdf2Sync(derivationKey, salt, PBKDF2_ITERATIONS, KEY_LENGTH, "sha256");
+
+  if (_derivedKeyCache.size >= KEY_CACHE_MAX_ENTRIES) {
+    // 最古（Map の先頭）のエントリを追い出す
+    const oldest = _derivedKeyCache.keys().next().value;
+    if (oldest !== undefined) _derivedKeyCache.delete(oldest);
+  }
+  _derivedKeyCache.set(cacheKey, key);
 
   return key;
 }

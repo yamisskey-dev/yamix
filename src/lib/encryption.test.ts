@@ -45,6 +45,20 @@ describe("encryptMessage / decryptMessage", () => {
     const encrypted = encryptMessage("secret", "user-1");
     expect(() => decryptMessage(encrypted, "user-2")).toThrow();
   });
+
+  it("repeated decryption of the same ciphertext returns the same plaintext (key cache)", () => {
+    const encrypted = encryptMessage("cached message", USER_ID);
+    for (let i = 0; i < 5; i++) {
+      expect(decryptMessage(encrypted, USER_ID)).toBe("cached message");
+    }
+  });
+
+  it("key cache does not leak keys across users", () => {
+    const encrypted = encryptMessage("secret", "user-1");
+    // user-1 の復号でキーがキャッシュされた後でも、user-2 では復号できない
+    expect(decryptMessage(encrypted, "user-1")).toBe("secret");
+    expect(() => decryptMessage(encrypted, "user-2")).toThrow();
+  });
 });
 
 describe("isEncrypted", () => {
