@@ -8,8 +8,11 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
+// 日本語サブセット済み WOFF2（元: Sarasa Gothic J Regular 24.8MB → 3.0MB）
+// 再生成: https://github.com/be5invis/Sarasa-Gothic の TTF に対して
+// pyftsubset --flavor=woff2 --unicodes=<Latin+かな+記号+CJK統合漢字> を実行
 const sarasaGothic = localFont({
-  src: [{ path: "./fonts/SarasaGothicJ-Regular.ttf", weight: "400" }],
+  src: [{ path: "./fonts/SarasaGothicJ-Regular.subset.woff2", weight: "400" }],
   preload: true,
   display: "swap",
   variable: "--font-sarasa-gothic",
