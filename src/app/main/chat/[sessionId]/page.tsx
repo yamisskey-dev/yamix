@@ -109,7 +109,17 @@ export default function ChatSessionPage({ params }: PageProps) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [expectingAIResponse, setExpectingAIResponse] = useState(false);
-  const [showCrisisAlert, setShowCrisisAlert] = useState(false);
+  // 初回メッセージフローではローカル→サーバーセッションへの遷移で再マウントされるため、
+  // 遷移前に sessionStorage に退避された危機アラート表示フラグを引き継ぐ
+  const [showCrisisAlert, setShowCrisisAlert] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem(`showCrisisAlert-${sessionId}`) === "1";
+  });
+
+  // 引き継いだフラグは一度表示したら消す
+  useEffect(() => {
+    sessionStorage.removeItem(`showCrisisAlert-${sessionId}`);
+  }, [sessionId]);
   const [error, setError] = useState<string>();
   const [inputValue, setInputValue] = useState("");
   const [isAnonymousResponse, setIsAnonymousResponse] = useState(false);
@@ -328,6 +338,8 @@ export default function ChatSessionPage({ params }: PageProps) {
           setSessionInfo,
           setShowCrisisAlert,
           showToast: toast.showToast,
+          // ストリーミング表示が始まったらタイピングインジケーターを消す
+          onStreamStart: () => setExpectingAIResponse(false),
           onStreamComplete: () => {
             streamingJustCompletedRef.current = true;
           },

@@ -15,6 +15,8 @@ export async function handleSSEResponse(
     setSessionInfo: Dispatch<SetStateAction<SessionInfo | null>>;
     setShowCrisisAlert: Dispatch<SetStateAction<boolean>>;
     showToast: (message: string, type?: "success" | "error" | "warning" | "info") => void;
+    /** 最初のチャンク受信時（ストリーミング表示が始まったらタイピングインジケーターを消す等） */
+    onStreamStart?: () => void;
     onStreamComplete?: () => void;
   }
 ): Promise<void> {
@@ -66,6 +68,7 @@ export async function handleSSEResponse(
         onChunk(chunk) {
           if (!streamStarted) {
             streamStarted = true;
+            callbacks.onStreamStart?.();
             // Note: Don't set isLoading=false here, it will be set in finally block
             // Setting it here causes race condition with SWR update useEffect
             callbacks.setMessages((prev) => [...prev, {

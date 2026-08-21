@@ -46,6 +46,8 @@ export function useInitialMessageSend(opts: {
   const router = useRouter();
   const toast = useToastActions();
   const pendingMessageSentRef = useRef(false);
+  // ストリーム中に危機アラートが表示されたか（遷移後の再マウントで引き継ぐため）
+  const crisisShownRef = useRef(false);
 
   useEffect(() => {
     // For local sessions, check if server session is ready
@@ -131,13 +133,25 @@ export function useInitialMessageSend(opts: {
           setMessages,
           setIsLoading,
           setSessionInfo,
-          setShowCrisisAlert,
+          setShowCrisisAlert: (value) => {
+            if (value === true) crisisShownRef.current = true;
+            setShowCrisisAlert(value);
+          },
           showToast: toast.showToast,
           onStreamComplete: async () => {
             streamingJustCompletedRef.current = true;
 
             // Navigate to server session AFTER SSE completes (prevents state loss)
             if (sessionId.startsWith("local-")) {
+              const navigateToServerSession = () => {
+                sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
+                // 遷移で再マウントされるため、危機アラートの表示状態を引き継ぐ
+                if (crisisShownRef.current) {
+                  sessionStorage.setItem(`showCrisisAlert-${targetSessionId}`, "1");
+                }
+                router.replace(`/main/chat/${targetSessionId}`);
+              };
+
               // Find assistant message ID from current state
               setMessages((currentMessages) => {
                 const assistantMsg = currentMessages.find((m) => m.role === "assistant");
@@ -148,8 +162,7 @@ export function useInitialMessageSend(opts: {
                   const maxAttempts = 15; // 15 attempts * 200ms = 3 seconds max
 
                   if (attemptCount >= maxAttempts) {
-                    sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
-                    router.replace(`/main/chat/${targetSessionId}`);
+                    navigateToServerSession();
                     return;
                   }
 
@@ -165,8 +178,7 @@ export function useInitialMessageSend(opts: {
                       );
 
                       if (hasAssistantMessage) {
-                        sessionStorage.removeItem(`pendingServerSession-${sessionId}`);
-                        router.replace(`/main/chat/${targetSessionId}`);
+                        navigateToServerSession();
                         return;
                       }
                     }
