@@ -9,6 +9,7 @@ services:
       DATABASE_URL: postgresql://yamix:${POSTGRES_PASSWORD:-password}@postgres:5432/yamix
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
+      MESSAGE_ENCRYPTION_KEY: ${MESSAGE_ENCRYPTION_KEY}
       WEB_URL: ${WEB_URL:-http://localhost:3000}
       YAMII_API_URL: http://yamii:8000
       YAMII_API_KEY: ${YAMII_API_KEY}
