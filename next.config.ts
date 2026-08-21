@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_YAMIX_VERSION: packageJson.version,
   },
   output: "standalone",
+  // Next 16.3 (Turbopack) の standalone トレースが @swc/helpers の esm/ を
+  // コピーし損ねて起動時に MODULE_NOT_FOUND になるため、明示的に含める
+  outputFileTracingIncludes: {
+    "*": ["node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers/**"],
+  },
   images: {
     remotePatterns: [
       {
