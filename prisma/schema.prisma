@@ -323,6 +323,8 @@ model ChatSession {
   allowAnonymousResponses  Boolean     @default(true)     // 匿名回答を許可するか
   category                 String?                        // Phase 2用: カテゴリ（恋愛/仕事/メンタル等）
   crisisCount              Int         @default(0)        // 危機検出回数（5回で自動非公開化）
+  contextSummary           String?                        // 会話メモリ: 過去メッセージのローリング要約（サーバーサイド暗号化）
+  summarizedCount          Int         @default(0)        // 要約に取り込み済みのメッセージ数
   createdAt                DateTime    @default(now())
   updatedAt                DateTime    @updatedAt
 

@@ -12,6 +12,7 @@ import { notifyDirectedRequest } from "@/lib/notifications";
 import { checkCrisisKeywords } from "@/lib/crisis";
 import type { JWTPayload } from "@/lib/jwt";
 import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
+import { updateSessionSummaryIfNeeded } from "@/lib/conversation-memory";
 import { QUERY_LIMITS, PrismaMessage, hasMentionYamii, removeMentionYamii } from "@/lib/constants";
 
 interface RouteParams {
@@ -23,6 +24,7 @@ interface SessionData {
   userId: string;
   consultType: string;
   isAnonymous: boolean;
+  contextSummary: string | null;
   messages: PrismaMessage[];
   _count: { targets: number };
 }
@@ -128,13 +130,18 @@ async function handleStreamingResponse(opts: {
     ? removeMentionYamii(userMessage)
     : userMessage;
 
+  // 会話メモリ: 履歴ウィンドウから溢れた過去分の要約（あれば復号して渡す）
+  const contextSummary = session.contextSummary
+    ? safeDecryptMessage(session.contextSummary, payload.userId)
+    : undefined;
+
   // Connect to Yamii SSE stream first (接続に失敗した場合は保存も課金もしない)
   let yamiiStreamResponse: Response;
   try {
     yamiiStreamResponse = await yamiiClient.sendCounselingMessageStream(
       messageForYamii,
       payload.userId,
-      { sessionId, conversationHistory: existingMessages }
+      { sessionId, conversationHistory: existingMessages, contextSummary }
     );
   } catch (error) {
     logger.error("Yamii API stream error", { sessionId }, error);
@@ -200,6 +207,10 @@ async function handleStreamingResponse(opts: {
     }
 
     assistantSaved = true;
+
+    // 会話メモリ: 必要なら古いメッセージの要約を更新（応答をブロックしない）
+    void updateSessionSummaryIfNeeded(sessionId, payload.userId);
+
     return { assistantMsg, shouldHide };
   };
 

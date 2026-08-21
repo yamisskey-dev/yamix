@@ -129,14 +129,17 @@ export class YamiiClient {
       userName?: string;
       sessionId?: string;
       conversationHistory?: ConversationMessage[];
+      contextSummary?: string;
     }
   ): Promise<Response> {
-    const body: CounselingRequest = {
+    // context_summary は yamii 側で追加済みだが生成型が未更新のため交差型で補う
+    const body: CounselingRequest & { context_summary?: string } = {
       message,
       user_id: userId,
       user_name: options?.userName,
       session_id: options?.sessionId,
       conversation_history: options?.conversationHistory,
+      context_summary: options?.contextSummary,
     };
 
     const headers: Record<string, string> = {
@@ -188,6 +191,25 @@ export class YamiiClient {
       const title = firstSentence?.[0] || message;
       return title.slice(0, 50) + (title.length > 50 ? "..." : "");
     }
+  }
+
+  async summarizeContext(
+    messages: ConversationMessage[],
+    previousSummary?: string | null
+  ): Promise<string> {
+    // 要約はステートレスなので POST でもリトライ可能
+    const result = await this.request<{ summary: string }>(
+      "/v1/summarize-context",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          previous_summary: previousSummary ?? undefined,
+          messages,
+        }),
+      },
+      { retryable: true }
+    );
+    return result.summary;
   }
 
   async healthCheck(): Promise<HealthResponse> {
