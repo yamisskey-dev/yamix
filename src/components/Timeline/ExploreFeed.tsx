@@ -178,7 +178,7 @@ export function ExploreFeed() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string>();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<IntersectionObserver>();
+  const observerRef = useRef<IntersectionObserver | undefined>(undefined);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const fetchExplore = useCallback(async (cursorId?: string | null) => {

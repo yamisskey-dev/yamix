@@ -16,7 +16,7 @@ export function TimelineFeed() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string>();
   const [hasNew, setHasNew] = useState(false);
-  const observerRef = useRef<IntersectionObserver>();
+  const observerRef = useRef<IntersectionObserver | undefined>(undefined);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const latestIdRef = useRef<string | null>(null);
 
