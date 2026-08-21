@@ -17,8 +17,6 @@ const eslintConfig = [
       "node_modules/",
       // Test output
       "coverage/",
-      "playwright-report/",
-      "test-results/",
       // Python submodule (ruff で lint される)
       "yamii/",
     ],

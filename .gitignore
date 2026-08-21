@@ -48,9 +48,6 @@ yarn-error.log*
 # Test
 coverage
 .nyc_output
-test-results
-playwright-report
-playwright/.cache
 
 # Temporary
 tmp
