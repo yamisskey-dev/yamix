@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { TOKEN_ECONOMY } from "@/types";
 import { logger } from "@/lib/logger";
-import { parseLimit, parsePage } from "@/lib/validation";
+import { parseLimit, parsePage, validateBody, createPostSchema } from "@/lib/validation";
 import { checkRateLimit, RateLimits } from "@/lib/rate-limit";
 
 // GET /api/posts - Get all posts (with pagination)
@@ -61,19 +61,16 @@ export async function POST(req: NextRequest) {
     return ErrorResponses.rateLimitExceeded();
   }
 
-  const bodyResult = await parseJsonBody<{ content?: string; parentId?: string }>(req);
+  const bodyResult = await parseJsonBody<unknown>(req);
   if ("error" in bodyResult) return bodyResult.error;
-  const body = bodyResult.data;
 
-  const { content, parentId } = body;
-  const walletId = payload.walletId; // Use walletId from JWT (1:1 user-wallet)
-
-  if (!content) {
-    return NextResponse.json(
-      { error: "Content is required" },
-      { status: 400 }
-    );
+  const validation = validateBody(createPostSchema, bodyResult.data);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
+
+  const { content, parentId } = validation.data;
+  const walletId = payload.walletId; // Use walletId from JWT (1:1 user-wallet)
 
   try {
     // Get user's wallet

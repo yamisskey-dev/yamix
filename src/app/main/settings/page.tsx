@@ -158,6 +158,15 @@ export default function SettingsPage() {
     localStorage.removeItem("yamix_handle");
     localStorage.removeItem("yamix_displayName");
     localStorage.removeItem("yamix_avatarUrl");
+    // SECURITY: Service Worker キャッシュに残る認証済みページ・API レスポンスを削除
+    // （共有端末で次のユーザーに前ユーザーのデータが表示されるのを防ぐ）
+    try {
+      if ("caches" in window) {
+        await Promise.all([caches.delete("app-pages"), caches.delete("api-cache")]);
+      }
+    } catch (error) {
+      clientLogger.error("Failed to clear SW caches on logout:", error);
+    }
     router.replace("/");
   };
 

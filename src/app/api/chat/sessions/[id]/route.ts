@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { safeDecryptMessage } from "@/lib/encryption";
 import { authenticateRequest, parseJsonBody, ErrorResponses } from "@/lib/api-helpers";
 import { QUERY_LIMITS } from "@/lib/constants";
+import { validateBody, updateChatSessionSchema } from "@/lib/validation";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -118,18 +119,18 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params;
 
-  const bodyResult = await parseJsonBody<{ title?: string; consultType?: "PRIVATE" | "PUBLIC" }>(req);
+  const bodyResult = await parseJsonBody<unknown>(req);
   if ("error" in bodyResult) return bodyResult.error;
-  const body = bodyResult.data;
+
+  const validation = validateBody(updateChatSessionSchema, bodyResult.data);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+  const body = validation.data;
 
   // タイトルまたはconsultTypeが指定されているか確認
   if (body.title === undefined && body.consultType === undefined) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
-  }
-
-  // consultTypeのバリデーション
-  if (body.consultType && !["PRIVATE", "PUBLIC"].includes(body.consultType)) {
-    return NextResponse.json({ error: "Invalid consultType" }, { status: 400 });
   }
 
   try {

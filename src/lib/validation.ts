@@ -110,6 +110,7 @@ export const createChatSessionSchema = z.object({
 
 export const updateChatSessionSchema = z.object({
   title: z.string().min(1).max(200).transform(sanitizeString).optional().describe("セッションタイトル"),
+  consultType: z.enum(["PRIVATE", "PUBLIC"]).optional().describe("公開設定の変更"),
 });
 
 // Message schemas
@@ -146,7 +147,13 @@ export const blockUserSchema = z.object({
 // Post schemas
 export const createPostSchema = z.object({
   content: z.string().min(1).max(5000),
-  visibility: z.enum(["PUBLIC", "FOLLOWERS", "PRIVATE"]).default("PUBLIC"),
+  parentId: z.string().cuid().optional().describe("返信先の投稿ID"),
+});
+
+// Yamii profile schema
+export const updateYamiiProfileSchema = z.object({
+  explicit_profile: z.string().max(2000).transform(sanitizeString).optional(),
+  display_name: z.string().max(100).transform(sanitizeString).optional(),
 });
 
 // Query parameter schemas

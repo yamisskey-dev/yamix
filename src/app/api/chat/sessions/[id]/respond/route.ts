@@ -10,6 +10,7 @@ import { encryptMessage, safeDecryptMessage } from "@/lib/encryption";
 
 import { checkCrisisKeywords } from "@/lib/crisis";
 import { QUERY_LIMITS, PrismaMessage, hasMentionYamii, removeMentionYamii } from "@/lib/constants";
+import { validateBody, respondToSessionSchema } from "@/lib/validation";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,15 +24,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   const { id } = await params;
 
-  const bodyResult = await parseJsonBody<{ content: string; isAnonymous?: boolean }>(req);
+  const bodyResult = await parseJsonBody<unknown>(req);
   if ("error" in bodyResult) return bodyResult.error;
-  const body = bodyResult.data;
 
-  if (!body.content || body.content.trim().length === 0) {
-    return NextResponse.json({ error: "Content is required" }, { status: 400 });
+  const validation = validateBody(respondToSessionSchema, bodyResult.data);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
+  // safeStringSchema が sanitize（trim 含む）済みの値を返す
+  const body = { content: validation.data.content, isAnonymous: validation.data.isAnonymous };
 
-  const isAnonymous = body.isAnonymous ?? false;
+  const isAnonymous = body.isAnonymous;
 
   try {
     // Get the session with messages for conversation history

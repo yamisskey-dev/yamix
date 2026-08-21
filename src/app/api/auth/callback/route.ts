@@ -84,6 +84,9 @@ export async function POST(req: NextRequest) {
         appSecret: server.appSecret,
         token,
       }),
+      // SECURITY: タイムアウトとリダイレクト禁止（SSRF 拡大とリソース占有を防ぐ）
+      signal: AbortSignal.timeout(5000),
+      redirect: "error",
     });
 
     if (!userKeyRes.ok) {

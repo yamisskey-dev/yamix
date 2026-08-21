@@ -1,6 +1,10 @@
 import type { InstanceType } from "@/types";
 import { logger } from "@/lib/logger";
 
+// SECURITY: 外部インスタンスへの fetch はタイムアウトとリダイレクト禁止を必須にする
+// （リダイレクト追跡による SSRF 拡大と、応答しないホストによるリソース占有を防ぐ）
+const FETCH_TIMEOUT_MS = 5000;
+
 interface NodeInfo {
   software?: {
     name?: string;
@@ -42,6 +46,8 @@ async function detectMisskeyByApi(host: string): Promise<InstanceType | null> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: "error",
     });
 
     if (!metaResponse.ok) {
@@ -84,7 +90,11 @@ async function detectByNodeInfo(host: string): Promise<InstanceType | null> {
   try {
     const nodeInfoResponse = await fetch(
       `https://${host}/.well-known/nodeinfo`,
-      { next: { revalidate: 3600 } }
+      {
+        next: { revalidate: 3600 },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        redirect: "error",
+      }
     );
 
     if (!nodeInfoResponse.ok) {
@@ -102,7 +112,26 @@ async function detectByNodeInfo(host: string): Promise<InstanceType | null> {
       return null;
     }
 
-    const infoResponse = await fetch(nodeInfoUrl);
+    // SECURITY: href は外部インスタンスが返す値。検証せずに fetch すると
+    // 任意 URL への second-hop SSRF になるため、https + 同一ホストを強制する
+    let parsedNodeInfoUrl: URL;
+    try {
+      parsedNodeInfoUrl = new URL(nodeInfoUrl);
+    } catch {
+      return null;
+    }
+    if (parsedNodeInfoUrl.protocol !== "https:" || parsedNodeInfoUrl.hostname !== host) {
+      logger.warn("nodeinfo href points outside the original host, skipping", {
+        host,
+        nodeInfoUrl,
+      });
+      return null;
+    }
+
+    const infoResponse = await fetch(nodeInfoUrl, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      redirect: "error",
+    });
     if (!infoResponse.ok) {
       return null;
     }

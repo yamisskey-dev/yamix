@@ -28,6 +28,11 @@ function getMasterKey(): Buffer {
     return Buffer.from(envKey, "base64");
   }
 
+  // SECURITY: 本番ではフォールバック鍵を許可しない（encryption.ts と同じ）
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MESSAGE_ENCRYPTION_KEY must be set in production");
+  }
+
   // 開発環境用のフォールバック（encryption.ts と同じ）
   console.warn(
     "WARNING: MESSAGE_ENCRYPTION_KEY not set. Using derived key from JWT_SECRET."

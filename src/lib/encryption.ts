@@ -42,10 +42,18 @@ function getMasterKey(): Buffer {
     return _masterKeyCache;
   }
 
-  // フォールバック: JWT_SECRETからキーを派生（既存データとの互換性のため維持）
-  if (process.env.NODE_ENV === "production" && !_encKeyWarned) {
+  // SECURITY: 本番ではフォールバック鍵を許可しない（推測可能な鍵での暗号化を防ぐ）
+  // 旧フォールバック鍵で暗号化済みのデータがある場合は、
+  // pbkdf2(JWT_SECRET, "yamix-fallback-salt", 100000, 32, "sha256") の base64 を
+  // MESSAGE_ENCRYPTION_KEY に設定すれば互換性を維持できる
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("MESSAGE_ENCRYPTION_KEY must be set in production");
+  }
+
+  // 開発環境のみ: JWT_SECRETからキーを派生
+  if (!_encKeyWarned) {
     _encKeyWarned = true;
-    logger.warn("MESSAGE_ENCRYPTION_KEY not set in production. Using derived key from JWT_SECRET.");
+    logger.warn("MESSAGE_ENCRYPTION_KEY not set. Using derived key from JWT_SECRET (development only).");
   }
   const jwtSecret = process.env.JWT_SECRET || "development-secret";
   _masterKeyCache = crypto.pbkdf2Sync(jwtSecret, "yamix-fallback-salt", 100000, KEY_LENGTH, "sha256");

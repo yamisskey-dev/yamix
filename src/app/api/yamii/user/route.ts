@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { yamiiClient } from "@/lib/yamii-client";
 import { logger } from "@/lib/logger";
-import { authenticateRequest } from "@/lib/api-helpers";
+import { authenticateRequest, parseJsonBody } from "@/lib/api-helpers";
+import { validateBody, updateYamiiProfileSchema } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   const auth = await authenticateRequest(req);
@@ -34,10 +35,16 @@ export async function PATCH(req: NextRequest) {
   if ("error" in auth) return auth.error;
   const { payload } = auth;
 
-  try {
-    const body = await req.json();
-    const { explicit_profile, display_name } = body;
+  const bodyResult = await parseJsonBody<unknown>(req);
+  if ("error" in bodyResult) return bodyResult.error;
 
+  const validation = validateBody(updateYamiiProfileSchema, bodyResult.data);
+  if (!validation.success) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
+  }
+  const { explicit_profile, display_name } = validation.data;
+
+  try {
     const result = await yamiiClient.updateUserProfile(payload.userId, {
       explicit_profile,
       display_name,

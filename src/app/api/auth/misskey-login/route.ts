@@ -10,6 +10,9 @@ import { validateExternalHost } from "@/lib/ssrf-protection";
 
 const WEB_URL = process.env.WEB_URL || "http://localhost:3000";
 
+// SECURITY: 外部インスタンスへの fetch はタイムアウトとリダイレクト禁止を必須にする
+const EXTERNAL_FETCH_TIMEOUT_MS = 5000;
+
 interface LoginRequest {
   host: string;
 }
@@ -84,6 +87,8 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(appPayload),
+        signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
+        redirect: "error",
       });
 
       if (!createAppRes.ok) {
@@ -122,6 +127,8 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appSecret: server.appSecret }),
+        signal: AbortSignal.timeout(EXTERNAL_FETCH_TIMEOUT_MS),
+        redirect: "error",
       }
     );
 
@@ -147,6 +154,28 @@ export async function POST(req: NextRequest) {
     }
 
     const authSession: MiAuthSession = await sessionRes.json();
+
+    // SECURITY: 認証 URL は外部インスタンスが返す値。クライアントはこれに
+    // そのまま遷移するため、https + リクエストしたホストであることを検証する
+    let authUrl: URL;
+    try {
+      authUrl = new URL(authSession.url);
+    } catch {
+      return NextResponse.json(
+        { error: "Instance returned an invalid auth URL" },
+        { status: 502 }
+      );
+    }
+    if (authUrl.protocol !== "https:" || authUrl.hostname !== misskeyHost) {
+      logger.warn("Instance returned auth URL for unexpected host", {
+        host: misskeyHost,
+        authUrl: authSession.url,
+      });
+      return NextResponse.json(
+        { error: "Instance returned an invalid auth URL" },
+        { status: 502 }
+      );
+    }
 
     // Store session token with 5 minute expiry
     await RedisService.setWithExpiry(

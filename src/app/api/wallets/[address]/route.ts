@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { authenticateRequest } from "@/lib/api-helpers";
 
 interface RouteParams {
   params: Promise<{ address: string }>;
 }
 
-// GET /api/wallets/[address] - Get wallet by address (public)
+// GET /api/wallets/[address] - Get wallet by address (requires auth)
 export async function GET(req: NextRequest, { params }: RouteParams) {
+  // SECURITY: 残高は財務情報のため未認証アクセスを許可しない
+  const auth = await authenticateRequest(req);
+  if ("error" in auth) return auth.error;
+
   const { address } = await params;
 
   try {
