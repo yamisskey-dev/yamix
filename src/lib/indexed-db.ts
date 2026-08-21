@@ -3,6 +3,7 @@
  * Stores sessions and messages locally for offline access
  */
 
+import { clientLogger } from "@/lib/client-logger";
 import type { OptimisticSession, OptimisticMessage } from './local-session-store';
 
 const DB_NAME = 'YamiDB';
@@ -277,5 +278,5 @@ export const indexedDB = new IndexedDBManager();
 
 // Initialize on import (only in browser)
 if (typeof window !== 'undefined') {
-  indexedDB.init().catch(console.error);
+  indexedDB.init().catch((e) => clientLogger.error("IndexedDB init failed:", e));
 }

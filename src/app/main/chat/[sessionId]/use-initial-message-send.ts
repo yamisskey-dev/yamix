@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { localSessionStore } from "@/lib/local-session-store";
+import { clientLogger } from "@/lib/client-logger";
 import { useToastActions } from "@/components/Toast";
 import { handleSSEResponse } from "./sse-response";
 import type { LocalMessage, SessionInfo } from "./chat-types";
@@ -116,7 +117,7 @@ export function useInitialMessageSend(opts: {
       .then(async (res) => {
         if (!res.ok) {
           const errorText = await res.text();
-          console.error("[CHAT] Initial message send failed:", {
+          clientLogger.error("[CHAT] Initial message send failed:", {
             status: res.status,
             statusText: res.statusText,
             body: errorText,
@@ -173,7 +174,7 @@ export function useInitialMessageSend(opts: {
                     // Message not found yet, retry after 200ms
                     setTimeout(() => pollForMessage(attemptCount + 1), 200);
                   } catch (error) {
-                    console.error("[LOCAL SESSION] Polling error:", error);
+                    clientLogger.error("[LOCAL SESSION] Polling error:", error);
                     // On error, retry
                     setTimeout(() => pollForMessage(attemptCount + 1), 200);
                   }
@@ -190,7 +191,7 @@ export function useInitialMessageSend(opts: {
         });
       })
       .catch((err) => {
-        console.error("[CHAT] Initial message send failed:", err);
+        clientLogger.error("[CHAT] Initial message send failed:", err);
         setIsLoading(false);
         setError(err instanceof Error ? err.message : "エラーが発生しました");
       });

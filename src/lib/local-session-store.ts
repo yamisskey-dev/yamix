@@ -5,7 +5,7 @@
  */
 
 import { indexedDB } from './indexed-db';
-import { devLog } from './dev-logger';
+import { clientLogger } from "./client-logger";
 
 export interface OptimisticMessage {
   id: string;
@@ -48,10 +48,10 @@ class LocalSessionStore {
       sessions.forEach((session) => {
         this.sessions.set(session.id, session);
       });
-      devLog.log('[LocalSessionStore] Initialized with', sessions.length, 'sessions from IndexedDB');
+      clientLogger.debug('[LocalSessionStore] Initialized with', sessions.length, 'sessions from IndexedDB');
       this.initialized = true;
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to initialize from IndexedDB:', error);
+      clientLogger.error('[LocalSessionStore] Failed to initialize from IndexedDB:', error);
     }
   }
 
@@ -101,7 +101,7 @@ class LocalSessionStore {
         synced: false,
       });
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to save session:', error);
+      clientLogger.error('[LocalSessionStore] Failed to save session:', error);
     }
 
     // リスナーに通知
@@ -133,7 +133,7 @@ class LocalSessionStore {
         return session;
       }
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to load session:', error);
+      clientLogger.error('[LocalSessionStore] Failed to load session:', error);
     }
 
     return null;
@@ -159,7 +159,7 @@ class LocalSessionStore {
         return bTime - aTime;
       });
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to get all sessions:', error);
+      clientLogger.error('[LocalSessionStore] Failed to get all sessions:', error);
       return [];
     }
   }
@@ -170,7 +170,7 @@ class LocalSessionStore {
   async addMessage(sessionId: string, message: OptimisticMessage): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      console.error('[LocalSessionStore] Session not found:', sessionId);
+      clientLogger.error('[LocalSessionStore] Session not found:', sessionId);
       return;
     }
 
@@ -192,7 +192,7 @@ class LocalSessionStore {
         }),
       ]);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to save message:', error);
+      clientLogger.error('[LocalSessionStore] Failed to save message:', error);
     }
 
     // リスナーに通知
@@ -230,7 +230,7 @@ class LocalSessionStore {
         }),
       ]);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to update message:', error);
+      clientLogger.error('[LocalSessionStore] Failed to update message:', error);
     }
 
     // リスナーに通知
@@ -256,7 +256,7 @@ class LocalSessionStore {
     try {
       await indexedDB.saveSession(session);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to update session:', error);
+      clientLogger.error('[LocalSessionStore] Failed to update session:', error);
     }
 
     // リスナーに通知
@@ -280,7 +280,7 @@ class LocalSessionStore {
     try {
       await indexedDB.saveSession(session);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to update syncing state:', error);
+      clientLogger.error('[LocalSessionStore] Failed to update syncing state:', error);
     }
 
     // リスナーに通知
@@ -305,7 +305,7 @@ class LocalSessionStore {
     try {
       await indexedDB.saveSession(session);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to save error:', error);
+      clientLogger.error('[LocalSessionStore] Failed to save error:', error);
     }
 
     // リスナーに通知
@@ -323,7 +323,7 @@ class LocalSessionStore {
     try {
       await indexedDB.deleteSession(id);
     } catch (error) {
-      console.error('[LocalSessionStore] Failed to delete session:', error);
+      clientLogger.error('[LocalSessionStore] Failed to delete session:', error);
     }
 
     // リスナーに通知（null = 削除）
@@ -347,7 +347,7 @@ class LocalSessionStore {
       try {
         listener(sessionId, session);
       } catch (error) {
-        console.error('[LocalSessionStore] Listener error:', error);
+        clientLogger.error('[LocalSessionStore] Listener error:', error);
       }
     });
   }
@@ -369,7 +369,7 @@ class LocalSessionStore {
     await Promise.all(toDelete.map((id) => this.delete(id)));
 
     if (toDelete.length > 0) {
-      devLog.log('[LocalSessionStore] Cleaned up', toDelete.length, 'old sessions');
+      clientLogger.debug('[LocalSessionStore] Cleaned up', toDelete.length, 'old sessions');
     }
   }
 }
@@ -380,10 +380,10 @@ export const localSessionStore = new LocalSessionStore();
 // ブラウザ環境でのみ初期化
 if (typeof window !== 'undefined') {
   // アプリ起動時に初期化
-  localSessionStore.initialize().catch(console.error);
+  localSessionStore.initialize().catch((e) => clientLogger.error("LocalSessionStore init failed:", e));
 
   // 定期的なクリーンアップ（5分ごと）
   setInterval(() => {
-    localSessionStore.cleanup().catch(console.error);
+    localSessionStore.cleanup().catch((e) => clientLogger.error("LocalSessionStore cleanup failed:", e));
   }, 5 * 60 * 1000);
 }

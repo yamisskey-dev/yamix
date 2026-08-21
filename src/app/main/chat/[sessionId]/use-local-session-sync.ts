@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { localSessionStore } from "@/lib/local-session-store";
+import { clientLogger } from "@/lib/client-logger";
 import { useToastActions } from "@/components/Toast";
 import type { LocalMessage, SessionInfo } from "./chat-types";
 
@@ -93,7 +94,7 @@ export function useLocalSessionSync(opts: {
             // DON'T navigate yet - will navigate after SSE completes
           },
           onError: (error) => {
-            console.error("[LOCAL SESSION] Sync failed:", error);
+            clientLogger.error("[LOCAL SESSION] Sync failed:", error);
             toast.error("サーバーとの同期に失敗しました");
           },
         });

@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { localSessionStore } from "@/lib/local-session-store";
-import { devLog } from "@/lib/dev-logger";
 
 const LoadingSpinner = lazy(() => import("@/components/LoadingSpinner").then(mod => ({ default: mod.LoadingSpinner })));
 
@@ -133,7 +132,6 @@ export default function NewChatPage() {
         targetUserIds: consultType === "DIRECTED" ? targetUsers.map((u) => u.handle) : undefined,
       });
 
-      devLog.log('[MAIN DEBUG] Local session created:', localSession.id);
 
       // Navigate immediately for instant UX (0ms latency!)
       router.push(`/main/chat/${localSession.id}`);

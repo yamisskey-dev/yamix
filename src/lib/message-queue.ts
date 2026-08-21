@@ -3,6 +3,7 @@
  * 送信失敗したメッセージをキューに保存し、オンライン復帰時に再送
  */
 
+import { clientLogger } from "@/lib/client-logger";
 import { indexedDB } from './indexed-db';
 import type { OptimisticMessage } from './local-session-store';
 
@@ -74,7 +75,7 @@ class MessageQueueManager {
             await indexedDB.removeFromSyncQueue(item.id);
           }
         } catch (error) {
-          console.error('[MessageQueue] Failed to send message:', error);
+          clientLogger.error('[MessageQueue] Failed to send message:', error);
 
           // リトライ回数を増やす
           const queueItems = await indexedDB.getSyncQueue();
@@ -87,7 +88,7 @@ class MessageQueueManager {
             const isPermanentError = (error as Error & { permanent?: boolean }).permanent;
             if (isPermanentError) {
               await indexedDB.removeFromSyncQueue(item.id);
-              console.warn('[MessageQueue] Permanent error (403/404), removing from queue:', queuedMsg.sessionId);
+              clientLogger.warn('[MessageQueue] Permanent error (403/404), removing from queue:', queuedMsg.sessionId);
               continue;
             }
 
@@ -97,7 +98,7 @@ class MessageQueueManager {
             // 5回以上失敗したらキューから削除（諦める）
             if (queuedMsg.retries >= 5) {
               await indexedDB.removeFromSyncQueue(item.id);
-              console.error('[MessageQueue] Message failed after 5 retries, removing from queue');
+              clientLogger.error('[MessageQueue] Message failed after 5 retries, removing from queue');
             }
           }
         }
@@ -153,7 +154,7 @@ class MessageQueueManager {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('online', () => {
-      console.log('[MessageQueue] Online - processing queue');
+      clientLogger.debug('[MessageQueue] Online - processing queue');
       this.processQueue();
     });
 
