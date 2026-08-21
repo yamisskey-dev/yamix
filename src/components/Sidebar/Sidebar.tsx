@@ -40,7 +40,7 @@ function NavItem({
           group relative w-full h-10 rounded-full
           flex items-center
           transition-colors duration-150 ease-smooth
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-200
+          focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-200
           ${isCollapsed ? "justify-center px-0" : "gap-3 px-4"}
           ${isActive
             ? "bg-primary/10 text-primary"
@@ -107,7 +107,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
         {onToggleCollapse && !isCollapsed && (
           <button
             onClick={onToggleCollapse}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-base-content/60 hover:bg-base-content/5 hover:text-primary transition-colors duration-150 flex-shrink-0 mr-1"
+            className="h-8 w-8 rounded-lg flex items-center justify-center text-base-content/60 hover:bg-base-content/5 hover:text-primary transition-colors duration-150 shrink-0 mr-1"
             title="サイドバーを折りたたむ"
           >
             <svg
@@ -147,7 +147,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
       )}
 
       {/* Navigation Items - Fixed */}
-      <nav className="flex-shrink-0">
+      <nav className="shrink-0">
         <NavItem
           icon={
             <svg
@@ -249,10 +249,10 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
       {!isCollapsed && (
         <>
           {/* Divider */}
-          <div className="mx-5 my-3 border-t border-base-content/10 flex-shrink-0" />
+          <div className="mx-5 my-3 border-t border-base-content/10 shrink-0" />
 
           {/* Search input */}
-          <div className="px-5 pb-2 flex-shrink-0">
+          <div className="px-5 pb-2 shrink-0">
             <div className="relative group">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -312,7 +312,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                 onClick={handleNewChat}
                 className="
                   w-full h-11 rounded-full px-4
-                  bg-gradient-to-r from-primary to-secondary
+                  bg-linear-to-r from-primary to-secondary
                   text-primary-content text-sm font-medium
                   flex items-center gap-3
                   hover:brightness-110
@@ -354,7 +354,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                 "
               >
                 {/* Avatar */}
-                <div className="flex-shrink-0">
+                <div className="shrink-0">
                   {user.avatarUrl ? (
                     <Image
                       src={user.avatarUrl}
@@ -364,7 +364,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
+                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
                       {(user.displayName || user.account).charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -389,7 +389,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
               onClick={handleNewChat}
               className="
                 w-full h-10 rounded-full
-                bg-gradient-to-r from-primary to-secondary
+                bg-linear-to-r from-primary to-secondary
                 text-primary-content
                 flex items-center justify-center
                 hover:brightness-110
@@ -439,7 +439,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                     className="rounded-full"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
+                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
                     {(user.displayName || user.account).charAt(0).toUpperCase()}
                   </div>
                 )}

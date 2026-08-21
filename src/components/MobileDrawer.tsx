@@ -207,7 +207,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* Menu (Burger) Button */}
       <button
         onClick={onMenuClick}
-        className="flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        className="flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 text-base-content/60 hover:bg-primary/10 hover:text-primary"
         aria-label="メニューを開く"
       >
         <MenuIcon className="h-5 w-5" />
@@ -216,7 +216,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* Timeline Button */}
       <button
         onClick={() => onNavigate("/main/timeline")}
-        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
           pathname === "/main/timeline"
             ? "text-primary bg-primary/10"
             : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
@@ -229,7 +229,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* Notification Button */}
       <button
         onClick={() => onNavigate("/main/notifications")}
-        className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+        className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
           pathname === "/main/notifications"
             ? "text-primary bg-primary/10"
             : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
@@ -248,7 +248,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* New Consultation Button (Right, Gradient) */}
       <button
         onClick={() => onNavigate("/main")}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 ease-smooth focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-soft"
+        className="flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 ease-smooth focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-soft"
         aria-label="新しい相談"
       >
         <ChatIcon className="h-5 w-5" />

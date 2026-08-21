@@ -40,12 +40,12 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
   return (
     <article
       onClick={() => router.push(`/main/chat/${consultation.sessionId}`)}
-      className="w-[calc(100vw-2rem)] sm:w-auto sm:aspect-[9/19] h-full flex-shrink-0 snap-center cursor-pointer group"
+      className="w-[calc(100vw-2rem)] sm:w-auto sm:aspect-[9/19] h-full shrink-0 snap-center cursor-pointer group"
     >
       <div className="bg-base-300/80 rounded-[20px] border border-base-content/10 overflow-hidden shadow-lg group-hover:shadow-xl group-hover:border-base-content/15 transition-all duration-200 h-full flex flex-col">
         {/* Status bar */}
-        <div className="flex items-center gap-2 px-4 pt-3 pb-2 bg-base-300/60 flex-shrink-0">
-          <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2 bg-base-300/60 shrink-0">
+          <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
             {isAnonymous ? (
               <div className="bg-base-content/10 flex items-center justify-center w-full h-full text-[10px]">
                 😎
@@ -59,16 +59,16 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
                 className="rounded-full object-cover w-full h-full"
               />
             ) : (
-              <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[9px] font-bold">
+              <div className="bg-linear-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[9px] font-bold">
                 {displayName.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           <div className="flex items-center gap-1 min-w-0 flex-1">
-            <span className="text-[11px] text-base-content/50 flex-shrink-0">
+            <span className="text-[11px] text-base-content/50 shrink-0">
               {displayName}
             </span>
-            <span className="text-[10px] text-base-content/30 flex-shrink-0">·</span>
+            <span className="text-[10px] text-base-content/30 shrink-0">·</span>
             <span className="text-[11px] font-semibold text-base-content/80 truncate">
               {titleText}
             </span>
@@ -79,7 +79,7 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
         <div className="flex-1 px-2 py-2 flex flex-col gap-1 bg-base-200/40 overflow-hidden relative min-h-0">
           {/* User message (right) - same as ChatBubble chat-user */}
           <div className="chat chat-end">
-            <div className="chat-bubble chat-user shadow-sm text-[12px] leading-relaxed break-words max-w-[85%]">
+            <div className="chat-bubble chat-user shadow-xs text-[12px] leading-relaxed break-words max-w-[85%]">
               {questionText}
             </div>
           </div>
@@ -116,7 +116,7 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
                     )}
                   </div>
                 </div>
-                <div className={`chat-bubble ${isHumanResponse ? "chat-human-response" : "chat-assistant"} shadow-sm text-[12px] leading-relaxed break-words max-w-[80%]`}>
+                <div className={`chat-bubble ${isHumanResponse ? "chat-human-response" : "chat-assistant"} shadow-xs text-[12px] leading-relaxed break-words max-w-[80%]`}>
                   {replyText}
                 </div>
               </div>
@@ -124,11 +124,11 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
           })}
 
           {/* Fade-out at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-base-200/90 to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-linear-to-t from-base-200/90 to-transparent pointer-events-none" />
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-base-300/60 border-t border-base-content/5 flex-shrink-0">
+        <div className="flex items-center justify-between px-3 py-2 bg-base-300/60 border-t border-base-content/5 shrink-0">
           {/* Participants */}
           <div className="flex items-center gap-2 min-w-0">
             {participants.length > 0 && (
@@ -136,20 +136,20 @@ function PhoneChatCard({ consultation }: { consultation: TimelineConsultation })
                 {participants.slice(0, 4).map((p, i) => (
                   <div
                     key={p.id || i}
-                    className="w-5 h-5 rounded-full overflow-hidden border-2 border-base-300/60 flex-shrink-0"
+                    className="w-5 h-5 rounded-full overflow-hidden border-2 border-base-300/60 shrink-0"
                     title={p.displayName || p.handle}
                   >
                     {p.avatarUrl ? (
                       <Image src={p.avatarUrl} alt="" width={20} height={20} className="rounded-full object-cover w-full h-full" />
                     ) : (
-                      <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[8px] font-bold">
+                      <div className="bg-linear-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-[8px] font-bold">
                         {(p.displayName || p.handle || "?").charAt(0).toUpperCase()}
                       </div>
                     )}
                   </div>
                 ))}
                 {participants.length > 4 && (
-                  <div className="w-5 h-5 rounded-full bg-base-content/10 border-2 border-base-300/60 flex items-center justify-center text-[8px] text-base-content/50 flex-shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-base-content/10 border-2 border-base-300/60 flex items-center justify-center text-[8px] text-base-content/50 shrink-0">
                     +{participants.length - 4}
                   </div>
                 )}
@@ -300,7 +300,7 @@ export function ExploreFeed() {
       ))}
 
       {/* Load more trigger */}
-      <div ref={loadMoreRef} className="w-4 flex-shrink-0 flex items-center">
+      <div ref={loadMoreRef} className="w-4 shrink-0 flex items-center">
         {loadingMore && <LoadingSpinner size="md" />}
       </div>
     </div>

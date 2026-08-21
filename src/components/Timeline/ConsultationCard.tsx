@@ -52,7 +52,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation }:
       className="note-article group flex py-6 px-8 bg-base-200/60 border-b border-base-content/10 hover:bg-base-200/80 transition-all duration-200 ease-smooth cursor-pointer relative"
     >
       {/* Avatar */}
-      <div className="flex-shrink-0 mr-3.5">
+      <div className="shrink-0 mr-3.5">
         <div className="w-[46px] h-[46px] rounded-full overflow-hidden shadow-soft">
           {isAIResponse ? (
             <div className="bg-base-200 flex items-center justify-center w-full h-full overflow-hidden">
@@ -77,7 +77,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation }:
               className="rounded-full object-cover w-full h-full"
             />
           ) : (
-            <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-base font-bold">
+            <div className="bg-linear-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-base font-bold">
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
@@ -136,7 +136,7 @@ export const ConsultationCard = memo(function ConsultationCard({ consultation }:
             {/* 回答モード: 質問を引用として表示 */}
             <div className="mb-1.5 pl-2.5 border-l-2 border-base-content/10">
               <div className="flex items-start gap-1.5">
-                <div className="flex-shrink-0 mt-0.5">
+                <div className="shrink-0 mt-0.5">
                   {consultation.user ? (
                     consultation.user.avatarUrl ? (
                       <Image

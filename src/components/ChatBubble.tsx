@@ -103,7 +103,7 @@ export const ChatBubble = memo(function ChatBubble({
                   />
                 ) : (
                   // User without avatar - show initial
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-full h-full rounded-full bg-linear-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
                     {(responder!.displayName || "?").charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -127,7 +127,7 @@ export const ChatBubble = memo(function ChatBubble({
                   />
                 ) : (
                   // User without avatar - show initial
-                  <div className="w-full h-full rounded-full bg-gradient-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-full h-full rounded-full bg-linear-to-br from-secondary to-primary flex items-center justify-center text-white text-sm font-bold">
                     {(responder!.displayName || "?").charAt(0).toUpperCase()}
                   </div>
                 )}

@@ -220,7 +220,7 @@ export default function NewChatPage() {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder="相談してみましょう"
-          className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 focus:border-0"
+          className="w-full resize-none min-h-[5rem] px-4 pt-4 pb-2 bg-transparent border-0 outline-hidden focus:outline-hidden focus:ring-0 focus:border-0"
           rows={1}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
@@ -332,7 +332,7 @@ export default function NewChatPage() {
                       value={userSearchQuery}
                       onChange={(e) => setUserSearchQuery(e.target.value)}
                       placeholder="@username@server.example"
-                      className="w-full bg-base-200 rounded-lg px-3 py-2 text-sm border-0 outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full bg-base-200 rounded-lg px-3 py-2 text-sm border-0 outline-hidden focus:ring-2 focus:ring-primary/50"
                       autoFocus
                     />
                     <p className="text-xs text-base-content/40 mt-1.5 px-1">

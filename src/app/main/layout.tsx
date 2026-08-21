@@ -149,7 +149,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       <div className="hidden xl:flex h-screen">
         {/* Fixed Sidebar */}
         <aside
-          className="h-screen flex-shrink-0 border-r border-base-300 bg-base-300/80 transition-all duration-300 ease-smooth relative"
+          className="h-screen shrink-0 border-r border-base-300 bg-base-300/80 transition-all duration-300 ease-smooth relative"
           style={{ width: sidebarCollapsed ? "64px" : `${sidebarWidth}px` }}
           role="navigation"
           aria-label="メインナビゲーション"

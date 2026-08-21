@@ -70,11 +70,11 @@ export function ChatHeader({ sessionId, sessionInfo, onDeleteClick }: ChatHeader
         <>
           {/* Skeleton header content - prevents layout shift */}
           <div className="flex items-center gap-2 truncate flex-1">
-            <div className="skeleton w-4 h-4 rounded bg-base-300" />
-            <div className="skeleton h-4 w-48 rounded bg-base-300" />
+            <div className="skeleton w-4 h-4 rounded-sm bg-base-300" />
+            <div className="skeleton h-4 w-48 rounded-sm bg-base-300" />
           </div>
           <div className="flex items-center gap-2">
-            <div className="skeleton w-8 h-8 rounded bg-base-300" />
+            <div className="skeleton w-8 h-8 rounded-sm bg-base-300" />
           </div>
         </>
       )}

@@ -104,7 +104,7 @@ export default async function AboutPage() {
               className="rounded-lg"
             />
           </div>
-          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-gradient-to-t from-black/70 to-transparent backdrop-blur-xs">
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 text-center bg-linear-to-t from-black/70 to-transparent backdrop-blur-xs">
             <span className="text-sm font-bold text-white drop-shadow-md">
               やみっくす
             </span>

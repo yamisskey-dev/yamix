@@ -9,13 +9,13 @@ export function ChatSkeleton() {
           <div className="w-8 h-8 rounded-full bg-base-300 skeleton" />
         </div>
         <div className="chat-bubble bg-base-200/60 shadow-none">
-          <div className="skeleton bg-base-300 h-4 w-48 mb-2 rounded" />
-          <div className="skeleton bg-base-300 h-4 w-32 rounded" />
+          <div className="skeleton bg-base-300 h-4 w-48 mb-2 rounded-sm" />
+          <div className="skeleton bg-base-300 h-4 w-32 rounded-sm" />
         </div>
       </div>
       <div className="chat chat-end">
         <div className="chat-bubble bg-primary/20 shadow-none">
-          <div className="skeleton bg-primary/30 h-4 w-40 rounded" />
+          <div className="skeleton bg-primary/30 h-4 w-40 rounded-sm" />
         </div>
       </div>
       <div className="chat chat-start">
@@ -23,9 +23,9 @@ export function ChatSkeleton() {
           <div className="w-8 h-8 rounded-full bg-base-300 skeleton" />
         </div>
         <div className="chat-bubble bg-base-200/60 shadow-none">
-          <div className="skeleton bg-base-300 h-4 w-56 mb-2 rounded" />
-          <div className="skeleton bg-base-300 h-4 w-44 mb-2 rounded" />
-          <div className="skeleton bg-base-300 h-4 w-36 rounded" />
+          <div className="skeleton bg-base-300 h-4 w-56 mb-2 rounded-sm" />
+          <div className="skeleton bg-base-300 h-4 w-44 mb-2 rounded-sm" />
+          <div className="skeleton bg-base-300 h-4 w-36 rounded-sm" />
         </div>
       </div>
     </div>

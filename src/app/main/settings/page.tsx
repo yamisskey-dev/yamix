@@ -325,7 +325,7 @@ export default function SettingsPage() {
               カスタムプロンプト
             </h2>
             <textarea
-              className="textarea textarea-bordered w-full h-28 text-[13px]"
+              className="textarea w-full h-28 text-[13px]"
               placeholder="例: 敬語で話してください / アドバイスより共感を重視して / 私は20代エンジニアです"
               value={customPrompt}
               onChange={(e) => setCustomPrompt(e.target.value)}

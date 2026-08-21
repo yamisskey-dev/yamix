@@ -264,7 +264,7 @@ export default function UserProfilePage({ params }: PageProps) {
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="bg-gradient-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-2xl font-bold rounded-full">
+                    <div className="bg-linear-to-br from-primary to-secondary text-primary-content flex items-center justify-center w-full h-full text-2xl font-bold rounded-full">
                       {displayName.charAt(0).toUpperCase()}
                     </div>
                   )}

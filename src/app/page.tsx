@@ -151,7 +151,7 @@ export default function LoginPage() {
         {/* Logo - NeoQuesdon style */}
         <div className="mb-4 flex flex-col items-center">
           <div className="relative text-7xl font-bold z-10">
-            <h1 className="absolute -inset-0 -z-10 bg-gradient-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg">
+            <h1 className="absolute -inset-0 -z-10 bg-linear-to-r text-transparent from-purple-500 via-pink-500 to-cyan-400 bg-clip-text blur-lg">
               Yamix
             </h1>
             <h1 className="text-7xl font-bold z-10 mb-2 desktop:mb-0">Yamix</h1>
@@ -187,7 +187,7 @@ export default function LoginPage() {
                 required: "required",
               })}
               placeholder="yami.ski"
-              className="w-full input input-bordered text-lg desktop:text-3xl mb-4 desktop:mb-0"
+              className="w-full input text-lg desktop:text-3xl mb-4 desktop:mb-0"
               disabled={isLoading}
               autoComplete="url"
             />
