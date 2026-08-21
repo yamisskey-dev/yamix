@@ -8,7 +8,11 @@ import { timelineApi } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 
 export function TimelineFeed() {
-  const [currentUserHandle, setCurrentUserHandle] = useState<string>();
+  // 自分の投稿判定用（localStorage から遅延初期化）
+  const [currentUserHandle] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    return localStorage.getItem("yamix_handle") || undefined;
+  });
   const [consultations, setConsultations] = useState<TimelineConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -20,15 +24,13 @@ export function TimelineFeed() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const latestIdRef = useRef<string | null>(null);
 
+  // NOTE: ローディング表示の開始（setLoading/setLoadingMore(true)）は各呼び出し側で行う。
+  // effect から同期的に setState するとカスケードレンダーになるため、この関数の
+  // 同期実行区間には setState を置かない（react-hooks/set-state-in-effect 対応）
   const fetchTimeline = useCallback(async (cursorId?: string | null) => {
+    const request = timelineApi.getTimeline(cursorId);
     try {
-      if (cursorId) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-
-      const data = await timelineApi.getTimeline(cursorId);
+      const data = await request;
 
       if (cursorId) {
         setConsultations((prev) => [...prev, ...data.consultations]);
@@ -52,11 +54,9 @@ export function TimelineFeed() {
 
   // Initial fetch
   useEffect(() => {
+    // fetchTimeline の setState はすべて await 後で実行される（ルールの誤検知回避）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTimeline();
-    const handle = localStorage.getItem("yamix_handle");
-    if (handle) {
-      setCurrentUserHandle(handle);
-    }
   }, [fetchTimeline]);
 
   // Check for new posts periodically
@@ -84,6 +84,7 @@ export function TimelineFeed() {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          setLoadingMore(true);
           fetchTimeline(cursor);
         }
       },
@@ -115,7 +116,13 @@ export function TimelineFeed() {
         <div className="alert alert-error max-w-md">
           <span>{error}</span>
         </div>
-        <button onClick={() => fetchTimeline()} className="btn btn-primary mt-4">
+        <button
+          onClick={() => {
+            setLoading(true);
+            fetchTimeline();
+          }}
+          className="btn btn-primary mt-4"
+        >
           再読み込み
         </button>
       </div>
@@ -143,7 +150,10 @@ export function TimelineFeed() {
       {/* New posts indicator */}
       {hasNew && (
         <button
-          onClick={() => fetchTimeline()}
+          onClick={() => {
+            setLoading(true);
+            fetchTimeline();
+          }}
           className="w-full py-2 text-sm text-primary bg-primary/10 hover:bg-primary/15 border-b border-primary/20 transition-colors"
         >
           新しい相談があります

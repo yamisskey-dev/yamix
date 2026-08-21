@@ -21,21 +21,19 @@ export default function NewChatPage() {
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
-  const [recentUsers, setRecentUsers] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>([]);
+  // 最近の宛先ユーザー（localStorage から遅延初期化）
+  const [recentUsers, setRecentUsers] = useState<{ id: string; handle: string; displayName: string | null; avatarUrl: string | null }[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("recentTargetUsers");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Load recent users from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("recentTargetUsers");
-      if (stored) {
-        setRecentUsers(JSON.parse(stored));
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
 
   // Save user to recent history
   const saveToRecentUsers = useCallback((user: { id?: string; handle: string; displayName: string | null; avatarUrl: string | null }) => {
@@ -61,9 +59,9 @@ export default function NewChatPage() {
   }, [inputValue]);
 
   // User search with debounce
+  // 空クエリ時の結果クリアは入力側（onChange / addTargetUser）で行う
   useEffect(() => {
     if (!userSearchQuery || userSearchQuery.length < 1) {
-      setUserSearchResults([]);
       return;
     }
 
@@ -330,7 +328,10 @@ export default function NewChatPage() {
                     <input
                       type="text"
                       value={userSearchQuery}
-                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        setUserSearchQuery(e.target.value);
+                        if (!e.target.value) setUserSearchResults([]);
+                      }}
                       placeholder="@username@server.example"
                       className="w-full bg-base-200 rounded-lg px-3 py-2 text-sm border-0 outline-hidden focus:ring-2 focus:ring-primary/50"
                       autoFocus

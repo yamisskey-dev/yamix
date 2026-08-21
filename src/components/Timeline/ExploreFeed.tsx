@@ -182,14 +182,10 @@ export function ExploreFeed() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const fetchExplore = useCallback(async (cursorId?: string | null) => {
+    // NOTE: ローディング表示の開始は各呼び出し側で行う（同期実行区間で setState しない）
+    const request = exploreApi.getExplore(cursorId);
     try {
-      if (cursorId) {
-        setLoadingMore(true);
-      } else {
-        setLoading(true);
-      }
-
-      const data = await exploreApi.getExplore(cursorId);
+      const data = await request;
 
       if (cursorId) {
         setConsultations((prev) => [...prev, ...data.consultations]);
@@ -208,6 +204,8 @@ export function ExploreFeed() {
   }, []);
 
   useEffect(() => {
+    // fetchExplore の setState はすべて await 後で実行される（ルールの誤検知回避）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchExplore();
   }, [fetchExplore]);
 
@@ -236,6 +234,7 @@ export function ExploreFeed() {
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          setLoadingMore(true);
           fetchExplore(cursor);
         }
       },
@@ -267,7 +266,13 @@ export function ExploreFeed() {
         <div className="alert alert-error max-w-md">
           <span>{error}</span>
         </div>
-        <button onClick={() => fetchExplore()} className="btn btn-primary mt-4">
+        <button
+          onClick={() => {
+            setLoading(true);
+            fetchExplore();
+          }}
+          className="btn btn-primary mt-4"
+        >
           再読み込み
         </button>
       </div>

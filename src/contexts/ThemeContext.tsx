@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 
 type Theme = "dark" | "light";
 type ThemePreference = "dark" | "light" | "system";
@@ -20,34 +20,36 @@ function getSystemTheme(): Theme {
     : "dark";
 }
 
+function getSavedPreference(): ThemePreference {
+  if (typeof window === "undefined") return "system";
+  const saved = localStorage.getItem(
+    "yamix_theme_preference"
+  ) as ThemePreference | null;
+  return saved && ["dark", "light", "system"].includes(saved) ? saved : "system";
+}
+
+// SSR では false、クライアントでは true（マウント検知。setState 不要）
+const emptySubscribe = () => () => {};
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [mounted, setMounted] = useState(false);
+  const [preference, setPreferenceState] = useState<ThemePreference>(getSavedPreference);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = getSavedPreference();
+    return saved === "system" ? getSystemTheme() : saved;
+  });
+  const mounted = useMounted();
 
-  // Initialize from localStorage
+  // data-theme 属性を theme に追随させる
   useEffect(() => {
-    const savedPreference = localStorage.getItem(
-      "yamix_theme_preference"
-    ) as ThemePreference | null;
-
-    if (
-      savedPreference &&
-      ["dark", "light", "system"].includes(savedPreference)
-    ) {
-      setPreferenceState(savedPreference);
-      const resolvedTheme =
-        savedPreference === "system" ? getSystemTheme() : savedPreference;
-      setTheme(resolvedTheme);
-      document.documentElement.setAttribute("data-theme", resolvedTheme);
-    } else {
-      // Default to system
-      const systemTheme = getSystemTheme();
-      setTheme(systemTheme);
-      document.documentElement.setAttribute("data-theme", systemTheme);
-    }
-    setMounted(true);
-  }, []);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   // Listen to system theme changes when preference is "system"
   useEffect(() => {
@@ -55,9 +57,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
     const handleChange = (e: MediaQueryListEvent) => {
-      const newTheme = e.matches ? "light" : "dark";
-      setTheme(newTheme);
-      document.documentElement.setAttribute("data-theme", newTheme);
+      setTheme(e.matches ? "light" : "dark");
     };
 
     mediaQuery.addEventListener("change", handleChange);
@@ -67,11 +67,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setPreference = (newPreference: ThemePreference) => {
     setPreferenceState(newPreference);
     localStorage.setItem("yamix_theme_preference", newPreference);
-
-    const resolvedTheme =
-      newPreference === "system" ? getSystemTheme() : newPreference;
-    setTheme(resolvedTheme);
-    document.documentElement.setAttribute("data-theme", resolvedTheme);
+    setTheme(newPreference === "system" ? getSystemTheme() : newPreference);
   };
 
   // Prevent flash of wrong theme

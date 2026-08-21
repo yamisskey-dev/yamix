@@ -77,9 +77,11 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
   }, [sessions, searchQuery]);
 
   const fetchSessions = useCallback(async (cursorId?: string | null) => {
+    // NOTE: 同期実行区間で setState しない（effect からの呼び出しでカスケードレンダーを防ぐ）
+    const request = chatApi.getSessions(cursorId);
     try {
       // Fetch server sessions
-      const data = await chatApi.getSessions(cursorId);
+      const data = await request;
 
       // Get local sessions (unsynced)
       const localSessions = await localSessionStore.getAllSessions();
@@ -123,6 +125,8 @@ export function ChatSessionList({ onSessionSelect, searchQuery = "" }: Props) {
   }, []);
 
   useEffect(() => {
+    // fetchSessions の setState はすべて await 後で実行される（ルールの誤検知回避）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchSessions();
 
     const handleNewSession = () => {

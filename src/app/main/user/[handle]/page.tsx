@@ -52,14 +52,15 @@ export default function UserProfilePage({ params }: PageProps) {
   const isOwnProfile = currentUserHandle === decodedHandle;
 
   const fetchTimeline = useCallback(async () => {
+    // 初回マウントでのみ呼ばれるため setLoading(true) は不要（初期値が true）。
+    // 同期実行区間で setState しないよう、fetch は try の外で発行する
+    const request = Promise.all([
+      fetch(`/api/timeline/user/${encodeURIComponent(decodedHandle)}`),
+      fetch(`/api/timeline/user/${encodeURIComponent(decodedHandle)}/responses`),
+    ]);
     try {
-      setLoading(true);
-
       // 相談と回答の両方を並列で取得
-      const [consultRes, responseRes] = await Promise.all([
-        fetch(`/api/timeline/user/${encodeURIComponent(decodedHandle)}`),
-        fetch(`/api/timeline/user/${encodeURIComponent(decodedHandle)}/responses`),
-      ]);
+      const [consultRes, responseRes] = await request;
 
       if (!consultRes.ok) {
         if (consultRes.status === 404) {
@@ -99,6 +100,8 @@ export default function UserProfilePage({ params }: PageProps) {
 
   // Initial fetch
   useEffect(() => {
+    // fetchTimeline の setState はすべて await 後で実行される（ルールの誤検知回避）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchTimeline();
   }, [fetchTimeline]);
 

@@ -87,7 +87,7 @@ export default function LoginPage() {
       const authSession = await res.json();
 
       // Redirect to Misskey auth page
-      window.location.href = authSession.url;
+      window.location.assign(authSession.url);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Login failed");
       errorModalRef.current?.showModal();
@@ -165,7 +165,7 @@ export default function LoginPage() {
         <div className="flex flex-col desktop:flex-row items-center">
           <form
             className="flex flex-col desktop:flex-row"
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={(e) => void handleSubmit(onSubmit)(e)}
             id="urlInputForm"
           >
             {errors.address?.type === "pattern" && (

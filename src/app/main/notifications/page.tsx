@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { clientLogger } from "@/lib/client-logger";
@@ -19,24 +19,24 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/notifications?limit=50");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications);
-      }
-    } catch (error) {
-      clientLogger.error("Failed to fetch notifications:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    // fetch を先に発行し、setState は非同期の継続内でのみ行う
+    const request = fetch("/api/notifications?limit=50");
+    const load = async () => {
+      try {
+        const res = await request;
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data.notifications);
+        }
+      } catch (error) {
+        clientLogger.error("Failed to fetch notifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const markAsRead = async (notificationIds: string[]) => {
     try {

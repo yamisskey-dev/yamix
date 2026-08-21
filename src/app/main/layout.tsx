@@ -38,15 +38,18 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     try {
       const userData = await authApi.getMe();
       setUser(userData);
+      setLoading(false);
     } catch (error) {
+      // 未認証時はログインへ戻す（リダイレクトするので loading は解除しない）
       logger.warn("Failed to fetch user, redirecting to login", {}, error);
       router.replace("/");
-    } finally {
-      setLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
+    // fetchUser の setState はすべて await 後（非同期の継続内）で実行されるが、
+    // 現行ルールは外部定義関数の await 位置を解析しないため誤検知する
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUser();
   }, [fetchUser]);
 
@@ -81,10 +84,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // パスが変わったらドロワーを閉じる
-  useEffect(() => {
+  // パスが変わったらドロワーを閉じる（レンダー中の派生 state 調整パターン）
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
     setSidebarOpen(false);
-  }, [pathname]);
+  }
 
   const handleNavigate = useCallback(
     (path: string) => {

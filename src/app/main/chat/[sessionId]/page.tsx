@@ -8,19 +8,19 @@ import { localSessionStore } from "@/lib/local-session-store";
 import { chatApi, userApi, messageApi, api } from "@/lib/api-client";
 import { clientLogger } from "@/lib/client-logger";
 import { useToastActions } from "@/components/Toast";
-import type { ChatMessage, ChatSessionWithMessages } from "@/types";
+import type { ChatSessionWithMessages } from "@/types";
 import { messageQueue } from "@/lib/message-queue";
 import { indexedDB } from "@/lib/indexed-db";
 import { hasMentionYamii } from "@/lib/constants";
 import {
   fetcher,
-  transformMessage,
   checkCrisisAlert,
   type LocalMessage,
   type SessionInfo,
 } from "./chat-types";
 import { handleSSEResponse } from "./sse-response";
 import { usePollingMessages } from "./use-polling-messages";
+import { useSessionDataSync } from "./use-session-data-sync";
 import { useLocalSessionSync } from "./use-local-session-sync";
 import { useInitialMessageSend } from "./use-initial-message-send";
 import { ChatHeader } from "./ChatHeader";
@@ -148,59 +148,15 @@ export default function ChatSessionPage({ params }: PageProps) {
   });
 
   // Process session data from SWR
-  useEffect(() => {
-    if (!sessionData || !currentUser) return;
-
-    const isOwner = sessionData.userId === currentUser.id;
-    const currentUserId = currentUser.id;
-
-    const responseCount = sessionData.messages.filter(
-      (m: ChatMessage) => m.role === "ASSISTANT" && m.responderId
-    ).length;
-
-    setSessionInfo({
-      consultType: sessionData.consultType,
-      userId: sessionData.userId,
-      isOwner,
-      isAnonymous: sessionData.isAnonymous,
-      currentUserId,
-      title: sessionData.title,
-      responseCount,
-      crisisCount: sessionData.crisisCount,
-      targets: sessionData.targets,
-    });
-
-    // Build anonymous user map
-    const anonymousUserMap = new Map<string, string>();
-    sessionData.messages.forEach((m: ChatMessage) => {
-      if (m.responderId && m.isAnonymous && m.responderId !== currentUserId) {
-        if (!anonymousUserMap.has(m.responderId)) {
-          anonymousUserMap.set(m.responderId, String.fromCharCode(65 + anonymousUserMap.size));
-        }
-      }
-    });
-    anonymousUserMapRef.current = new Map(anonymousUserMap);
-
-    // Update messages (SWR handles deduplication automatically)
-    // Don't overwrite messages while loading (message is being sent)
-    if (isLoading) return;
-
-    setMessages((prev) => {
-      // Skip if streaming just completed (prevent overwriting fresh AI response)
-      if (streamingJustCompletedRef.current) {
-        streamingJustCompletedRef.current = false; // Reset for next time
-        return prev;
-      }
-      // Skip if local messages exist (not yet synced to server)
-      const hasLocalMessages = prev.some(m => m.id.startsWith('local-'));
-      if (hasLocalMessages) return prev;
-      // If local state has more messages than server data, don't overwrite (race condition)
-      if (prev.length > sessionData.messages.length) return prev;
-      return sessionData.messages.map((m: ChatMessage) =>
-        transformMessage(m, isOwner, currentUserId, sessionData.isAnonymous, sessionData.user, anonymousUserMap)
-      );
-    });
-  }, [sessionData, currentUser, isLoading]);
+  useSessionDataSync({
+    sessionData,
+    currentUser,
+    isLoading,
+    anonymousUserMapRef,
+    streamingJustCompletedRef,
+    setSessionInfo,
+    setMessages,
+  });
 
   // Send pending initial message after sync completes (optimistic UI approach)
   useInitialMessageSend({
