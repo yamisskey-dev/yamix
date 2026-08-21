@@ -88,33 +88,43 @@ export const safeStringSchema = z
   );
 
 // Chat session schemas
+// NOTE: describe() の内容は OpenAPI ドキュメント（/api/openapi）にそのまま反映される
 export const createChatSessionSchema = z.object({
-  consultType: z.enum(["PRIVATE", "PUBLIC", "DIRECTED"]).default("PRIVATE"),
-  isAnonymous: z.boolean().default(false),
-  allowAnonymousResponses: z.boolean().default(true),
-  category: z.string().max(50).nullable().optional(),
-  targetUserHandles: z.array(z.string().min(1).max(100)).max(20).optional(),
-  initialMessage: safeStringSchema.optional(),
+  consultType: z
+    .enum(["PRIVATE", "PUBLIC", "DIRECTED"])
+    .default("PRIVATE")
+    .describe(
+      "PRIVATE: AI専用/非公開（1 YAMI）, PUBLIC: 公開/人間も回答可能（3 YAMI）, DIRECTED: 指名相談"
+    ),
+  isAnonymous: z.boolean().default(false).describe("匿名投稿"),
+  allowAnonymousResponses: z.boolean().default(true).describe("匿名回答を許可"),
+  category: z.string().max(50).nullable().optional().describe("カテゴリ（恋愛/仕事/メンタル等）"),
+  targetUserHandles: z
+    .array(z.string().min(1).max(100))
+    .max(20)
+    .optional()
+    .describe("指名相談の宛先ハンドル（DIRECTED 時）"),
+  initialMessage: safeStringSchema.optional().describe("最初のメッセージ"),
 });
 // Note: DIRECTED with no targets = self-only post (Misskey-style "裏技")
 
 export const updateChatSessionSchema = z.object({
-  title: z.string().min(1).max(200).transform(sanitizeString).optional(),
+  title: z.string().min(1).max(200).transform(sanitizeString).optional().describe("セッションタイトル"),
 });
 
 // Message schemas
 export const sendMessageSchema = z.object({
-  message: safeStringSchema,
+  message: safeStringSchema.describe("メッセージ内容"),
 });
 
 export const respondToSessionSchema = z.object({
-  content: safeStringSchema,
-  isAnonymous: z.boolean().default(false),
+  content: safeStringSchema.describe("回答内容"),
+  isAnonymous: z.boolean().default(false).describe("匿名回答"),
 });
 
 // Gas tipping schema
 export const sendGasSchema = z.object({
-  amount: z.number().int().min(1).max(100).optional().default(3),
+  amount: z.number().int().min(1).max(100).optional().default(3).describe("送る灯（ともしび）の量"),
 });
 
 // Token schemas

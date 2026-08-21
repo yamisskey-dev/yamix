@@ -1,4 +1,12 @@
 import type { OpenAPIV3 } from "openapi-types";
+import {
+  createChatSessionSchema,
+  updateChatSessionSchema,
+  sendMessageSchema,
+  respondToSessionSchema,
+  sendGasSchema,
+} from "@/lib/validation";
+import { zodRequestSchema } from "./zod-schema";
 
 export const chatPaths: OpenAPIV3.PathsObject = {
   "/api/chat/sessions": {
@@ -58,32 +66,7 @@ export const chatPaths: OpenAPIV3.PathsObject = {
       requestBody: {
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                consultType: {
-                  type: "string",
-                  enum: ["PRIVATE", "PUBLIC"],
-                  default: "PRIVATE",
-                  description: "PRIVATE: AI専用/非公開（1 YAMI）, PUBLIC: 公開/人間も回答可能（3 YAMI）",
-                },
-                isAnonymous: {
-                  type: "boolean",
-                  default: false,
-                  description: "匿名投稿",
-                },
-                allowAnonymousResponses: {
-                  type: "boolean",
-                  default: true,
-                  description: "匿名回答を許可",
-                },
-                category: {
-                  type: "string",
-                  nullable: true,
-                  description: "カテゴリ（恋愛/仕事/メンタル等）",
-                },
-              },
-            },
+            schema: zodRequestSchema(createChatSessionSchema),
           },
         },
       },
@@ -220,20 +203,7 @@ export const chatPaths: OpenAPIV3.PathsObject = {
       requestBody: {
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                title: {
-                  type: "string",
-                  description: "セッションタイトル",
-                },
-                consultType: {
-                  type: "string",
-                  enum: ["PRIVATE", "PUBLIC"],
-                  description: "相談タイプ",
-                },
-              },
-            },
+            schema: zodRequestSchema(updateChatSessionSchema),
           },
         },
       },
@@ -329,16 +299,7 @@ export const chatPaths: OpenAPIV3.PathsObject = {
       requestBody: {
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              required: ["content"],
-              properties: {
-                content: {
-                  type: "string",
-                  description: "メッセージ内容",
-                },
-              },
-            },
+            schema: zodRequestSchema(sendMessageSchema),
           },
         },
       },
@@ -402,21 +363,7 @@ export const chatPaths: OpenAPIV3.PathsObject = {
       requestBody: {
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              required: ["content"],
-              properties: {
-                content: {
-                  type: "string",
-                  description: "回答内容",
-                },
-                isAnonymous: {
-                  type: "boolean",
-                  default: false,
-                  description: "匿名回答",
-                },
-              },
-            },
+            schema: zodRequestSchema(respondToSessionSchema),
           },
         },
       },
@@ -466,16 +413,7 @@ export const chatPaths: OpenAPIV3.PathsObject = {
       requestBody: {
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                amount: {
-                  type: "integer",
-                  default: 1,
-                  description: "送るガスの量",
-                },
-              },
-            },
+            schema: zodRequestSchema(sendGasSchema),
           },
         },
       },
