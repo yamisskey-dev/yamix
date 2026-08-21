@@ -299,6 +299,10 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-sarasa-gothic), Arial, Helvetica, sans-serif;
+  /* Misskey (style.scss html) と同じベースフォント。html に置くと rem 基準が変わり
+     Tailwind のスペーシング全体が縮むため body に置く */
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 /* Background with image */

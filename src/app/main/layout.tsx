@@ -28,9 +28,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebarWidth');
-      return saved ? parseInt(saved, 10) : 288;
+      return saved ? parseInt(saved, 10) : 250;
     }
-    return 288;
+    return 250;
   });
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
 
@@ -155,7 +155,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         {/* Fixed Sidebar */}
         <aside
           className="h-screen shrink-0 border-r border-base-300 bg-base-300/80 transition-all duration-300 ease-smooth relative"
-          style={{ width: sidebarCollapsed ? "64px" : `${sidebarWidth}px` }}
+          style={{ width: sidebarCollapsed ? "80px" : `${sidebarWidth}px` }}
           role="navigation"
           aria-label="メインナビゲーション"
         >
@@ -183,7 +183,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile/Tablet Layout - ボトムナビ + ドロワー */}
       <div className="xl:hidden flex flex-col h-screen">
-        <main id="main-content-mobile" className="flex-1 flex flex-col pb-14 overflow-hidden" role="main">{children}</main>
+        <main id="main-content-mobile" className="flex-1 flex flex-col pb-[calc(66px+env(safe-area-inset-bottom,0px))] overflow-hidden" role="main">{children}</main>
 
         {/* Mobile Bottom Navigation */}
         <nav aria-label="モバイルナビゲーション">

@@ -20,7 +20,7 @@ interface ChatHeaderProps {
 /** チャット画面のヘッダー（タイトル・宛先・危機カウント・ブックマーク・削除） */
 export function ChatHeader({ sessionId, sessionInfo, onDeleteClick }: ChatHeaderProps) {
   return (
-    <div className="border-b border-base-300 px-4 py-2 flex items-center justify-between bg-base-100">
+    <div className="border-b border-base-300 px-4 min-h-[50px] flex items-center justify-between bg-base-100">
       {sessionInfo && sessionInfo.title ? (
         <>
           {/* Actual header content */}

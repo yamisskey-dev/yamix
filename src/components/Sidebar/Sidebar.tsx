@@ -33,15 +33,15 @@ function NavItem({
   isCollapsed?: boolean;
 }) {
   return (
-    <div className={isCollapsed ? "px-2 mb-1.5" : "px-4 mb-1.5"}>
+    <div className={isCollapsed ? "" : "px-[17px]"}>
       <button
         onClick={onClick}
         className={`
-          group relative w-full h-10 rounded-full
+          group relative w-full
           flex items-center
           transition-colors duration-150 ease-smooth
           focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-200
-          ${isCollapsed ? "justify-center px-0" : "gap-3 px-4"}
+          ${isCollapsed ? "justify-center px-0 py-4" : "h-10 rounded-full gap-2 pl-[13px] pr-[13px]"}
           ${isActive
             ? "bg-primary/10 text-primary"
             : "text-base-content/70 hover:bg-primary/10 hover:text-primary"
@@ -50,10 +50,10 @@ function NavItem({
         aria-current={isActive ? "page" : undefined}
         title={isCollapsed ? label : undefined}
       >
-        <span className="w-5 h-5 flex items-center justify-center">{icon}</span>
+        <span className={`${isCollapsed ? "w-[18px]" : "w-8"} h-[18px] flex items-center justify-center`}>{icon}</span>
         {!isCollapsed && (
           <>
-            <span className="text-[13px] font-medium flex-1 text-left">{label}</span>
+            <span className="text-[0.9em] flex-1 text-left">{label}</span>
             {indicator && (
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
@@ -63,7 +63,7 @@ function NavItem({
           </>
         )}
         {isCollapsed && indicator && (
-          <span className="absolute top-1 right-1 flex h-2 w-2">
+          <span className="absolute top-1.5 left-6 flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-error opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
           </span>
@@ -88,7 +88,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
   return (
     <div className="h-full flex flex-col">
       {/* Header - Instance icon & Toggle button */}
-      <div className={`sticky top-0 z-10 pt-4 pb-4 flex items-center ${isCollapsed ? "justify-center px-2" : "justify-between px-6"}`}>
+      <div className={`sticky top-0 z-10 flex items-center ${isCollapsed ? "py-5 justify-center px-2" : "h-20 justify-between px-6"}`}>
         <Link
           href="/main/about"
           onClick={onClose}
@@ -97,8 +97,8 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
           <img
             src="/app-icon.png"
             alt="やみっくす"
-            width={isCollapsed ? 28 : 36}
-            height={isCollapsed ? 28 : 36}
+            width={isCollapsed ? 30 : 38}
+            height={isCollapsed ? 30 : 38}
             className="rounded-lg"
           />
         </Link>
@@ -249,7 +249,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
       {!isCollapsed && (
         <>
           {/* Divider */}
-          <div className="mx-5 my-3 border-t border-base-content/10 shrink-0" />
+          <div className="mx-4 my-4 border-t border-base-content/10 shrink-0" />
 
           {/* Search input */}
           <div className="px-5 pb-2 shrink-0">
@@ -305,16 +305,16 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
           </div>
 
           {/* Bottom Section */}
-          <div className="mt-auto pt-3 pb-3 border-t border-base-content/10">
+          <div className="mt-auto pt-5 border-t border-base-content/10">
             {/* Post Button */}
-            <div className="px-4 mb-3">
+            <div className="px-[19px]">
               <button
                 onClick={handleNewChat}
                 className="
-                  w-full h-11 rounded-full px-4
+                  w-full h-10 rounded-full pl-[11px] pr-4
                   bg-linear-to-r from-primary to-secondary
                   text-primary-content text-sm font-medium
-                  flex items-center gap-3
+                  flex items-center gap-2
                   hover:brightness-110
                   transition-all duration-150 ease-smooth
                   group
@@ -322,7 +322,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
+                  className="w-8 h-[18px]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -347,7 +347,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                 }}
                 className="
                   group flex items-center w-full
-                  py-2.5 px-4 rounded-lg mx-2
+                  py-5 pl-[30px] pr-4
                   text-left
                   hover:bg-base-content/5
                   transition-colors duration-150 ease-smooth
@@ -370,7 +370,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                   )}
                 </div>
                 {/* User info */}
-                <div className="flex-1 min-w-0 ml-2.5 truncate">
+                <div className="flex-1 min-w-0 ml-2 truncate">
                   <span className="text-sm text-base-content transition-colors duration-150 group-hover:text-primary">
                     @{user.account}@{user.hostName}
                   </span>
@@ -384,11 +384,11 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
       {/* Collapsed state: New chat button at bottom */}
       {isCollapsed && (
         <div className="mt-auto pt-3 pb-3">
-          <div className="px-2 mb-2">
+          <div className="mb-2">
             <button
               onClick={handleNewChat}
               className="
-                w-full h-10 rounded-full
+                w-[52px] h-[52px] rounded-full mx-auto
                 bg-linear-to-r from-primary to-secondary
                 text-primary-content
                 flex items-center justify-center
@@ -399,7 +399,7 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-[18px] w-[18px]"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -434,12 +434,12 @@ export function Sidebar({ user, onClose, unreadNotificationCount = 0, isCollapse
                   <Image
                     src={user.avatarUrl}
                     alt={user.displayName || user.account}
-                    width={32}
-                    height={32}
+                    width={38}
+                    height={38}
                     className="rounded-full"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
+                  <div className="w-[38px] h-[38px] rounded-full bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-sm font-bold">
                     {(user.displayName || user.account).charAt(0).toUpperCase()}
                   </div>
                 )}

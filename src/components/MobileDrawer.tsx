@@ -67,7 +67,7 @@ export function MobileDrawer({ isOpen, onClose, children }: MobileDrawerProps) {
 
       {/* Drawer Panel - Enhanced with glassmorphism and animation */}
       <div
-        className={`absolute left-0 top-0 h-full w-72 glass-card-enhanced shadow-elevated transition-all duration-300 ease-smooth ${
+        className={`absolute left-0 top-0 h-full w-[250px] glass-card-enhanced shadow-elevated transition-all duration-300 ease-smooth ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -203,11 +203,11 @@ interface BottomNavProps {
 
 export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotificationCount = 0 }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 h-14 bg-base-100/95 backdrop-blur-medium border-t border-base-300 flex items-center justify-around px-2 z-40 shadow-soft">
+    <nav className="fixed bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom,0px)] bg-base-100/95 backdrop-blur-medium border-t border-base-300 grid grid-flow-col auto-cols-fr z-40 shadow-soft">
       {/* Menu (Burger) Button */}
       <button
         onClick={onMenuClick}
-        className="flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 text-base-content/60 hover:bg-primary/10 hover:text-primary"
+        className="flex flex-col items-center justify-center w-[42px] h-[42px] justify-self-center my-3 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 text-base-content/60 hover:bg-primary/10 hover:text-primary"
         aria-label="メニューを開く"
       >
         <MenuIcon className="h-5 w-5" />
@@ -216,7 +216,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* Timeline Button */}
       <button
         onClick={() => onNavigate("/main/timeline")}
-        className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+        className={`flex flex-col items-center justify-center w-[42px] h-[42px] justify-self-center my-3 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
           pathname === "/main/timeline"
             ? "text-primary bg-primary/10"
             : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
@@ -229,7 +229,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* Notification Button */}
       <button
         onClick={() => onNavigate("/main/notifications")}
-        className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
+        className={`relative flex flex-col items-center justify-center w-[42px] h-[42px] justify-self-center my-3 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 ${
           pathname === "/main/notifications"
             ? "text-primary bg-primary/10"
             : "text-base-content/60 hover:bg-primary/10 hover:text-primary"
@@ -248,7 +248,7 @@ export function MobileBottomNav({ pathname, onMenuClick, onNavigate, unreadNotif
       {/* New Consultation Button (Right, Gradient) */}
       <button
         onClick={() => onNavigate("/main")}
-        className="flex items-center justify-center w-12 h-12 rounded-full bg-linear-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 ease-smooth focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-soft"
+        className="flex items-center justify-center w-[42px] h-[42px] justify-self-center my-3 rounded-full bg-linear-to-r from-primary to-secondary text-primary-content hover:brightness-110 transition-all duration-150 ease-smooth focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-base-100 shadow-soft"
         aria-label="新しい相談"
       >
         <ChatIcon className="h-5 w-5" />
