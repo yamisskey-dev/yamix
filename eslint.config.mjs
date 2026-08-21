@@ -1,8 +1,5 @@
-import { FlatCompat } from "@eslint/eslintrc";
-
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
+import coreWebVitals from "eslint-config-next/core-web-vitals";
+import typescript from "eslint-config-next/typescript";
 
 const eslintConfig = [
   {
@@ -26,10 +23,16 @@ const eslintConfig = [
       "yamii/",
     ],
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...coreWebVitals,
+  ...typescript,
   {
     rules: {
       "@next/next/no-img-element": "off",
+      // eslint-config-next 16 同梱の react-hooks v6 で追加された新ルール。
+      // 既存コード14箇所が該当するため一旦無効化。修正後に有効化すること
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/immutability": "off",
     },
   },
 ];

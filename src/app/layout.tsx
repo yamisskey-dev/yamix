@@ -5,7 +5,7 @@ import localFont from "next/font/local";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ToastProvider } from "@/components/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import "./globals.css";
 
 const sarasaGothic = localFont({
@@ -85,6 +85,7 @@ export default async function RootLayout({
   return (
     <html lang={lng} data-theme="dark" suppressHydrationWarning>
       <body className={`${sarasaGothic.variable} relative min-h-screen`} suppressHydrationWarning>
+        <SerwistProvider swUrl="/serwist/sw.js">
         <ThemeProvider>
           <ToastProvider>
             <ErrorBoundary>
@@ -110,8 +111,8 @@ export default async function RootLayout({
               </Suspense>
             </ErrorBoundary>
           </ToastProvider>
-          <ServiceWorkerRegister />
         </ThemeProvider>
+        </SerwistProvider>
       </body>
     </html>
   );

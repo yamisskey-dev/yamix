@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * NOTE: Edge Runtime compatible (Web Crypto を使用)
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== "production";
 
   // Web Crypto はEdge Runtimeで利用可能
