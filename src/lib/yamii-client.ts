@@ -10,7 +10,7 @@ const YAMII_API_KEY = process.env.YAMII_API_KEY || "";
 
 // 通常リクエストのタイムアウト（プロフィール取得等の軽い呼び出し）
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
-// counseling は LLM 生成を含むため長め（yamii 側の OpenAI timeout は 60s）
+// counseling は LLM 生成を含むため長め（yamii 側の Claude API timeout は 60s）
 const COUNSELING_TIMEOUT_MS = 90_000;
 // ストリームは接続確立（ヘッダ受信）までのタイムアウト。ボディの受信は制限しない
 const STREAM_CONNECT_TIMEOUT_MS = 15_000;
